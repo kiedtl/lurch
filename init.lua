@@ -256,6 +256,10 @@ local irchand = {
 	["PART"] = function(e)
 		prin(e.dest, "<--", "%s has left %s", ncolor(e.nick), e.dest)
 	end,
+	["INVITE"] = function(e)
+		-- TODO: auto-join on invite?
+		prin("*", "--", "%s sent an invite to %s", e.nick, e.msg)
+	end,
 	["PRIVMSG"] = function(e)
 		-- remove extra characters from nick that won't fit.
 		if #e.nick > 10 then
@@ -395,6 +399,11 @@ local irchand = {
 	-- ???
 	["333"] = none,
 
+	-- invited <nick> to <chan> (response to /invite)
+	["341"] = function(e)
+		prin(e.fields[4], "--", "invited %s to %s", ncolor(e.fields[3]), e.fields[4])
+	end,
+
 	-- Reply to /names
 	["353"] = function(e)
 		local nicklist = ""
@@ -439,6 +448,12 @@ local irchand = {
 
 	-- No such nick/channel
 	["401"] = function(e) prin("*", "-!-", "No such nick/channel %s", e.fields[3]) end,
+
+	-- <nick> is already in channel (response to /invite)
+	["443"] = function(e)
+		prin(e.fields[4], "-!-", "%s is already in %s", ncolor(e.fields[3]),
+			e.fields[4])
+	end,
 
 	-- WHOIS: <nick> is using a secure connection (response to /whois)
 	["671"] = function(e)
@@ -512,6 +527,15 @@ local cmdhand = {
 	end,
 	["/prev"] = function(a, args, inp)
 		switch_buf(chan - 1)
+	end,
+	["/invite"] = function(a, args, inp)
+		if not (channels[chan]):find("#") then
+			prin("*", "-!-", "/invite must be executed in a channel buffer.")
+			return
+		end
+
+		if not a or a == "" then return end
+		send(":%s INVITE %s :%s", nick, a, channels[chan])
 	end,
 	["/names"] = function(a, args, inp)
 		send("NAMES %s", a or channels[chan])
