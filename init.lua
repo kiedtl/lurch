@@ -295,11 +295,11 @@ local irchand = {
 	["NICK"] = function(e)
 		-- copy across nick information.
 		-- this preserves highlighting across nickname changes.
-		if whom == nick then
-			nick = mesg
+		if e.nick == nick then
+			nick = e.msg
 		else
-			nicks[mesg] = nicks[whom]
-			nicks[whom] = nil
+			nicks[e.msg] = nicks[e.nick]
+			nicks[e.nick] = nil
 		end
 
 		-- display nick message for all channels that user has joined.
@@ -359,8 +359,32 @@ local irchand = {
 	["255"] = none, ["265"] = none,
 	["266"] = none, ["250"] = none,
 
+	-- WHOIS: RPL_WHOISUSER (response to /whois)
+	-- <nick> <user> <host> * :realname
+	["311"] = function(e)
+		prin("*", "WHOIS", "[%s] (%s!%s@%s): %s", ncolor(e.fields[3]),
+			e.fields[3], e.fields[4], e.fields[5], e.msg)
+	end,
+
+	-- WHOIS: RPL_WHOISSERVER (response to /whois)
+	-- <nick> <server> :serverinfo
+	["312"] = function(e)
+		prin("*", "WHOIS", "[%s] %s (%s)", ncolor(e.fields[3]), e.fields[4], e.msg)
+	end,
+
+	-- End of WHOIS
+	["318"] = function(e)
+		prin("*", "WHOIS", "[%s] End of WHOIS info.", ncolor(e.fields[3]))
+	end,
+
 	-- URL for channel
 	["328"] = function(e) prin(e.dest, "URL", "%s", e.msg) end,
+
+	-- WHOIS: <nick> is logged in as <user> (response to /whois)
+	["330"] = function(e)
+		prin("*", "WHOIS", "[%s] is logged in as %s", ncolor(e.fields[3]),
+			ncolor(e.fields[4]))
+	end,
 
 	-- No topic set
 	["331"] = function(e) prin(e.dest, "-!-", "No topic set for %s", e.dest) end,
@@ -415,6 +439,11 @@ local irchand = {
 
 	-- No such nick/channel
 	["401"] = function(e) prin("*", "-!-", "No such nick/channel %s", e.fields[3]) end,
+
+	-- WHOIS: <nick> is using a secure connection (response to /whois)
+	["671"] = function(e)
+		prin("*", "WHOIS", "[%s] uses a secure connection", ncolor(e.fields[3]))
+	end,
 
 	-- CTCP stuff.
 	["CTCP_ACTION"] = function(e) prin(e.dest, "*", "%s %s", ncolor(e.nick), e.msg) end,
@@ -485,15 +514,13 @@ local cmdhand = {
 		switch_buf(chan - 1)
 	end,
 	["/names"] = function(a, args, inp)
-		-- WARNING: sharp edges! if this is executed in the "*" buffer,
-		-- then the NAMES for *all* channels will be sent in response!
-		local ch = channels[chan]
-
-		if a and a ~= "" then
-			ch = a
-		end
-
-		send("NAMES %s", ch)
+		send("NAMES %s", a or channels[chan])
+	end,
+	["/topic"] = function(a, args, inp)
+		send("TOPIC %s", a or channels[chan])
+	end,
+	["/whois"] = function(a, args, inp)
+		if a and a ~= "" then send("WHOIS %s", a) end
 	end,
 	["/join"] = function(a, args, inp)
 		send(":%s JOIN %s", nick, a)
