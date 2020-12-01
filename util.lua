@@ -99,6 +99,17 @@ function util.array_contains(src, value)
 	return has
 end
 
+function util.array_find(src, value)
+	local idx = nil
+	for i = 1, #src do
+		if src[i] == value then
+			idx = i
+			break
+		end
+	end
+	return idx
+end
+
 -- This hash function was stolen from the QBE project.
 -- git://c9x.me/qbe.git, ./minic/minic.y:104
 HASH_BEG = 42

@@ -9,6 +9,7 @@ local readline = require('readline')
 local tty = require('tty')
 local socket = require('socket')
 local lfs = require('lfs')
+local mirc = require('mirc')
 local posix = require('posix')
 
 local tcp = assert(socket.tcp())
@@ -22,7 +23,7 @@ LEFT_PADDING = 10
 RIGHT_PADDING = 80
 
 
-HOST = "irc.freenode.net"
+HOST = "localhost"--"irc.freenode.net"
 NICK = "inebriate|lurch"
 PASS = nil
 USER = nil
@@ -30,11 +31,14 @@ PORT = 6667
 NAME = nil
 JOIN = "#bots"
 
+QUIT_MSG = "*thud*"
+PART_MSG = "*confused yelling*"
 
 CTCP_PING    = true
 CTCP_VERSION = "lurch (beta)"
 CTCP_SOURCE  = "(null)"
 
+MIRC_COLORS_ENABLED = true
 
 -- dimensions of the terminal
 tty_width = 80
@@ -254,7 +258,7 @@ local irchand = {
 	["MODE"] = function(e)   prin("*", "MODE", "%s", e.msg) end,
 	["NOTICE"] = function(e) prin(e.dest, "NOTE", "%s", e.msg) end,
 	["PART"] = function(e)
-		prin(e.dest, "<--", "%s has left %s", ncolor(e.nick), e.dest)
+		prin(e.dest, "<--", "%s has left %s (%s)", ncolor(e.nick), e.dest, e.msg)
 	end,
 	["INVITE"] = function(e)
 		-- TODO: auto-join on invite?
@@ -264,6 +268,13 @@ local irchand = {
 		-- remove extra characters from nick that won't fit.
 		if #e.nick > 10 then
 			e.nick = (e.nick):sub(1, 9) .. "\x1b[m\x1b[37m+\x1b[m"
+		end
+
+		-- convert or remove mIRC IRC colors.
+		if MIRC_COLORS_ENABLED then
+			e.msg = mirc.to_tty_seq(e.msg)
+		else
+			e.msg = mirc.remove(e.msg)
 		end
 
 		prin(e.dest, ncolor(e.nick), "%s", e.msg)
@@ -276,7 +287,7 @@ local irchand = {
 		-- display quit message for all channels that user has
 		-- joined.
 		for _, ch in ipairs(nicks[e.nick].joined) do
-			prin(ch, "<--", "%s has quit %s", ncolor(e.nick), e.dest)
+			prin(ch, "<--", "%s has quit %s (%s)", ncolor(e.nick), e.dest, e.msg)
 		end
 	end,
 	["JOIN"] = function(e)
@@ -291,7 +302,7 @@ local irchand = {
 
 		-- sometimes the channel joined is contained in the message.
 		if not e.dest or e.dest == "" then
-			e.dest = mesg
+			e.dest = e.msg
 		end
 
 		prin(e.dest, "-->", "%s has joined %s", ncolor(e.nick), e.dest)
@@ -455,6 +466,13 @@ local irchand = {
 			e.fields[4])
 	end,
 
+	-- cannot join channel (you are banned)
+	["474"] = function(e)
+		prin(e.fields[3], "-!-", "you're banned creep")
+		local buf = util.array_find(channels, e.fields[3])
+		if buf then switch_buf(buf) end
+	end,
+
 	-- WHOIS: <nick> is using a secure connection (response to /whois)
 	["671"] = function(e)
 		prin("*", "WHOIS", "[%s] uses a secure connection", ncolor(e.fields[3]))
@@ -559,6 +577,17 @@ local cmdhand = {
 			switch_buf(#channels)
 		end
 	end,
+	["/part"] = function(a, args, inp)
+		if not (channels[chan]):find("#") then
+			prin("*", "-!-", "/invite must be executed in a channel buffer.")
+			return
+		end
+
+		local msg = inp
+		if not inp or inp ~= "" then msg = PART_MSG end
+
+		send(":%s PART %s :%s", nick, channels[chan], msg)
+	end,
 	["/nick"] = function(a, args, inp)
 		send("NICK %s", a)
 		nick = a
@@ -570,7 +599,10 @@ local cmdhand = {
 		send("%s %s", a, args)
 	end,
 	["/quit"] = function(a, args, inp)
-		send("QUIT :%s %s", a, args)
+		local msg = inp
+		if not inp or inp ~= "" then msg = QUIT_MSG end
+
+		send("QUIT :%s", msg)
 		eprintf("[lurch exited]\n")
 		clean()
 		os.exit(0)
@@ -663,6 +695,7 @@ end
 
 local function luaerr(err)
 	clean()
+	send("QUIT :%s", "*poof*")
 	printf("lua error:\n%s\n", debug.traceback(err, 6))
 	os.exit(1)
 end
