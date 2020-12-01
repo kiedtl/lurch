@@ -40,6 +40,12 @@ function util.write(file, stuff)
 	f:close()
 end
 
+function util.append(file, stuff)
+	local f = assert(io.open(file, 'a'))
+	assert(f:write(stuff))
+	f:close()
+end
+
 function util.create(file)
 	util.write(file, "")
 end
@@ -60,7 +66,7 @@ function util.fold(text, width)
 	local _raw_len = function(text)
 		text = text:gsub("\x1b%[.-m", "")
 		text = text:gsub("\x1b%[m", "")
-		return text:len()
+		return #text
 	end
 
 	local res = ""

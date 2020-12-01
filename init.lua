@@ -36,7 +36,7 @@ tty_height = 24
 
 colors = {}    -- List of colors used for nick highlighting
 nick = NICK    -- The current nickname
-chan = 1       -- The current channel
+chan = nil     -- The current channel
 channels = {}  -- List of all opened channels
 nicks = {}     -- Table of all nicknames
 history = {}   -- History of each buffer
@@ -82,6 +82,13 @@ local function send(fmt, ...)
 end
 
 local function ncolor(nick)
+	local access = ""
+
+	if nick:find("^[~@%&+!]") then
+		access = nick:gmatch("(.)")()
+		nick = nick:gsub("^.", "")
+	end
+
 	if not nicks[nick] then
 		nicks[nick] = {}
 	end
@@ -102,7 +109,7 @@ local function ncolor(nick)
 		esc = format("\x1b[1;38;2;%s;%s;%sm", color.r, color.g, color.b)
 	end
 
-	return format("%s%s\x1b[m", esc, nick)
+	return format("%s%s%s\x1b[m", access, esc, nick)
 end
 
 local function refresh()
@@ -114,7 +121,6 @@ local function refresh()
 	tty.clear()
 	tty.set_scroll_area(tty_height - 1)
 	tty.curs_move_to_line(999)
-	tty.curs_show()
 end
 
 local function status()
@@ -129,17 +135,18 @@ local function status()
 
 	tty.curs_save()
 	tty.curs_move_to_line(0)
+
 	tty.clear_line()
 	printf("%s", chanlist)
+
 	tty.curs_restore()
 end
 
 local function redraw()
-	--refresh()
+	refresh()
 
 	tty.curs_save()
 	tty.curs_hide()
-
 	tty.clear()
 
 	tty.curs_down(999)
@@ -153,8 +160,15 @@ local function redraw()
 
 	status()
 
-	tty.curs_restore()
 	tty.curs_show()
+	tty.curs_restore()
+end
+
+local function switch_buf(ch)
+	if channels[ch] then
+		chan = ch
+		redraw()
+	end
 end
 
 local function connect()
@@ -172,7 +186,13 @@ end
 local function prin(dest, left, right_fmt, ...)
 	local right = format(right_fmt, ...)
 
-	assert(dest); assert(left); assert(right)
+	assert(dest)
+	assert(left)
+	assert(right)
+
+	-- fold message to width
+	right = util.fold(right, RIGHT_PADDING)
+	right = right:gsub("\n", "\n            ")
 
 	-- Strip escape sequences from the first word in the message
 	-- so that we can calculate how much padding to add for
@@ -188,7 +208,8 @@ local function prin(dest, left, right_fmt, ...)
 	else
 		pad = 11 - #raw
 	end
-	local out = format("\x1b[%sC%s %s", pad, left, right)
+
+	local out = format("\x1b[%sC%s %s", pad, left, right):gsub("\n+$", "")
 
 	-- TODO: rename "channels" to "buffers"; that's a more accurate
 	-- description
@@ -199,10 +220,12 @@ local function prin(dest, left, right_fmt, ...)
 	if dest == channels[chan] then
 		tty.curs_hide()
 		tty.curs_save()
-		tty.curs_down(999)
-		tty.curs_up(1)
 
-		printf("\r\x1b[2K%s\n\r", out)
+		tty.curs_down(999)
+
+		tty.clear_line()
+		printf("%s\n", out)
+		tty.clear_line()
 
 		tty.curs_restore()
 		tty.curs_show()
@@ -215,132 +238,210 @@ local function prin(dest, left, right_fmt, ...)
 	history[dest][#history[dest] + 1] = out
 end
 
-local none = function(whom, mesg, dest) end -- dummy action
+local function none(_) end
+local function default2(e) prin("*", "--", "There are %s %s", e.fields[3], e.msg) end
+local function default(e) prin(e.dest, "--", "%s", e.msg) end
+
 local irchand = {
-	["PING"] = function(whom, mesg, dest) send("PONG %s", dest) end,
-	["NOTICE"] = function(whom, mesg, dest) prin(dest, "NOTE", "%s", mesg) end,
-	["AWAY"] = function(whom, mesg, dest) prin(nick, "--", "Away status: %s", mesg) end,
-	["ACTION"] = function(whom, mesg, dest)
-		prin(dest, "*", "%s %s", ncolor(whom), mesg)
+	["PING"] = function(e)   send("PONG %s", e.dest) end,
+	["AWAY"] = function(e)   prin("*", "--", "Away status: %s", e.msg) end,
+	["MODE"] = function(e)   prin("*", "MODE", "%s", e.msg) end,
+	["NOTICE"] = function(e) prin(e.dest, "NOTE", "%s", e.msg) end,
+	["ACTION"] = function(e) prin(e.dest, "*", "%s %s", ncolor(e.nick), e.msg) end,
+	["PART"] = function(e)
+		prin(e.dest, "<--", "%s has left %s", ncolor(e.nick), e.dest)
 	end,
-
-	["PART"] = function(whom, mesg, dest)
-		prin(dest, "<--", "%s has left %s", ncolor(whom), dest)
-	end,
-
-	["PRIVMSG"] = function(whom, mesg, dest)
+	["PRIVMSG"] = function(e)
 		-- remove extra characters from nick that won't fit.
-		if whom:len() > 10 then
-			whom = whom:sub(1, 9) .. "\x1b[m\x1b[37m+\x1b[m"
+		if #e.nick > 10 then
+			e.nick = (e.nick):sub(1, 9) .. "\x1b[m\x1b[37m+\x1b[m"
 		end
 
-		prin(dest, ncolor(whom), "%s", mesg)
+		prin(e.dest, ncolor(e.nick), "%s", e.msg)
 	end,
-
-	["QUIT"] = function(whom, mesg, dest)
-		if not nicks[whom] or not nicks[whom].joined then
+	["QUIT"] = function(e)
+		if not nicks[e.nick] or not nicks[e.nick].joined then
 			return
 		end
 
 		-- display quit message for all channels that user has
 		-- joined.
-		for _, ch in ipairs(nicks[whom].joined) do
-			prin(ch, "<--", "%s has quit %s", ncolor(whom), dest)
+		for _, ch in ipairs(nicks[e.nick].joined) do
+			prin(ch, "<--", "%s has quit %s", ncolor(e.nick), e.dest)
 		end
 	end,
-
-	["JOIN"] = function(whom, mesg, dest)
-		if not util.array_contains(channels, dest) then
-			channels[#channels + 1] = dest
+	["JOIN"] = function(e)
+		if not util.array_contains(channels, e.dest) then
+			channels[#channels + 1] = e.dest
 		end
 
 		-- if we are the ones joining, then switch to that buffer.
-		if whom == nick then
-			chan = #channels
+		if e.nick == nick then
+			switch_buf(#channels)
 		end
 
-		prin(mesg, "-->", "%s has joined %s", ncolor(whom), dest)
+		-- sometimes the channel joined is contained in the message.
+		if not e.dest or e.dest == "" then
+			e.dest = mesg
+		end
+
+		prin(e.dest, "-->", "%s has joined %s", ncolor(e.nick), e.dest)
+	end,
+	["NICK"] = function(e)
+		-- copy across nick information.
+		-- this preserves highlighting across nickname changes.
+		if whom == nick then
+			nick = mesg
+		else
+			nicks[mesg] = nicks[whom]
+			nicks[whom] = nil
+		end
+
+		-- display nick message for all channels that user has joined.
+		local bufs = nil
+		if e.nick == nick or not nicks[e.nick] then
+			bufs = channels
+		else
+			bufs = nicks[e.nick].joined
+		end
+
+		for _, ch in ipairs(bufs) do
+			prin(ch, "--@", "%s is now known as %s", ncolor(e.nick),
+				ncolor(e.msg))
+		end
 	end,
 
-	["NICK"] = function(whom, mesg, dest)
-		if whom == nick then nick = mesg end
-		prin(dest, "--@", "%s is now %s", ncolor(whom), ncolor(mesg))
-	end,
+	-- Welcome to the xyz Internet Relay Chat Network, foo!
+	["001"] = default,
 
-	-- End of MOTD
-	["376"] = function(whom, mesg, dest)
-		send(":%s JOIN %s", nick, JOIN)
-	end,
+	-- Your host is irc.foo.net, running ircd-version
+	["002"] = default,
+
+	-- This server was created on January 1, 2020.
+	["003"] = default,
+
+	-- RPL_MYINFO
+	-- <servername> <version> <available user modes> <available chan modes>
+	-- I am not aware of any situation in which the user would need to see
+	-- this useless information.
+	["004"] = none,
+
+	-- I'm not really sure what 005 is. RFC2812 states that this is RPL_BOUNCE,
+	-- telling the user to try another server as the one they connected to has
+	-- reached the maximum number of connected clients.
+	--
+	-- However, freenode sends something that seems to be something entirely
+	-- different. Here's an example:
+	--
+	-- :card.freenode.net 005 nick CNOTICE KNOCK :are supported by this server
+	--
+	-- Anyway, I don't think anyone is interested in seeing this info.
+	["005"] = none,
+
+	-- There are x users online
+	["251"] = default,
+
+	-- There are x operators online
+	["252"] = default2,
+
+	-- There are x unknown connections
+	["253"] = default2,
+
+	-- There are x channels formed
+	["254"] = default2,
+
+	-- Some junk sent by freenode.
+	["255"] = none, ["265"] = none,
+	["266"] = none, ["250"] = none,
+
+	-- URL for channel
+	["328"] = function(e) prin(e.dest, "URL", "%s", e.msg) end,
+
+	-- No topic set
+	["331"] = function(e) prin(e.dest, "-!-", "No topic set for %s", e.dest) end,
+
+	-- TOPIC for channel
+	["332"] = function(e) prin(e.dest, "TOPIC", "%s", e.msg) end,
+
+	-- ???
+	["333"] = none,
 
 	-- Reply to /names
-	["353"] = function(whom, mesg, dest)
+	["353"] = function(e)
 		local nicklist = ""
 
-		for nick in mesg:gmatch("([^%s]+)%s?") do
-			nicklist = format("%s%s ", nicklist, ncolor(nick))
+		for _nick in (e.msg):gmatch("([^%s]+)%s?") do
+			nicklist = nicklist .. format("%s ", ncolor(_nick))
 
-			if not nicks[nick] then
-				nicks[nick] = {}
+			if not nicks[_nick] then
+				nicks[_nick] = {}
 			end
 
-			if not nicks[nick].joined then
-				nicks[nick].joined = {}
+			if not nicks[_nick].joined then
+				nicks[_nick].joined = {}
 			end
 
-			if not util.array_contains(nicks[nick].joined, dest) then
-				local sz = #nicks[nick].joined
-				nicks[nick].joined[sz + 1] = dest
+			if not util.array_contains(nicks[_nick].joined, e.dest) then
+				local sz = #nicks[_nick].joined
+				nicks[_nick].joined[sz + 1] = e.dest
 			end
 		end
 
-		prin(dest, "NAMES", "%s", nicklist)
+		prin(e.dest, "NAMES", "%s", nicklist)
 	end,
 
 	-- End of /names
 	["366"] = none,
 
-	-- URL for channel
-	["328"] = function(whom, mesg, dest) prin(dest, "URL", "%s", mesg) end,
+	-- MOTD message
+	["372"] = default,
+	
+	-- Beginning of MOTD
+	["375"] = default,
 
-	-- ???
-	["333"] = none,
+	-- End of MOTD
+	["376"] = function(fields, whom, mesg, dest)
+		-- TODO: reenable
+		--send(":%s JOIN %s", nick, JOIN)
+	end,
 
 	-- "xyz" is now your hidden host (set by foo)
-	["396"] = function(whom, mesg, dest) prin("*", "--", "%s %s", dest, mesg) end,
+	["396"] = function(e) prin("*", "--", "%s %s", e.fields[3], e.msg) end,
 
-	[0] = function(cmd, whom, mesg, dest)
-		text = mesg
-		if not mesg or mesg == "" then
-			text = dest
-		end
+	-- No such nick/channel
+	["401"] = function(e) prin("*", "-!-", "No such nick/channel %s", e.fields[3]) end,
 
-		prin(dest, cmd .. " --", "%s", text)
+	[0] = function(e)
+		prin(e.dest, e.fields[1] .. " --", "%s", e.msg or e.dest)
 	end
 }
 
 local function parseirc(reply)
-	local fields, whom, dest, msg = irc.parse(reply)
-	if not whom or whom == "" then whom = nick end
+	-- DEBUG
+	util.append("logs", reply .. "\n")
+
+	local event = irc.parse(reply)
+
+	if not event.nick or event.nick == "" then
+		event.nick = nick
+	end
 
 	-- The first element in the fields array points to
 	-- the type of message we're dealing with.
-	local cmd = fields[1]
-
-	-- fold message to width
-	local mesg = util.fold(msg, RIGHT_PADDING)
-	mesg = mesg:gsub("\n", "\n            ")
+	local cmd = event.fields[1]
 
 	-- When recieving MOTD messages and similar stuff from
 	-- the IRCd, send it to the main tab
 	if cmd:find("00.") or cmd:find("2[56].") or cmd:find("37.") then
-		dest = "*"
+		event.dest = "*"
 	end
 
-	if irchand[cmd] then
-		(irchand[cmd])(whom, mesg, dest)
-	else
-		(irchand[0])(cmd, whom, mesg, dest)
-	end
+	-- When recieving PMs, send it to the buffer named after
+	-- the sender
+	if event.dest == nick then event.dest = event.nick end
+
+	local handler = irchand[cmd] or irchand[0]
+	handler(event)
 end
 
 local function send_both(fmt, ...)
@@ -352,16 +453,21 @@ end
 
 local cmdhand = {
 	["/next"] = function(a, args, inp)
-		if chan < #channels then
-			chan = chan + 1
-		end
-		redraw()
+		switch_buf(chan + 1)
 	end,
 	["/prev"] = function(a, args, inp)
-		if chan > 1 then
-			chan = chan - 1
+		switch_buf(chan - 1)
+	end,
+	["/names"] = function(a, args, inp)
+		-- WARNING: sharp edges! if this is executed in the "*" buffer,
+		-- then the NAMES for *all* channels will be sent in response!
+		local ch = channels[chan]
+
+		if a and a ~= "" then
+			ch = a
 		end
-		redraw()
+
+		send("NAMES %s", ch)
 	end,
 	["/join"] = function(a, args, inp)
 		send(":%s JOIN %s", nick, a)
@@ -373,7 +479,7 @@ local cmdhand = {
 
 		-- if we are the ones joining, then switch to that buffer.
 		if whom == nick then
-			chan = #channels
+			switch_buf(#channels)
 		end
 	end,
 	["/nick"] = function(a, args, inp)
@@ -404,7 +510,7 @@ local function parsecmd(inp)
 		local ac = (cmdhand[_cmd] or cmdhand[0]); ac(a, args, inp)
 	end
 
-	-- clear the input line once we're done.
+	-- clear the input line.
 	printf("\r\x1b[2K\r")
 end
 
@@ -427,6 +533,7 @@ local function main()
 
 	-- create the server buffer.
 	channels[#channels + 1] = "*"
+	switch_buf(1)
 
 	local linehandler = function(line)
 		-- save the sent input to readline's history
@@ -459,6 +566,8 @@ local function main()
 
 		-- is there user input?
 		if fds[0].revents.IN then
+			tty.curs_down(999)
+			tty.curs_show()
 			readline.read_char()
 		end
 

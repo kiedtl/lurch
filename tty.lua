@@ -36,7 +36,7 @@ end
 
 -- clear from the cursor to the end of the current line
 function tty.clear_line()
-	printf("\x1b[K")
+	printf("\r\x1b[K")
 end
 
 -- set scroll area
