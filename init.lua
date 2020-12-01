@@ -30,6 +30,12 @@ PORT = 6667
 NAME = nil
 JOIN = "#bots"
 
+
+CTCP_PING    = true
+CTCP_VERSION = "lurch (beta)"
+CTCP_SOURCE  = "(null)"
+
+
 -- dimensions of the terminal
 tty_width = 80
 tty_height = 24
@@ -243,11 +249,10 @@ local function default2(e) prin("*", "--", "There are %s %s", e.fields[3], e.msg
 local function default(e) prin(e.dest, "--", "%s", e.msg) end
 
 local irchand = {
-	["PING"] = function(e)   send("PONG %s", e.dest) end,
+	["PING"] = function(e)   send("PONG :%s", e.dest or "(null)") end,
 	["AWAY"] = function(e)   prin("*", "--", "Away status: %s", e.msg) end,
 	["MODE"] = function(e)   prin("*", "MODE", "%s", e.msg) end,
 	["NOTICE"] = function(e) prin(e.dest, "NOTE", "%s", e.msg) end,
-	["ACTION"] = function(e) prin(e.dest, "*", "%s %s", ncolor(e.nick), e.msg) end,
 	["PART"] = function(e)
 		prin(e.dest, "<--", "%s has left %s", ncolor(e.nick), e.dest)
 	end,
@@ -410,6 +415,27 @@ local irchand = {
 
 	-- No such nick/channel
 	["401"] = function(e) prin("*", "-!-", "No such nick/channel %s", e.fields[3]) end,
+
+	-- CTCP stuff.
+	["CTCP_ACTION"] = function(e) prin(e.dest, "*", "%s %s", ncolor(e.nick), e.msg) end,
+	["CTCP_VERSION"] = function(e)
+		if CTCP_VERSION then
+			prin("*", "CTCP", "%s requested VERSION (reply: %s)", e.nick, CTCP_VERSION)
+			send("NOTICE %s :\1VERSION %s\1", e.nick, CTCP_VERSION)
+		end
+	end,
+	["CTCP_SOURCE"] = function(e)
+		if CTCP_SOURCE then
+			prin("*", "CTCP", "%s requested SOURCE (reply: %s)", e.nick, CTCP_SOURCE)
+			send("NOTICE %s :\1SOURCE %s\1", e.nick, CTCP_SOURCE)
+		end
+	end,
+	["CTCP_PING"] = function(e)
+		if CTCP_PING then
+			prin("*", "CTCP", "PING from %s", e.nick)
+			send("NOTICE %s :%s", e.nick, e.fields[2])
+		end
+	end,
 
 	[0] = function(e)
 		prin(e.dest, e.fields[1] .. " --", "%s", e.msg or e.dest)
