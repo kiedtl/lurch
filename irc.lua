@@ -63,10 +63,15 @@ function irc.parse(rawmsg)
 	-- If the message itself contains text with surrounding '\x01',
 	-- we're dealing with CTCP. Simply set the type to that text so
 	-- we may specially deal with it later.
-	if (event.msg):find("\x01[A-Z]+%s.-\x01") then
-		event.fields[1] = (event.msg):gmatch("\x01([A-Z]+)%s?.-\x01")()
-		event.msg = (event.msg):gsub("\x01[A-Z]+%s?", "")
-		event.msg = (event.msg):gsub("\x01", "")
+	if (event.msg):find("\1[A-Z]+%s?([^\1]*)\1") then
+		event.fields[1] = (event.msg):gmatch("\1([A-Z]+)%s?")()
+		event.msg = (event.msg):gsub("\1[A-Z]+%s?", "")
+		event.msg = (event.msg):gsub("\1", "")
+
+		-- prepend CTCP_ to the command to distinguish it from other
+		-- non-CTCP commands (e.g. PING vs CTCP PING)
+		event.fields[1] = "CTCP_" .. event.fields[1]
+
 	end
 
 	return event
