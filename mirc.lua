@@ -93,6 +93,7 @@ function mirc.to_tty_seq(text)
 		text = text:gsub(("\x03%s"):format(fg), tty_fg)
 	end
 
+	text = text:gsub(mirc.COLOR, "\x1b[m")
 	return text
 end
 
