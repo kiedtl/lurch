@@ -85,27 +85,30 @@ local function load_nick_highlight_colors()
 	end
 end
 
-local function ncolor(nick)
+local function ncolor(text, text_as)
 	local access = ""
 
-	if nick:find("^[~@%&+!]") then
+	assert(text)
+	if not text_as then text_as = text end
+
+	if text_as:find("^[~@%&+!]") then
 		access = nick:gmatch("(.)")()
-		nick = nick:gsub("^.", "")
+		text_as = nick:gsub("^.", "")
 	end
 
-	if not nicks[nick] then
-		nicks[nick] = {}
+	if not nicks[text_as] then
+		nicks[text_as] = {}
 	end
 
 	-- store nickname highlight color, so that we don't have to
 	-- calculate the nickname's hash each time
-	if not nicks[nick].highlight then
+	if not nicks[text_as].highlight then
 		-- add one to the hash value, as the hash value may be 0
-		nicks[nick].highlight = util.hash(nick, #colors - 1)
-		nicks[nick].highlight = nicks[nick].highlight + 1
+		nicks[text_as].highlight = util.hash(text_as, #colors - 1)
+		nicks[text_as].highlight = nicks[text_as].highlight + 1
 	end
 
-	local color = colors[nicks[nick].highlight]
+	local color = colors[nicks[text_as].highlight]
 	local esc = "\x1b[1m"
 
 	-- if no color could be found, just use the default of black
@@ -113,7 +116,7 @@ local function ncolor(nick)
 		esc = format("\x1b[1;38;2;%s;%s;%sm", color.r, color.g, color.b)
 	end
 
-	return format("%s%s%s\x1b[m", access, esc, nick)
+	return format("%s%s%s\x1b[m", access, esc, text)
 end
 
 local function refresh()
@@ -255,9 +258,10 @@ local irchand = {
 		prin("*", "--", "%s sent an invite to %s", e.nick, e.msg)
 	end,
 	["PRIVMSG"] = function(e)
+		local sender = e.nick
 		-- remove extra characters from nick that won't fit.
-		if #e.nick > 10 then
-			e.nick = (e.nick):sub(1, 9) .. "\x1b[m\x1b[37m+\x1b[m"
+		if #sender > 10 then
+			sender = (sender):sub(1, 9) .. "\x1b[m\x1b[37m+\x1b[m"
 		end
 
 		-- convert or remove mIRC IRC colors.
@@ -267,7 +271,7 @@ local irchand = {
 			e.msg = mirc.remove(e.msg)
 		end
 
-		prin(e.dest, ncolor(e.nick), "%s", e.msg)
+		prin(e.dest, ncolor(sender, e.nick), "%s", e.msg)
 	end,
 	["QUIT"] = function(e)
 		if not nicks[e.nick] or not nicks[e.nick].joined then
@@ -469,7 +473,7 @@ local irchand = {
 	end,
 
 	-- CTCP stuff.
-	["CTCP_ACTION"] = function(e) prin(e.dest, "*", "%s %s", ncolor(e.nick), e.msg) end,
+	["CTCP_ACTION"] = function(e) prin(e.dest, "*", "%s %s", ncolor(e.nick or nick), e.msg) end,
 	["CTCP_VERSION"] = function(e)
 		if CTCP_VERSION then
 			prin("*", "CTCP", "%s requested VERSION (reply: %s)", e.nick, CTCP_VERSION)
@@ -593,31 +597,34 @@ local cmdhand = {
 		clean()
 		os.exit(0)
 	end,
+	["/me"] = function(a, args, inp)
+		send_both(":%s PRIVMSG %s :\1ACTION %s %s\1", nick, channels[chan], a, args)
+	end,
 	[0] = function(a, args, inp)
 		send_both(":%s PRIVMSG %s :%s", nick, channels[chan], inp)
 	end
 }
 
 local function parsecmd(inp)
+	-- clear the input line.
+	printf("\x1b[A\r\x1b[2K\r\x1b[B")
+
 	local _cmd, a, args = inp:gmatch("([^%s]+)%s?([^%s]*)%s?(.*)")()
 
 	if _cmd then
 		local ac = (cmdhand[_cmd] or cmdhand[0]); ac(a, args, inp)
 	end
-
-	-- clear the input line.
-	printf("\r\x1b[2K\r")
 end
 
 function core.main()
 	refresh()
 
 
-	local nick = NICK or os.getenv("IRCNICK") or os.getenv("USER")
+	local _nick = NICK or os.getenv("IRCNICK") or os.getenv("USER")
 	local user = USER or os.getenv("IRCUSER") or os.getenv("USER")
 	local name = NAME or "hii im drukn"
 
-	local r, e = irc.connect(HOST, PORT, nick, user, name, PASS)
+	local r, e = irc.connect(HOST, PORT, _nick, user, name, PASS)
 	if not r then panic("error: %s\n", e) end
 
 	load_nick_highlight_colors()

@@ -24,6 +24,7 @@ end
 -- IRCv3 tags                 sender                          command arg   msg
 --
 function irc.parse(rawmsg)
+	assert(rawmsg)
 	local event = {}
 
 	-- Remove the trailing \r\n from the raw message.
@@ -47,6 +48,8 @@ function irc.parse(rawmsg)
 			event.nick = (event.from):gmatch("(.-)!.-@.+")()
 			event.user = (event.from):gmatch(".-!(.-)@.+")()
 			event.host = (event.from):gmatch(".-!.-@(.+)")()
+		else
+			event.nick = event.from
 		end
 
 		-- strip out what was already processed.
