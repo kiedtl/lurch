@@ -240,7 +240,14 @@ local irchand = {
 	["PING"] = function(e)   irc.send("PONG :%s", e.dest or "(null)") end,
 	["AWAY"] = function(e)   prin("*", "--", "Away status: %s", e.msg) end,
 	["MODE"] = function(e)   prin("*", "MODE", "%s", e.msg) end,
-	["NOTICE"] = function(e) prin(e.dest, "NOTE", "%s", e.msg) end,
+	["NOTICE"] = function(e)
+		local dest = e.dest
+		if not e.nick and e.dest == nick then
+			dest = "*"
+		end
+
+		prin(dest, "NOTE", "%s", e.msg)
+	end,
 	["PART"] = function(e)
 		prin(e.dest, "<--", "%s has left %s (%s)", ncolor(e.nick), e.dest, e.msg)
 	end,
