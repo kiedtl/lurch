@@ -8,17 +8,23 @@
 #include <netdb.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
 
-FILE *con;
+// TODO: signals
+
+int conn_fd = 0;
 lua_State *L;
 
 int api_tty_size(lua_State *pL);
-int api_connect(lua_State *pL);
+int api_conn_init(lua_State *pL);
+int api_conn_fd(lua_State *pL);
+int api_conn_send(lua_State *pL);
+int api_conn_receive(lua_State *pL);
 
 #define ADD_CFUNC(FUNC, NAME) do { \
 		lua_pushcfunction(L, FUNC); \
@@ -36,7 +42,10 @@ main(int argc, char **argv)
 	luaopen_math(L);
 
 	ADD_CFUNC(api_tty_size, "__lurch_tty_size");
-	ADD_CFUNC(api_connect, "__lurch_connect");
+	ADD_CFUNC(api_conn_init, "__lurch_conn_init");
+	ADD_CFUNC(api_conn_fd, "__lurch_conn_fd");
+	ADD_CFUNC(api_conn_send, "__lurch_conn_send");
+	ADD_CFUNC(api_conn_receive, "__lurch_conn_receive");
 
 	(void) luaL_dostring(L,
 		"xpcall(function()\n"
@@ -82,13 +91,12 @@ api_tty_size(lua_State *pL)
 
 
 int
-api_connect(lua_State *pL)
+api_conn_init(lua_State *pL)
 {
 	char *host = (char *) luaL_checkstring(pL, 1);
 	char *port = (char *) luaL_checkstring(pL, 2);
 
 	static struct addrinfo hints;
-	int srv = 0;
 	struct addrinfo *res, *r;
 
 	memset(&hints, 0, sizeof hints);
@@ -102,11 +110,11 @@ api_connect(lua_State *pL)
 	}
 
 	for(r = res; r != NULL; r = r->ai_next) {
-		if((srv = socket(r->ai_family, r->ai_socktype, r->ai_protocol)) == -1)
+		if((conn_fd = socket(r->ai_family, r->ai_socktype, r->ai_protocol)) == -1)
 			continue;
-		if(connect(srv, r->ai_addr, r->ai_addrlen) == 0)
+		if(connect(conn_fd, r->ai_addr, r->ai_addrlen) == 0)
 			break;
-		close(srv);
+		close(conn_fd);
 	}
 
 	freeaddrinfo(res);
@@ -117,13 +125,46 @@ api_connect(lua_State *pL)
 		return 2;
 	}
 
-	con = fdopen(srv, "r+");
+	// push some random integer to provide a distinction between calls to this
+	// function that return nil because they failed or because there was nothing
+	// to return
+	lua_pushinteger(L, (lua_Integer) 1);
+	return 1;
+}
 
-	if (con == NULL) {
-		lua_pushnil(pL);
-		lua_pushstring(pL, format("cannot connect to host: %s", strerror(errno)));
-		return 2;
-	}
+int
+api_conn_fd(lua_State *pL)
+{
+	lua_pushinteger(pL, (lua_Integer) conn_fd);
+	return 1;
+}
+
+int
+api_conn_send(lua_State *pL)
+{
+	// TODO: check if connection is still open
+	char *data = (char *) luaL_checkstring(pL, 1);
+	char *fmtd = format("%s\r\n", data);
+
+	ssize_t sent = send(conn_fd, fmtd, strlen(fmtd), 0);
+	assert(sent == (strlen(data) + 2));
 
 	return 0;
+}
+
+int
+api_conn_receive(lua_State *pL)
+{
+	int len = 0;
+	ioctl(conn_fd, FIONREAD, &len);
+	char *bufin = malloc(len + 1);
+	assert(bufin);
+
+	int received = read(conn_fd, (void *) bufin, len);
+	assert(received == len);
+
+	lua_pushstring(pL, (const char *) bufin);
+	free(bufin);
+
+	return 1;
 }

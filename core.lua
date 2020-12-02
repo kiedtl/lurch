@@ -3,16 +3,14 @@
 
 local core = {}
 
-local util = require('util')
-local irc = require('irc')
-local readline = require('readline')
-local tty = require('tty')
-local socket = require('socket')
-local lfs = require('lfs')
-local mirc = require('mirc')
 local posix = require('posix')
+local readline = require('readline')
 
-local tcp = assert(socket.tcp())
+local irc = require('irc')
+local mirc = require('mirc')
+local tty = require('tty')
+local util = require('util')
+
 local printf = util.printf
 local eprintf = util.eprintf
 local format = util.format
@@ -23,7 +21,7 @@ LEFT_PADDING = 10
 RIGHT_PADDING = 80
 
 
-HOST = "dsklfjsd"--"irc.freenode.net"
+HOST = "irc.freenode.net"
 NICK = "inebriate|lurch"
 PASS = nil
 USER = nil
@@ -85,11 +83,6 @@ local function load_nick_highlight_colors()
 		colors[#colors].g = tonumber(g, 16)
 		colors[#colors].b = tonumber(b, 16)
 	end
-end
-
-local function send(fmt, ...)
-	local r, e = tcp:send(format(fmt, ...) .. "\n")
-	if not r then panic("error: %s", e) end
 end
 
 local function ncolor(nick)
@@ -184,21 +177,6 @@ local function switch_buf(ch)
 	end
 end
 
-local function connect()
-	local r, e = __lurch_connect(HOST, PORT)
-	if not r then panic("error: %s\n", e) end
-
-	tcp:connect(HOST, PORT)
-
-	local nick = NICK or os.getenv("IRCNICK") or os.getenv("USER")
-	local user = USER or os.getenv("IRCUSER") or os.getenv("USER")
-	local name = NAME or "hii im drukn"
-
-	send("NICK %s", nick)
-	send("USER %s %s %s :%s", user, user, user, name)
-	if PASS then send("PASS %s", PASS) end
-end
-
 local function prin(dest, left, right_fmt, ...)
 	local right = format(right_fmt, ...)
 
@@ -259,7 +237,7 @@ local function default2(e) prin("*", "--", "There are %s %s", e.fields[3], e.msg
 local function default(e) prin(e.dest, "--", "%s", e.msg) end
 
 local irchand = {
-	["PING"] = function(e)   send("PONG :%s", e.dest or "(null)") end,
+	["PING"] = function(e)   irc.send("PONG :%s", e.dest or "(null)") end,
 	["AWAY"] = function(e)   prin("*", "--", "Away status: %s", e.msg) end,
 	["MODE"] = function(e)   prin("*", "MODE", "%s", e.msg) end,
 	["NOTICE"] = function(e) prin(e.dest, "NOTE", "%s", e.msg) end,
@@ -489,19 +467,19 @@ local irchand = {
 	["CTCP_VERSION"] = function(e)
 		if CTCP_VERSION then
 			prin("*", "CTCP", "%s requested VERSION (reply: %s)", e.nick, CTCP_VERSION)
-			send("NOTICE %s :\1VERSION %s\1", e.nick, CTCP_VERSION)
+			irc.send("NOTICE %s :\1VERSION %s\1", e.nick, CTCP_VERSION)
 		end
 	end,
 	["CTCP_SOURCE"] = function(e)
 		if CTCP_SOURCE then
 			prin("*", "CTCP", "%s requested SOURCE (reply: %s)", e.nick, CTCP_SOURCE)
-			send("NOTICE %s :\1SOURCE %s\1", e.nick, CTCP_SOURCE)
+			irc.send("NOTICE %s :\1SOURCE %s\1", e.nick, CTCP_SOURCE)
 		end
 	end,
 	["CTCP_PING"] = function(e)
 		if CTCP_PING then
 			prin("*", "CTCP", "PING from %s", e.nick)
-			send("NOTICE %s :%s", e.nick, e.fields[2])
+			irc.send("NOTICE %s :%s", e.nick, e.fields[2])
 		end
 	end,
 
@@ -541,7 +519,7 @@ end
 local function send_both(fmt, ...)
 	-- this is a simple function to send the input to the
 	-- terminal and to the server at the same time.
-	send(fmt, ...)
+	irc.send(fmt, ...)
 	parseirc(format(fmt, ...))
 end
 
@@ -559,19 +537,19 @@ local cmdhand = {
 		end
 
 		if not a or a == "" then return end
-		send(":%s INVITE %s :%s", nick, a, channels[chan])
+		irc.send(":%s INVITE %s :%s", nick, a, channels[chan])
 	end,
 	["/names"] = function(a, args, inp)
-		send("NAMES %s", a or channels[chan])
+		irc.send("NAMES %s", a or channels[chan])
 	end,
 	["/topic"] = function(a, args, inp)
-		send("TOPIC %s", a or channels[chan])
+		irc.send("TOPIC %s", a or channels[chan])
 	end,
 	["/whois"] = function(a, args, inp)
-		if a and a ~= "" then send("WHOIS %s", a) end
+		if a and a ~= "" then irc.send("WHOIS %s", a) end
 	end,
 	["/join"] = function(a, args, inp)
-		send(":%s JOIN %s", nick, a)
+		irc.send(":%s JOIN %s", nick, a)
 		status()
 
 		if not util.array_contains(channels, dest) then
@@ -592,23 +570,23 @@ local cmdhand = {
 		local msg = inp
 		if not inp or inp ~= "" then msg = PART_MSG end
 
-		send(":%s PART %s :%s", nick, channels[chan], msg)
+		irc.send(":%s PART %s :%s", nick, channels[chan], msg)
 	end,
 	["/nick"] = function(a, args, inp)
-		send("NICK %s", a)
+		irc.send("NICK %s", a)
 		nick = a
 	end,
 	["/msg"] = function(a, args, inp)
 		send_both(":%s PRIVMSG %s :%s", nick, a, args)
 	end,
 	["/raw"] = function(a, args, inp)
-		send("%s %s", a, args)
+		irc.send("%s %s", a, args)
 	end,
 	["/quit"] = function(a, args, inp)
 		local msg = inp
 		if not inp or inp ~= "" then msg = QUIT_MSG end
 
-		send("QUIT :%s", msg)
+		irc.send("QUIT :%s", msg)
 		eprintf("[lurch exited]\n")
 		clean()
 		os.exit(0)
@@ -631,7 +609,14 @@ end
 
 function core.main()
 	refresh()
-	connect()
+
+
+	local nick = NICK or os.getenv("IRCNICK") or os.getenv("USER")
+	local user = USER or os.getenv("IRCUSER") or os.getenv("USER")
+	local name = NAME or "hii im drukn"
+
+	local r, e = irc.connect(HOST, PORT, nick, user, name, PASS)
+	if not r then panic("error: %s\n", e) end
 
 	load_nick_highlight_colors()
 
@@ -657,9 +642,10 @@ function core.main()
 	end
 	readline.handler_install("", linehandler)
 
+	local conn_fd = __lurch_conn_fd()
 	local fds = {
 		[0] = { events = { IN = { true } } },
-		[tcp:getfd()] = { events = { IN = { true } } }
+		[conn_fd] = { events = { IN = { true } } }
 	}
 
 	while "pigs fly" do
@@ -673,10 +659,13 @@ function core.main()
 		end
 
 		-- did the server send data?
-		if fds[tcp:getfd()].revents.IN then
-			local reply, tcp_status, _ = tcp:receive("*l")
-			if tcp_status == "closed" then break end
-			parseirc(reply)
+		if fds[conn_fd].revents.IN then
+			local reply, e = __lurch_conn_receive()
+			if not reply then panic("%s", e) end
+
+			for line in reply:gmatch("(.-\r\n)") do
+				parseirc(line)
+			end
 		end
 
 		-- is there user input?
@@ -688,7 +677,7 @@ function core.main()
 
 		-- if the user has entered input or the server has sent
 		-- data, redraw the status bar
-		if fds[0].revents.IN or fds[tcp:getfd()].revents.IN then
+		if fds[0].revents.IN or fds[conn_fd].revents.IN then
 			status()
 		end
 
@@ -701,7 +690,7 @@ end
 
 function core.on_error(err)
 	clean()
-	--send("QUIT :%s", "*poof*")
+	irc.send("QUIT :%s", "*poof*")
 end
 
 return core

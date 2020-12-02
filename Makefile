@@ -5,7 +5,7 @@ SRC     = main.c
 
 all: lurch
 
-lurch:
+lurch: $(SRC)
 	$(CC) $(SRC) -o $@ $(CFLAGS) $(LDFLAGS)
 
 .PHONY: clean

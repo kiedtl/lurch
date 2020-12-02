@@ -1,5 +1,20 @@
 local irc = {}
 
+function irc.send(fmt, ...)
+	__lurch_conn_send(fmt:format(...))
+end
+
+function irc.connect(host, port, nick, user, name, pass)
+	local r, e = __lurch_conn_init(host, port)
+	if not r then return false, e end
+
+	irc.send("USER %s %s %s :%s", user, user, user, name)
+	if pass then irc.send("PASS %s", pass) end
+	irc.send("NICK %s", nick)
+
+	return true
+end
+
 --
 -- ported from the parse() function in https://github.com/dylanaraps/birch
 --
