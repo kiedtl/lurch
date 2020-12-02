@@ -96,7 +96,7 @@ api_conn_init(lua_State *pL)
 	char *host = (char *) luaL_checkstring(pL, 1);
 	char *port = (char *) luaL_checkstring(pL, 2);
 
-	static struct addrinfo hints;
+	struct addrinfo hints;
 	struct addrinfo *res, *r;
 
 	memset(&hints, 0, sizeof hints);
