@@ -1,7 +1,7 @@
-#!/usr/bin/env lua
---
 -- lurch: an extendable irc client in lua
 -- (c) Kiëd Llaentenn
+
+local core = {}
 
 local util = require('util')
 local irc = require('irc')
@@ -23,7 +23,7 @@ LEFT_PADDING = 10
 RIGHT_PADDING = 80
 
 
-HOST = "localhost"--"irc.freenode.net"
+HOST = "dsklfjsd"--"irc.freenode.net"
 NICK = "inebriate|lurch"
 PASS = nil
 USER = nil
@@ -88,7 +88,8 @@ local function load_nick_highlight_colors()
 end
 
 local function send(fmt, ...)
-	tcp:send(format(fmt, ...) .. "\n")
+	local r, e = tcp:send(format(fmt, ...) .. "\n")
+	if not r then panic("error: %s", e) end
 end
 
 local function ncolor(nick)
@@ -123,8 +124,10 @@ local function ncolor(nick)
 end
 
 local function refresh()
-	tty_height = tty.height()
-	tty_width = tty.width()
+	tty_height, tty_width = tty.dimensions()
+
+	assert(tty_height)
+	assert(tty_width)
 
 	tty.alt_buffer()
 	tty.no_line_wrap()
@@ -182,6 +185,9 @@ local function switch_buf(ch)
 end
 
 local function connect()
+	local r, e = __lurch_connect(HOST, PORT)
+	if not r then panic("error: %s\n", e) end
+
 	tcp:connect(HOST, PORT)
 
 	local nick = NICK or os.getenv("IRCNICK") or os.getenv("USER")
@@ -623,7 +629,7 @@ local function parsecmd(inp)
 	printf("\r\x1b[2K\r")
 end
 
-local function main()
+function core.main()
 	refresh()
 	connect()
 
@@ -693,11 +699,9 @@ local function main()
 	os.exit(0)
 end
 
-local function luaerr(err)
+function core.on_error(err)
 	clean()
-	send("QUIT :%s", "*poof*")
-	printf("lua error:\n%s\n", debug.traceback(err, 6))
-	os.exit(1)
+	--send("QUIT :%s", "*poof*")
 end
 
-xpcall(main, luaerr)
+return core
