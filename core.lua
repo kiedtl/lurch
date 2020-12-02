@@ -241,12 +241,11 @@ local irchand = {
 	["AWAY"] = function(e)   prin("*", "--", "Away status: %s", e.msg) end,
 	["MODE"] = function(e)   prin("*", "MODE", "%s", e.msg) end,
 	["NOTICE"] = function(e)
-		local dest = e.dest
-		if not e.nick and e.dest == nick then
-			dest = "*"
+		if e.nick then
+			prin(e.nick, "NOTE", "%s: %s", e.nick, e.msg)
+		else
+			prin("*", "NOTE", "%s", e.msg)
 		end
-
-		prin(dest, "NOTE", "%s", e.msg)
 	end,
 	["PART"] = function(e)
 		prin(e.dest, "<--", "%s has left %s (%s)", ncolor(e.nick), e.dest, e.msg)
@@ -501,10 +500,6 @@ local function parseirc(reply)
 
 	local event = irc.parse(reply)
 
-	if not event.nick or event.nick == "" then
-		event.nick = nick
-	end
-
 	-- The first element in the fields array points to
 	-- the type of message we're dealing with.
 	local cmd = event.fields[1]
@@ -599,7 +594,7 @@ local cmdhand = {
 		os.exit(0)
 	end,
 	[0] = function(a, args, inp)
-		send_both("PRIVMSG %s :%s", channels[chan], inp)
+		send_both(":%s PRIVMSG %s :%s", nick, channels[chan], inp)
 	end
 }
 
