@@ -244,7 +244,7 @@ local irchand = {
 	["AWAY"] = function(e)   prin("*", "--", "Away status: %s", e.msg) end,
 	["MODE"] = function(e)   prin("*", "MODE", "%s", e.msg) end,
 	["NOTICE"] = function(e)
-		if e.nick then
+		if e.host then
 			prin(e.nick, "NOTE", "%s: %s", e.nick, e.msg)
 		else
 			prin("*", "NOTE", "%s", e.msg)
