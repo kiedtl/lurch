@@ -41,6 +41,24 @@ main(int argc, char **argv)
 	luaopen_string(L);
 	luaopen_math(L);
 
+	/* get executable path */
+	char buf[4096];
+	char path[128];
+	sprintf((char *) &path, "/proc/%d/exe", getpid());
+	int len = readlink((char *) &path, (char *) &buf, sizeof(buf));
+	buf[len] = '\0';
+
+	/* trim off the filename */
+	for (size_t i = strlen(buf) - 1; i > 0; --i) {
+		if (buf[i] == '/' || buf [i] == '\\') {
+			buf[i] = '\0';
+			break;
+		}
+	}
+
+	lua_pushstring(L, (char *) &buf);
+	lua_setglobal(L, "__LURCH_EXEDIR");
+
 	ADD_CFUNC(api_tty_size, "__lurch_tty_size");
 	ADD_CFUNC(api_conn_init, "__lurch_conn_init");
 	ADD_CFUNC(api_conn_fd, "__lurch_conn_fd");
@@ -49,10 +67,11 @@ main(int argc, char **argv)
 
 	(void) luaL_dostring(L,
 		"xpcall(function()\n"
-		"  core = require('core')\n"
-		"  core.main()\n"
+		"  package.path = __LURCH_EXEDIR .. '/rt/?.lua;' .. package.path\n"
+		"  rt = require('rt')\n"
+		"  rt.main()\n"
 		"end, function(err)\n"
-		"  if core then core.on_error(err) end\n"
+		"  if rt then rt.on_error(err) end\n"
 		"  print(debug.traceback(err, 6))\n"
 		"  os.exit(1)\n"
 		"end)\n"

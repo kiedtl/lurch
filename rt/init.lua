@@ -1,7 +1,7 @@
 -- lurch: an extendable irc client in lua
 -- (c) Kiëd Llaentenn
 
-local core = {}
+local rt = {}
 
 local posix = require('posix')
 local readline = require('readline')
@@ -66,7 +66,7 @@ local function load_nick_highlight_colors()
 	-- read a list of newline-separated colors from ./colors.
 	-- the colors are in RRGGBB and may or may not be prefixed
 	-- with a #
-	local data = util.read("colors")
+	local data = util.read(__LURCH_EXEDIR .. "/conf/colors")
 
 	-- iterate through each line, and parse each color into
 	-- the R, G, and B values. this allows us to easily construct
@@ -502,11 +502,11 @@ local function parseirc(reply)
 	-- DEBUG
 	util.append("logs", reply .. "\n")
 
-	local event = irc.parse(reply)
+	local event = assert(irc.parse(reply))
 
 	-- The first element in the fields array points to
 	-- the type of message we're dealing with.
-	local cmd = event.fields[1]
+	local cmd = assert(event.fields[1])
 
 	-- When recieving MOTD messages and similar stuff from
 	-- the IRCd, send it to the main tab
@@ -616,7 +616,7 @@ local function parsecmd(inp)
 	end
 end
 
-function core.main()
+function rt.main()
 	refresh()
 
 
@@ -697,9 +697,9 @@ function core.main()
 	os.exit(0)
 end
 
-function core.on_error(err)
+function rt.on_error(err)
 	clean()
 	irc.send("QUIT :%s", "*poof*")
 end
 
-return core
+return rt
