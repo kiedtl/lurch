@@ -502,7 +502,8 @@ local function parseirc(reply)
 	-- DEBUG
 	util.append("logs", reply .. "\n")
 
-	local event = assert(irc.parse(reply))
+	local event = irc.parse(reply)
+	if not event then return end
 
 	-- The first element in the fields array points to
 	-- the type of message we're dealing with.
@@ -651,7 +652,7 @@ function rt.main()
 	end
 	readline.handler_install("", linehandler)
 
-	local conn_fd = __lurch_conn_fd()
+	local conn_fd = lurch.conn_fd()
 	local fds = {
 		[0] = { events = { IN = { true } } },
 		[conn_fd] = { events = { IN = { true } } }
@@ -669,7 +670,7 @@ function rt.main()
 
 		-- did the server send data?
 		if fds[conn_fd].revents.IN then
-			local reply, e = __lurch_conn_receive()
+			local reply, e = lurch.conn_receive()
 			if not reply then panic("%s", e) end
 
 			for line in reply:gmatch("(.-\r\n)") do
@@ -697,7 +698,35 @@ function rt.main()
 	os.exit(0)
 end
 
-function rt.on_error(err)
+local sighand = {
+	-- SIGHUP
+	[1] = function() return true end,
+	-- SIGINT
+	[2] = function() return true end,
+	-- SIGPIPE
+	[13] = function() end,
+	-- SIGUSR1
+	[10] = function() end,
+	-- SIGUSR2
+	[12] = function() end,
+	-- SIGWINCH
+	[28] = function() redraw() end,
+	-- catch-all
+	[0] = function() return true end,
+}
+
+function rt.on_signal(sig)
+	local quitmsg = QUIT_MSG or "*poof*"
+	local handler = sighand[sig] or sighand[0]
+	if (handler)() then
+		clean()
+		irc.send("QUIT :%s", quitmsg)
+		eprintf("[lurch exited]")
+		os.exit(0)
+	end
+end
+
+function rt.on_lerror(err)
 	clean()
 	irc.send("QUIT :%s", "*poof*")
 end

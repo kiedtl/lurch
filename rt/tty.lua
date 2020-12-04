@@ -4,7 +4,7 @@ local printf = util.printf
 local tty = {}
 
 function tty.dimensions()
-	return __lurch_tty_size()
+	return lurch.tty_size()
 end
 
 -- switch to alternate buffer and back

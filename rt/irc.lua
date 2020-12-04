@@ -1,11 +1,11 @@
 local irc = {}
 
 function irc.send(fmt, ...)
-	__lurch_conn_send(fmt:format(...))
+	return lurch.conn_send(fmt:format(...))
 end
 
 function irc.connect(host, port, nick, user, name, pass)
-	local r, e = __lurch_conn_init(host, port)
+	local r, e = lurch.conn_init(host, port)
 	if not r then return false, e end
 
 	irc.send("USER %s %s %s :%s", user, user, user, name)
@@ -29,6 +29,7 @@ function irc.parse(rawmsg)
 
 	-- Remove the trailing \r\n from the raw message.
 	rawmsg = rawmsg:gsub("\r\n$", "")
+	if not rawmsg then return nil end
 
 	-- grab the first "word" of the IRC message, as we know that
 	-- will be the timestamp of the message
