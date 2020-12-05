@@ -157,8 +157,14 @@ local function redraw()
 	tty.curs_up(1)
 
 	if buffers[cur_buf].history then
-		for _, msg in ipairs(buffers[cur_buf].history) do
-			printf("\r\x1b[0m%s\n\r", msg)
+		local start = #buffers[cur_buf].history - (tui.tty_height-2)
+		for i = start, #buffers[cur_buf].history do
+			local msg = buffers[cur_buf].history[i]
+			if msg then
+				printf("\r\x1b[0m%s\n\r", msg)
+			else
+				printf("\n\r", msg)
+			end
 		end
 	end
 
