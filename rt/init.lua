@@ -39,6 +39,8 @@ MIRC_COLORS_ENABLED = true
 tty_width = 80
 tty_height = 24
 
+MAINBUF = "<server>"
+
 colors = {}     -- List of colors used for nick highlighting
 set_colors = {} -- list of cached colors used for each nick/text
 nick = NICK     -- The current nickname
@@ -46,6 +48,7 @@ cur_buf = nil   -- The current buffer
 buffers = {}    -- List of all opened buffers
 nicks = {}      -- Table of all nicknames
 history = {}    -- History of each buffer
+unread = {}     -- list of buffers with unread items
 
 local function clean()
 	tty.line_wrap()
@@ -84,7 +87,7 @@ local function load_nick_highlight_colors()
 	end
 end
 
-local function ncolor(text, text_as)
+local function ncolor(text, text_as, no_bold)
 	local access = ""
 
 	assert(text)
@@ -109,10 +112,11 @@ local function ncolor(text, text_as)
 
 	local color = colors[set_colors[text_as]]
 	local esc = "\x1b[1m"
+	if no_bold then esc = "" end
 
 	-- if no color could be found, just use the default of black
 	if color then
-		esc = format("\x1b[1;38;2;%s;%s;%sm", color.r, color.g, color.b)
+		esc = esc .. format("\x1b[38;2;%s;%s;%sm", color.r, color.g, color.b)
 	end
 
 	return format("%s%s%s\x1b[m", access, esc, text)
@@ -133,11 +137,19 @@ end
 
 local function status()
 	local chanlist = " "
-	for _, ch in ipairs(buffers) do
-		if ch == buffers[cur_buf] then
-			chanlist = chanlist .. "\x1b[7m " .. ch .. " \x1b[0m "
+	for buf = 1, #buffers do
+		local ch = buffers[buf]
+
+		if buf == cur_buf then
+			local pnch = ncolor(format(" %d %s ", buf, ch), ch, true)
+			chanlist = chanlist .. "\x1b[7m" .. pnch .. "\x1b[0m "
 		else
-			chanlist = chanlist .. ch .. " "
+			if not unread[buf] then unread[buf] = 0 end
+			if unread[buf] > 0 then
+				local nch = ncolor(format(" %d %s %s%d ", buf, ch,
+					"+", unread[buf]), ch, true)
+				chanlist = chanlist .. nch .. " "
+			end
 		end
 	end
 
@@ -175,6 +187,7 @@ end
 local function switch_buf(ch)
 	if buffers[ch] then
 		cur_buf = ch
+		unread[cur_buf] = 0
 		redraw()
 	end
 end
@@ -209,6 +222,7 @@ local function prin(dest, left, right_fmt, ...)
 
 	if not util.array_contains(buffers, dest) then
 		buffers[#buffers + 1] = dest
+		status()
 	end
 
 	if dest == buffers[cur_buf] then
@@ -223,8 +237,14 @@ local function prin(dest, left, right_fmt, ...)
 
 		tty.curs_restore()
 		tty.curs_show()
+	else
+		local bufnm = util.array_find(buffers, dest)
+		if not unread[bufnm] then unread[bufnm] = 0 end
+		unread[bufnm] = unread[bufnm] + 1
+		status()
 	end
 
+	-- save to buffer history.
 	if not history[dest] then
 		history[dest] = {}
 	end
@@ -233,12 +253,12 @@ local function prin(dest, left, right_fmt, ...)
 end
 
 local function none(_) end
-local function default2(e) prin("*", "--", "There are %s %s", e.fields[3], e.msg) end
+local function default2(e) prin(MAINBUF, "--", "There are %s %s", e.fields[3], e.msg) end
 local function default(e) prin(e.dest, "--", "%s", e.msg) end
 
 local irchand = {
 	["PING"] = function(e)   irc.send("PONG :%s", e.dest or "(null)") end,
-	["AWAY"] = function(e)   prin("*", "--", "Away status: %s", e.msg) end,
+	["AWAY"] = function(e)   prin(MAINBUF, "--", "Away status: %s", e.msg) end,
 	["MODE"] = function(e)
 		if (e.dest):find("#") then
 			local mode = e.fields[3]
@@ -249,14 +269,14 @@ local irchand = {
 			mode = mode .. " " .. e.msg
 			prin(e.dest, "MODE", "[%s] by %s", mode, ncolor(e.nick))
 		else
-			prin("*", "MODE", "%s", e.msg)
+			prin(MAINBUF, "MODE", "%s", e.msg)
 		end
 	end,
 	["NOTICE"] = function(e)
 		if e.host then
 			prin(e.nick, "NOTE", "%s: %s", e.nick, e.msg)
 		else
-			prin("*", "NOTE", "%s", e.msg)
+			prin(MAINBUF, "NOTE", "%s", e.msg)
 		end
 	end,
 	["PART"] = function(e)
@@ -267,7 +287,7 @@ local irchand = {
 	end,
 	["INVITE"] = function(e)
 		-- TODO: auto-join on invite?
-		prin("*", "--", "%s sent an invite to %s", e.nick, e.msg)
+		prin(MAINBUF, "--", "%s sent an invite to %s", e.nick, e.msg)
 	end,
 	["PRIVMSG"] = function(e)
 		local sender = e.nick
@@ -383,19 +403,19 @@ local irchand = {
 	-- WHOIS: RPL_WHOISUSER (response to /whois)
 	-- <nick> <user> <host> * :realname
 	["311"] = function(e)
-		prin("*", "WHOIS", "[%s] (%s!%s@%s): %s", ncolor(e.fields[3]),
+		prin(MAINBUF, "WHOIS", "[%s] (%s!%s@%s): %s", ncolor(e.fields[3]),
 			e.fields[3], e.fields[4], e.fields[5], e.msg)
 	end,
 
 	-- WHOIS: RPL_WHOISSERVER (response to /whois)
 	-- <nick> <server> :serverinfo
 	["312"] = function(e)
-		prin("*", "WHOIS", "[%s] %s (%s)", ncolor(e.fields[3]), e.fields[4], e.msg)
+		prin(MAINBUF, "WHOIS", "[%s] %s (%s)", ncolor(e.fields[3]), e.fields[4], e.msg)
 	end,
 
 	-- End of WHOIS
 	["318"] = function(e)
-		prin("*", "WHOIS", "[%s] End of WHOIS info.", ncolor(e.fields[3]))
+		prin(MAINBUF, "WHOIS", "[%s] End of WHOIS info.", ncolor(e.fields[3]))
 	end,
 
 	-- URL for channel
@@ -403,7 +423,7 @@ local irchand = {
 
 	-- WHOIS: <nick> is logged in as <user> (response to /whois)
 	["330"] = function(e)
-		prin("*", "WHOIS", "[%s] is logged in as %s", ncolor(e.fields[3]),
+		prin(MAINBUF, "WHOIS", "[%s] is logged in as %s", ncolor(e.fields[3]),
 			ncolor(e.fields[4]))
 	end,
 
@@ -470,10 +490,10 @@ local irchand = {
 	end,
 
 	-- "xyz" is now your hidden host (set by foo)
-	["396"] = function(e) prin("*", "--", "%s %s", e.fields[3], e.msg) end,
+	["396"] = function(e) prin(MAINBUF, "--", "%s %s", e.fields[3], e.msg) end,
 
 	-- No such nick/channel
-	["401"] = function(e) prin("*", "-!-", "No such nick/channel %s", e.fields[3]) end,
+	["401"] = function(e) prin(MAINBUF, "-!-", "No such nick/channel %s", e.fields[3]) end,
 
 	-- <nick> is already in channel (response to /invite)
 	["443"] = function(e)
@@ -490,26 +510,26 @@ local irchand = {
 
 	-- WHOIS: <nick> is using a secure connection (response to /whois)
 	["671"] = function(e)
-		prin("*", "WHOIS", "[%s] uses a secure connection", ncolor(e.fields[3]))
+		prin(MAINBUF, "WHOIS", "[%s] uses a secure connection", ncolor(e.fields[3]))
 	end,
 
 	-- CTCP stuff.
-	["CTCP_ACTION"] = function(e) prin(e.dest, "*", "%s %s", ncolor(e.nick or nick), e.msg) end,
+	["CTCP_ACTION"] = function(e) prin(e.dest, MAINBUF, "%s %s", ncolor(e.nick or nick), e.msg) end,
 	["CTCP_VERSION"] = function(e)
 		if CTCP_VERSION then
-			prin("*", "CTCP", "%s requested VERSION (reply: %s)", e.nick, CTCP_VERSION)
+			prin(MAINBUF, "CTCP", "%s requested VERSION (reply: %s)", e.nick, CTCP_VERSION)
 			irc.send("NOTICE %s :\1VERSION %s\1", e.nick, CTCP_VERSION)
 		end
 	end,
 	["CTCP_SOURCE"] = function(e)
 		if CTCP_SOURCE then
-			prin("*", "CTCP", "%s requested SOURCE (reply: %s)", e.nick, CTCP_SOURCE)
+			prin(MAINBUF, "CTCP", "%s requested SOURCE (reply: %s)", e.nick, CTCP_SOURCE)
 			irc.send("NOTICE %s :\1SOURCE %s\1", e.nick, CTCP_SOURCE)
 		end
 	end,
 	["CTCP_PING"] = function(e)
 		if CTCP_PING then
-			prin("*", "CTCP", "PING from %s", e.nick)
+			prin(MAINBUF, "CTCP", "PING from %s", e.nick)
 			irc.send("NOTICE %s :%s", e.nick, e.fields[2])
 		end
 	end,
@@ -537,7 +557,7 @@ local function parseirc(reply)
 	-- When recieving MOTD messages and similar stuff from
 	-- the IRCd, send it to the main tab
 	if cmd:find("00.") or cmd:find("2[56].") or cmd:find("37.") then
-		event.dest = "*"
+		event.dest = MAINBUF
 	end
 
 	-- When recieving PMs, send it to the buffer named after
@@ -564,7 +584,7 @@ local cmdhand = {
 	end,
 	["/invite"] = function(a, args, inp)
 		if not (buffers[cur_buf]):find("#") then
-			prin("*", "-!-", "/invite must be executed in a channel buffer.")
+			prin(MAINBUF, "-!-", "/invite must be executed in a channel buffer.")
 			return
 		end
 
@@ -593,7 +613,7 @@ local cmdhand = {
 	end,
 	["/part"] = function(a, args, inp)
 		if not (buffers[cur_buf]):find("#") then
-			prin("*", "-!-", "/invite must be executed in a channel buffer.")
+			prin(MAINBUF, "-!-", "/invite must be executed in a channel buffer.")
 			return
 		end
 
@@ -652,7 +672,7 @@ function rt.init()
 
 	load_nick_highlight_colors()
 
-	buffers[#buffers + 1] = "*"
+	buffers[#buffers + 1] = MAINBUF
 	switch_buf(1)
 
 	lurch.bind_keyseq("\\C-n")
