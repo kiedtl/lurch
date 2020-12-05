@@ -39,12 +39,13 @@ MIRC_COLORS_ENABLED = true
 tty_width = 80
 tty_height = 24
 
-colors = {}    -- List of colors used for nick highlighting
-nick = NICK    -- The current nickname
-chan = nil     -- The current channel
-channels = {}  -- List of all opened channels
-nicks = {}     -- Table of all nicknames
-history = {}   -- History of each buffer
+colors = {}     -- List of colors used for nick highlighting
+set_colors = {} -- list of cached colors used for each nick/text
+nick = NICK     -- The current nickname
+cur_buf = nil   -- The current buffer
+buffers = {}    -- List of all opened buffers
+nicks = {}      -- Table of all nicknames
+history = {}    -- History of each buffer
 
 local function clean()
 	tty.line_wrap()
@@ -100,13 +101,13 @@ local function ncolor(text, text_as)
 
 	-- store nickname highlight color, so that we don't have to
 	-- calculate the nickname's hash each time
-	if not nicks[text_as].highlight then
+	if not set_colors[text_as] then
 		-- add one to the hash value, as the hash value may be 0
-		nicks[text_as].highlight = util.hash(text_as, #colors - 1)
-		nicks[text_as].highlight = nicks[text_as].highlight + 1
+		set_colors[text_as] = util.hash(text_as, #colors - 1)
+		set_colors[text_as] = set_colors[text_as] + 1
 	end
 
-	local color = colors[nicks[text_as].highlight]
+	local color = colors[set_colors[text_as]]
 	local esc = "\x1b[1m"
 
 	-- if no color could be found, just use the default of black
@@ -132,8 +133,8 @@ end
 
 local function status()
 	local chanlist = " "
-	for _, ch in ipairs(channels) do
-		if ch == channels[chan] then
+	for _, ch in ipairs(buffers) do
+		if ch == buffers[cur_buf] then
 			chanlist = chanlist .. "\x1b[7m " .. ch .. " \x1b[0m "
 		else
 			chanlist = chanlist .. ch .. " "
@@ -159,8 +160,8 @@ local function redraw()
 	tty.curs_down(999)
 	tty.curs_up(1)
 
-	if history[channels[chan]] then
-		for _, msg in ipairs(history[channels[chan]]) do
+	if history[buffers[cur_buf]] then
+		for _, msg in ipairs(history[buffers[cur_buf]]) do
 			printf("\r%s\n\r", msg)
 		end
 	end
@@ -172,8 +173,8 @@ local function redraw()
 end
 
 local function switch_buf(ch)
-	if channels[ch] then
-		chan = ch
+	if buffers[ch] then
+		cur_buf = ch
 		redraw()
 	end
 end
@@ -206,13 +207,11 @@ local function prin(dest, left, right_fmt, ...)
 
 	local out = format("\x1b[%sC%s %s", pad, left, right):gsub("\n+$", "")
 
-	-- TODO: rename "channels" to "buffers"; that's a more accurate
-	-- description
-	if not util.array_contains(channels, dest) then
-		channels[#channels + 1] = dest
+	if not util.array_contains(buffers, dest) then
+		buffers[#buffers + 1] = dest
 	end
 
-	if dest == channels[chan] then
+	if dest == buffers[cur_buf] then
 		tty.curs_hide()
 		tty.curs_save()
 
@@ -291,20 +290,20 @@ local irchand = {
 			return
 		end
 
-		-- display quit message for all channels that user has
+		-- display quit message for all buffers that user has
 		-- joined.
 		for _, ch in ipairs(nicks[e.nick].joined) do
 			prin(ch, "<--", "%s has quit %s (%s)", ncolor(e.nick), e.dest, e.msg)
 		end
 	end,
 	["JOIN"] = function(e)
-		if not util.array_contains(channels, e.dest) then
-			channels[#channels + 1] = e.dest
+		if not util.array_contains(buffers, e.dest) then
+			buffers[#buffers + 1] = e.dest
 		end
 
 		-- if we are the ones joining, then switch to that buffer.
 		if e.nick == nick then
-			switch_buf(#channels)
+			switch_buf(#buffers)
 		end
 
 		-- sometimes the channel joined is contained in the message.
@@ -324,10 +323,10 @@ local irchand = {
 			nicks[e.nick] = nil
 		end
 
-		-- display nick message for all channels that user has joined.
+		-- display nick message for all buffers that user has joined.
 		local bufs = nil
 		if e.nick == nick or not nicks[e.nick] then
-			bufs = channels
+			bufs = buffers
 		else
 			bufs = nicks[e.nick].joined
 		end
@@ -485,7 +484,7 @@ local irchand = {
 	-- cannot join channel (you are banned)
 	["474"] = function(e)
 		prin(e.fields[3], "-!-", "you're banned creep")
-		local buf = util.array_find(channels, e.fields[3])
+		local buf = util.array_find(buffers, e.fields[3])
 		if buf then switch_buf(buf) end
 	end,
 
@@ -558,25 +557,25 @@ end
 
 local cmdhand = {
 	["/next"] = function(a, args, inp)
-		switch_buf(chan + 1)
+		switch_buf(cur_buf + 1)
 	end,
 	["/prev"] = function(a, args, inp)
-		switch_buf(chan - 1)
+		switch_buf(cur_buf - 1)
 	end,
 	["/invite"] = function(a, args, inp)
-		if not (channels[chan]):find("#") then
+		if not (buffers[cur_buf]):find("#") then
 			prin("*", "-!-", "/invite must be executed in a channel buffer.")
 			return
 		end
 
 		if not a or a == "" then return end
-		irc.send(":%s INVITE %s :%s", nick, a, channels[chan])
+		irc.send(":%s INVITE %s :%s", nick, a, buffers[cur_buf])
 	end,
 	["/names"] = function(a, args, inp)
-		irc.send("NAMES %s", a or channels[chan])
+		irc.send("NAMES %s", a or buffers[cur_buf])
 	end,
 	["/topic"] = function(a, args, inp)
-		irc.send("TOPIC %s", a or channels[chan])
+		irc.send("TOPIC %s", a or buffers[cur_buf])
 	end,
 	["/whois"] = function(a, args, inp)
 		if a and a ~= "" then irc.send("WHOIS %s", a) end
@@ -585,15 +584,15 @@ local cmdhand = {
 		irc.send(":%s JOIN %s", nick, a)
 		status()
 
-		if not util.array_contains(channels, dest) then
-			channels[#channels + 1] = dest
+		if not util.array_contains(buffers, dest) then
+			buffers[#buffers + 1] = dest
 		end
 
 		-- if we are the ones joining, then switch to that buffer.
-		switch_buf(#channels)
+		switch_buf(#buffers)
 	end,
 	["/part"] = function(a, args, inp)
-		if not (channels[chan]):find("#") then
+		if not (buffers[cur_buf]):find("#") then
 			prin("*", "-!-", "/invite must be executed in a channel buffer.")
 			return
 		end
@@ -601,7 +600,7 @@ local cmdhand = {
 		local msg = inp
 		if not inp or inp ~= "" then msg = PART_MSG end
 
-		irc.send(":%s PART %s :%s", nick, channels[chan], msg)
+		irc.send(":%s PART %s :%s", nick, buffers[cur_buf], msg)
 	end,
 	["/nick"] = function(a, args, inp)
 		irc.send("NICK %s", a)
@@ -623,10 +622,10 @@ local cmdhand = {
 		os.exit(0)
 	end,
 	["/me"] = function(a, args, inp)
-		send_both(":%s PRIVMSG %s :\1ACTION %s %s\1", nick, channels[chan], a, args)
+		send_both(":%s PRIVMSG %s :\1ACTION %s %s\1", nick, buffers[cur_buf], a, args)
 	end,
 	[0] = function(a, args, inp)
-		send_both(":%s PRIVMSG %s :%s", nick, channels[chan], inp)
+		send_both(":%s PRIVMSG %s :%s", nick, buffers[cur_buf], inp)
 	end
 }
 
@@ -653,7 +652,7 @@ function rt.init()
 
 	load_nick_highlight_colors()
 
-	channels[#channels + 1] = "*"
+	buffers[#buffers + 1] = "*"
 	switch_buf(1)
 
 	lurch.bind_keyseq("\\C-n")
@@ -718,8 +717,8 @@ end
 
 local keyseq_handler = {
 	-- Ctrl+n, Ctrl+p
-	[14] = function() switch_buf(chan + 1) end,
-	[16] = function() switch_buf(chan - 1) end,
+	[14] = function() switch_buf(cur_buf + 1) end,
+	[16] = function() switch_buf(cur_buf - 1) end,
 }
 
 function rt.on_keyseq(key)
