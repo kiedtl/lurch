@@ -10,7 +10,7 @@ local util = require('util')
 
 local printf = util.printf
 local eprintf = util.eprintf
-local format = util.format
+local format = string.format
 
 math.randomseed(os.time())
 
@@ -220,7 +220,7 @@ local function prin(dest, left, right_fmt, ...)
 
 	local out = format("\x1b[%sC%s %s", pad, left, right):gsub("\n+$", "")
 
-	if not util.array_contains(buffers, dest) then
+	if not util.contains(buffers, dest) then
 		buffers[#buffers + 1] = dest
 		status()
 	end
@@ -238,7 +238,7 @@ local function prin(dest, left, right_fmt, ...)
 		tty.curs_restore()
 		tty.curs_show()
 	else
-		local bufnm = util.array_find(buffers, dest)
+		local bufnm = util.indexof(buffers, dest)
 		if not unread[bufnm] then unread[bufnm] = 0 end
 		unread[bufnm] = unread[bufnm] + 1
 		status()
@@ -317,7 +317,7 @@ local irchand = {
 		end
 	end,
 	["JOIN"] = function(e)
-		if not util.array_contains(buffers, e.dest) then
+		if not util.contains(buffers, e.dest) then
 			buffers[#buffers + 1] = e.dest
 		end
 
@@ -465,7 +465,7 @@ local irchand = {
 				nicks[_nick].joined = {}
 			end
 
-			if not util.array_contains(nicks[_nick].joined, e.dest) then
+			if not util.contains(nicks[_nick].joined, e.dest) then
 				local sz = #nicks[_nick].joined
 				nicks[_nick].joined[sz + 1] = e.dest
 			end
@@ -504,7 +504,7 @@ local irchand = {
 	-- cannot join channel (you are banned)
 	["474"] = function(e)
 		prin(e.fields[3], "-!-", "you're banned creep")
-		local buf = util.array_find(buffers, e.fields[3])
+		local buf = util.indexof(buffers, e.fields[3])
 		if buf then switch_buf(buf) end
 	end,
 
@@ -604,7 +604,7 @@ local cmdhand = {
 		irc.send(":%s JOIN %s", nick, a)
 		status()
 
-		if not util.array_contains(buffers, dest) then
+		if not util.contains(buffers, dest) then
 			buffers[#buffers + 1] = dest
 		end
 

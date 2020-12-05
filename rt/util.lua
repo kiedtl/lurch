@@ -16,17 +16,6 @@ function util.eprintf(fmt, ...)
 	io.stderr:write(string.format(fmt, ...))
 end
 
-function util.format(fmt, ...)
-	return string.format(fmt, ...)
-end
-
-function util.capture(cmdl)
-	local cmd = assert(io.popen(cmdl, 'r'))
-	local out = assert(cmd:read('a'))
-	cmd:close()
-	return out
-end
-
 function util.read(file)
 	local f = assert(io.open(file, 'rb'))
 	local out = assert(f:read('*all'))
@@ -54,10 +43,6 @@ function util.exists(file)
 	local f = io.open(file, "rb")
 	if f ~= nil then f:close() end
 	return f ~= nil
-end
-
-function string.trim_newline(str)
-	return str:gsub("\n+$", "")
 end
 
 -- Fold text to width, adding newlines between words. This is basically a /bin/fold
@@ -88,7 +73,7 @@ function util.fold(text, width)
 	return res
 end
 
-function util.array_contains(src, value)
+function util.contains(src, value)
 	local has = false
 	for i = 1, #src do
 		if src[i] == value then
@@ -99,7 +84,7 @@ function util.array_contains(src, value)
 	return has
 end
 
-function util.array_find(src, value)
+function util.indexof(src, value)
 	local idx = nil
 	for i = 1, #src do
 		if src[i] == value then
