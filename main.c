@@ -22,7 +22,7 @@
 #include <time.h>
 #include <unistd.h>
 
-const size_t TIMEOUT = 512;
+const size_t TIMEOUT = 4096;
 const size_t BT_BUF_SIZE = 16;
 
 int conn_fd = 0;
@@ -146,7 +146,7 @@ main(int argc, char **argv)
 	 */
 	setvbuf(stdin, NULL, _IONBF, 0);
 	setvbuf(stdout, NULL, _IONBF, 0);
-	setvbuf(conn, NULL, _IONBF, 0);
+	setvbuf(conn, NULL, _IOLBF, 0);
 
 	time_t trespond;
 	struct timeval tv;
@@ -169,19 +169,28 @@ main(int argc, char **argv)
 				continue;
 			die("error on select():");
 		} else if (n == 0) {
-			if (time(NULL) - trespond >= TIMEOUT) {
-				/* TODO: run timeout handler */
+			if (time(NULL) - trespond >= TIMEOUT)
 				llua_call(L, "on_timeout", 0, 0);
-			}
 
-			/* TODO: run timeout handler */
-			llua_call(L, "on_no_reply", 0, 0);
 			continue;
 		}
 
 		if (FD_ISSET(conn_fd, &rd)) {
-			llua_call(L, "on_reply", 0, 0);
+			int len = 0;
+			ioctl(conn_fd, FIONREAD, &len);
+
+			char *bufin = malloc(len + 1);
+			assert(bufin);
+			bufin[len] = '\0';
+
+			int received = read(conn_fd, (void *) bufin, len);
+			assert(received == len);
+
+			lua_pushstring(L, (const char *) bufin);
+			llua_call(L, "on_reply", 1, 0);
+
 			trespond = time(NULL);
+			free(bufin);
 		}
 
 		if (FD_ISSET(0, &rd)) {
@@ -471,16 +480,6 @@ api_conn_send(lua_State *pL)
 int
 api_conn_receive(lua_State *pL)
 {
-	int len = 0;
-	ioctl(conn_fd, FIONREAD, &len);
-	char *bufin = malloc(len + 1);
-	assert(bufin);
-
-	int received = read(conn_fd, (void *) bufin, len);
-	assert(received == len);
-
-	lua_pushstring(pL, (const char *) bufin);
-	free(bufin);
 
 	return 1;
 }

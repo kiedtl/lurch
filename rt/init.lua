@@ -675,13 +675,9 @@ function rt.on_timeout()
 	panic("fatal timeout\n");
 end
 
-function rt.on_no_reply()
-	irc.send("PING %s", HOST)
-end
-
-function rt.on_reply()
-	local reply, e = lurch.conn_receive()
-	if not reply then panic("%s", e) end
+function rt.on_reply(reply)
+	--local reply, e = lurch.conn_receive()
+	--if not reply then panic("%s", e) end
 
 	for line in reply:gmatch("(.-\r\n)") do
 		parseirc(line)
