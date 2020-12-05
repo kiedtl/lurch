@@ -7,19 +7,26 @@
 #include <lua.h>
 #include <lualib.h>
 #include <netdb.h>
+#include <readline/readline.h>
+#include <readline/history.h> /* TODO: remove. */
 #include <signal.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
+#include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <time.h>
 #include <unistd.h>
 
+const size_t TIMEOUT = 512;
 const size_t BT_BUF_SIZE = 16;
 
 int conn_fd = 0;
+FILE *conn;
 lua_State *L;
 
 void signal_lhand(int sig);
@@ -27,10 +34,15 @@ void signal_fatal(int sig);
 
 void die(const char *fmt, ...);
 char *format(const char *format, ...);
+void rl_handler(char *line);
+int  rl_getc(FILE *f);
 
 int  llua_panic(lua_State *pL);
 void llua_sdump(lua_State *pL);
+void llua_call(lua_State *pL, const char *fnname, size_t nargs,
+		size_t nret);
 
+/* TODO: move to separate file */
 int api_tty_size(lua_State *pL);
 int api_conn_init(lua_State *pL);
 int api_conn_fd(lua_State *pL);
@@ -59,6 +71,13 @@ main(int argc, char **argv)
 	sigaction(SIGUSR1,  &lhand, NULL);
 	sigaction(SIGUSR2,  &lhand, NULL);
 	sigaction(SIGWINCH, &lhand, NULL);
+
+	/* init readline */
+	rl_readline_name = "lurch";
+	rl_getc_function = rl_getc;
+	rl_callback_handler_install(NULL, rl_handler);
+	rl_bind_key('\t', rl_insert);
+	rl_initialize();
 
 	/* init lua */
 	L = luaL_newstate();
@@ -109,17 +128,74 @@ main(int argc, char **argv)
 	lua_pushvalue(L, -1);
 	lua_setglobal(L, "lurch");
 
-	(void) luaL_dostring(L,
-		"xpcall(function()\n"
-		"  rt = require('rt')\n"
-		"  rt.main()\n"
-		"end, function(err)\n"
-		"  if rt then rt.on_lerror(err) end\n"
-		"  print(debug.traceback(err, 6))\n"
-		"  os.exit(1)\n"
-		"end)\n"
-	);
+	luaL_dofile(L, "./rt/init.lua");
+	lua_setglobal(L, "rt");
 
+	/* run init function */
+	llua_call(L, "init", 0, 0);
+
+	/*
+	 * no buffering for server,stdin,stdout. buffering causes
+	 * certain escape sequences to not be output until a newline
+	 * is sent, which often will badly mess up the TUI.
+	 *
+	 * by now, the server connection should have been opened.
+	 */
+	setvbuf(stdin, NULL, _IONBF, 0);
+	setvbuf(stdout, NULL, _IONBF, 0);
+	setvbuf(conn, NULL, _IONBF, 0);
+
+	time_t trespond;
+	struct timeval tv;
+	tv.tv_sec  = 120;
+	tv.tv_usec =   0;
+
+	int n;
+	fd_set rd;
+
+	while ("pigs fly") {
+		/* TODO: use poll(2) */
+		FD_ZERO(&rd);
+		FD_SET(conn_fd, &rd);
+		FD_SET(0, &rd);
+
+		n = select(conn_fd + 1, &rd, 0, 0, &tv);
+
+		if (n < 0) {
+			if (errno == EINTR)
+				continue;
+			die("error on select():");
+		} else if (n == 0) {
+			if (time(NULL) - trespond >= TIMEOUT) {
+				/* TODO: run timeout handler */
+				llua_call(L, "on_timeout", 0, 0);
+			}
+
+			/* TODO: run timeout handler */
+			llua_call(L, "on_no_reply", 0, 0);
+			continue;
+		}
+
+		if (FD_ISSET(conn_fd, &rd)) {
+			llua_call(L, "on_reply", 0, 0);
+			trespond = time(NULL);
+		}
+
+		if (FD_ISSET(0, &rd)) {
+			llua_call(L, "on_input", 0, 0);
+			rl_callback_read_char();
+
+			/*
+			 * for some reason, callback readline interface
+			 * doesn't print the current line buffer, so print it manually.
+			 * \r:       move cursor the the start of the terminal row.
+			 * \x1b[2K:  clear the current line.
+			 * \r:       move back to the start of the terminal row.
+			 */
+			printf("\r\x1b[2K\r%s", rl_line_buffer);
+		}
+	}
+	
 	lua_close(L);
 	return 0;
 }
@@ -129,22 +205,16 @@ main(int argc, char **argv)
 void
 signal_lhand(int sig)
 {
-	char *l = format(
-		"xpcall(function()\n"
-		"  rt = require('rt')\n"
-		"  rt.on_signal(%d)\n"
-		"end, function(err)\n"
-		"  if rt then rt.on_lerror(err) end\n"
-		"  print(debug.traceback(err, 6))\n"
-		"  os.exit(1)\n"
-		"end)\n",
-	sig);
-	(void) luaL_dostring(L, l);
+	/* run error handler */
+	/* TODO: do not run sig-unsafe code in this fn */
+	lua_pushinteger(L, (lua_Integer) sig);
+	llua_call(L, "on_signal", 1, 0);
 }
 
 void
 signal_fatal(int sig)
 {
+	/* TODO: do not run sig-unsafe code in this fn */
 	die("received signal %d; aborting.", sig);
 }
 
@@ -192,14 +262,57 @@ format(const char *fmt, ...)
 	return (char *) &buf;
 }
 
+void
+rl_handler(char *line)
+{
+	add_history(line);
+	lua_pushstring(L, line);
+	llua_call(L, "on_rl_input", 1, 0);
+}
+
+int
+rl_getc(FILE *f)
+{
+	int c = getc(f);
+
+	if (c == '\n') {
+		rl_done = 1;
+		return 0;
+	}
+
+	return c;
+}
+
 int
 llua_panic(lua_State *pL)
 {
-	(void) luaL_dostring(L,
-		"if rt then rt.on_lerror(err) end\n"
-		"print(debug.traceback(err, 6))\n"
-		"os.exit(1)\n"
-	);
+	int ret;
+
+	/* run error handler */
+	lua_getglobal(pL, "rt");
+	lua_getfield(pL, -1, "on_lerror");
+	lua_remove(pL, -2);
+	ret = lua_pcall(pL, 0, 0, 0);
+
+	if (ret != 0) {
+		/* if the call to rt.on_lerror failed, just ignore
+		 * the error message and pop it. */
+		lua_pop(pL, 1);
+
+		/* flush stdin, as rt.on_lerror probably didn't do
+		 * it for us */
+		fflush(stdin);
+	}
+
+	/* call debug.traceback and get backtrace */
+	lua_getglobal(pL, "debug");
+	lua_getfield(pL, -1, "traceback");
+	lua_remove(pL, -2);
+	lua_pushvalue(pL, 1);
+	lua_pushinteger(pL, (lua_Integer) 2);
+	lua_pcall(pL, 2, 1, 0);
+
+	fprintf(stderr, "\rlua_call error: %s\n\n", lua_tostring(pL, -1));
 	die("unable to recover; exiting");
 	return 0;
 }
@@ -225,6 +338,20 @@ llua_sdump(lua_State *pL)
 		}
 	}
 	fprintf(stderr, "----- STACK DUMP END -----\n");
+}
+
+void
+llua_call(lua_State *pL, const char *fnname, size_t nargs, size_t nret)
+{
+	/* get function from rt. */
+	lua_getglobal(pL, "rt");
+	lua_getfield(pL, -1, fnname);
+	lua_remove(pL, -2);
+
+	/* move function before args. */
+	lua_insert(pL, -nargs - 1);
+
+	lua_call(pL, nargs, nret);
 }
 
 // API functions
@@ -271,7 +398,7 @@ api_conn_init(lua_State *pL)
 
 	freeaddrinfo(res);
 
-	if (r == NULL) {
+	if (r == NULL || ((conn = fdopen(conn_fd, "r+")) == NULL)) {
 		lua_pushnil(pL);
 		lua_pushstring(pL, format("cannot connect to host: %s", strerror(errno)));
 		return 2;

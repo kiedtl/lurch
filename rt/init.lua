@@ -3,7 +3,6 @@
 
 local rt = {}
 
-local posix = require('posix')
 local readline = require('readline')
 
 local irc = require('irc')
@@ -54,6 +53,7 @@ local function clean()
 	tty.clear()
 	tty.reset_scroll_area()
 	tty.main_buffer()
+	io.flush(1)
 end
 
 local function panic(fmt, ...)
@@ -507,7 +507,11 @@ local function parseirc(reply)
 
 	-- The first element in the fields array points to
 	-- the type of message we're dealing with.
-	local cmd = assert(event.fields[1])
+	local cmd = event.fields[1]
+
+	-- TODO: remove this
+	i=require'inspect'
+	if not cmd then panic("cmd null (ev=%s) on reply %s\n", i(event), reply) end
 
 	-- When recieving MOTD messages and similar stuff from
 	-- the IRCd, send it to the main tab
@@ -608,7 +612,7 @@ local cmdhand = {
 
 local function parsecmd(inp)
 	-- clear the input line.
-	printf("\x1b[A\r\x1b[2K\r\x1b[B")
+	printf("\r\x1b[2K\r")
 
 	local _cmd, a, args = inp:gmatch("([^%s]+)%s?([^%s]*)%s?(.*)")()
 
@@ -617,9 +621,8 @@ local function parsecmd(inp)
 	end
 end
 
-function rt.main()
+function rt.init()
 	refresh()
-
 
 	local _nick = NICK or os.getenv("IRCNICK") or os.getenv("USER")
 	local user = USER or os.getenv("IRCUSER") or os.getenv("USER")
@@ -630,9 +633,8 @@ function rt.main()
 
 	load_nick_highlight_colors()
 
-	-- set readline's history file, so that we may manage
-	-- it ourselves
-	readline.set_options({ histfile='hist' })
+	channels[#channels + 1] = "*"
+	switch_buf(1)
 
 	-- other misc options
 	readline.set_readline_name('lurch')
@@ -642,60 +644,12 @@ function rt.main()
 	--readline.set_complete_list(names)
 
 	-- create the server buffer.
-	channels[#channels + 1] = "*"
-	switch_buf(1)
-
 	local linehandler = function(line)
 		-- save the sent input to readline's history
 		readline.add_history(line)
 		parsecmd(line)
 	end
 	readline.handler_install("", linehandler)
-
-	local conn_fd = lurch.conn_fd()
-	local fds = {
-		[0] = { events = { IN = { true } } },
-		[conn_fd] = { events = { IN = { true } } }
-	}
-
-	while "pigs fly" do
-		-- use poll(2) to monitor stdin and the tcp socket
-		-- and check which one has data to read.
-		--
-		-- continue if there is neither user input or data from the
-		-- irc server.
-		if posix.poll(fds, 0) == 0 then
-			goto continue
-		end
-
-		-- did the server send data?
-		if fds[conn_fd].revents.IN then
-			local reply, e = lurch.conn_receive()
-			if not reply then panic("%s", e) end
-
-			for line in reply:gmatch("(.-\r\n)") do
-				parseirc(line)
-			end
-		end
-
-		-- is there user input?
-		if fds[0].revents.IN then
-			tty.curs_down(999)
-			tty.curs_show()
-			readline.read_char()
-		end
-
-		-- if the user has entered input or the server has sent
-		-- data, redraw the status bar
-		if fds[0].revents.IN or fds[conn_fd].revents.IN then
-			status()
-		end
-
-		::continue::
-	end
-
-	clean()
-	os.exit(0)
 end
 
 local sighand = {
@@ -721,7 +675,7 @@ function rt.on_signal(sig)
 	if (handler)() then
 		clean()
 		irc.send("QUIT :%s", quitmsg)
-		eprintf("[lurch exited]")
+		eprintf("[lurch exited]\n")
 		os.exit(0)
 	end
 end
@@ -729,6 +683,32 @@ end
 function rt.on_lerror(err)
 	clean()
 	irc.send("QUIT :%s", "*poof*")
+end
+
+function rt.on_timeout()
+	panic("fatal timeout\n");
+end
+
+function rt.on_no_reply()
+	irc.send("PING %s", HOST)
+end
+
+function rt.on_reply()
+	local reply, e = lurch.conn_receive()
+	if not reply then panic("%s", e) end
+
+	for line in reply:gmatch("(.-\r\n)") do
+		parseirc(line)
+	end
+end
+
+function rt.on_input()
+	tty.curs_down(999)
+	tty.curs_show()
+end
+
+function rt.on_rl_input(inp)
+	parsecmd(inp)
 end
 
 return rt
