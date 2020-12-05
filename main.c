@@ -113,6 +113,7 @@ main(int argc, char **argv)
 	/* TODO: do this the non-lazy way */
 	(void) luaL_dostring(L,
 		"package.path = __LURCH_EXEDIR .. '/rt/?.lua;' .. package.path\n"
+		"package.path = __LURCH_EXEDIR .. '/conf/?.lua;' .. package.path\n"
 	);
 
 	/* setup lurch api functions */
@@ -308,6 +309,7 @@ int
 llua_panic(lua_State *pL)
 {
 	int ret;
+	char *err = (char *) lua_tostring(pL, -1);
 
 	/* run error handler */
 	lua_getglobal(pL, "rt");
@@ -325,14 +327,14 @@ llua_panic(lua_State *pL)
 		fflush(stdin);
 	}
 
-	fprintf(stderr, "\rlua_call error: %s\n\n", lua_tostring(pL, -1));
+	fprintf(stderr, "\r\x1b[2K\rlua_call error: %s\n\n", err);
 
 	/* call debug.traceback and get backtrace */
 	lua_getglobal(pL, "debug");
 	lua_getfield(pL, -1, "traceback");
 	lua_remove(pL, -2);
-	lua_pushvalue(pL, 1);
-	lua_pushinteger(pL, (lua_Integer) 2);
+	lua_pushstring(pL, err);
+	lua_pushinteger(pL, (lua_Integer) 0);
 	lua_pcall(pL, 2, 1, 0);
 
 	fprintf(stderr, "\rtraceback: %s\n\n", lua_tostring(pL, -1));

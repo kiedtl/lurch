@@ -3,11 +3,12 @@
 
 local rt = {}
 
+local config = require('config')
 local irc = require('irc')
-local tui = require('tui')
 local mirc = require('mirc')
-local tty = require('tty')
 local util = require('util')
+local tui = require('tui')
+local tty = require('tty')
 
 local printf = util.printf
 local eprintf = util.eprintf
@@ -15,33 +16,12 @@ local format = string.format
 
 math.randomseed(os.time())
 
-LEFT_PADDING = 10
-RIGHT_PADDING = 80
-
-
-HOST = "localhost"--"irc.freenode.net"
-NICK = "inebriate|lurch"
-PASS = nil
-USER = nil
-PORT = 6667
-NAME = nil
-JOIN = "#bots"
-
-QUIT_MSG = "*thud*"
-PART_MSG = "*confused yelling*"
-
-CTCP_PING    = true
-CTCP_VERSION = "lurch (beta)"
-CTCP_SOURCE  = "(null)"
-
-MIRC_COLORS_ENABLED = true
-
 MAINBUF = "<server>"
 
 colors = {}     -- List of colors used for nick highlighting
 set_colors = {} -- list of cached colors used for each nick/text
 
-nick = NICK     -- The current nickname
+nick = config.nick     -- The current nickname
 nicks = {}      -- Table of all nicknames
 
 cur_buf = nil   -- The current buffer
@@ -201,8 +181,10 @@ local function prin(dest, left, right_fmt, ...)
 	assert(right)
 
 	-- fold message to width
-	right = util.fold(right, RIGHT_PADDING)
-	right = right:gsub("\n", "\n            ")
+	local default_width = tui.tty_width - config.left_col_width
+	right = util.fold(right, right_col_width or default_width)
+	right = right:gsub("\n", format("\n%s",
+		util.strrepeat(" ", config.left_col_width + 2)))
 
 	-- Strip escape sequences from the first word in the message
 	-- so that we can calculate how much padding to add for
@@ -216,7 +198,7 @@ local function prin(dest, left, right_fmt, ...)
 	if #raw > 10 then
 		pad = 0
 	else
-		pad = 11 - #raw
+		pad = (config.left_col_width + 1) - #raw
 	end
 
 	local out = format("\x1b[%sC%s %s", pad, left, right):gsub("\n+$", "")
@@ -295,7 +277,7 @@ local irchand = {
 		end
 
 		-- convert or remove mIRC IRC colors.
-		if MIRC_COLORS_ENABLED then
+		if config.show_mirc_colors then
 			e.msg = mirc.to_tty_seq(e.msg)
 		else
 			e.msg = mirc.remove(e.msg)
@@ -487,8 +469,9 @@ local irchand = {
 
 	-- End of MOTD
 	["376"] = function(fields, whom, mesg, dest)
-		-- TODO: reenable
-		--send(":%s JOIN %s", nick, JOIN)
+		for c = 1, #config.channels do
+			irc.send(":%s JOIN %s", nick, config.channels[c])
+		end
 	end,
 
 	-- "xyz" is now your hidden host (set by foo)
@@ -518,19 +501,19 @@ local irchand = {
 	-- CTCP stuff.
 	["CTCP_ACTION"] = function(e) prin(e.dest, MAINBUF, "%s %s", ncolor(e.nick or nick), e.msg) end,
 	["CTCP_VERSION"] = function(e)
-		if CTCP_VERSION then
-			prin(MAINBUF, "CTCP", "%s requested VERSION (reply: %s)", e.nick, CTCP_VERSION)
-			irc.send("NOTICE %s :\1VERSION %s\1", e.nick, CTCP_VERSION)
+		if config.ctcp_version then
+			prin(MAINBUF, "CTCP", "%s requested VERSION (reply: %s)", e.nick, config.ctcp_version)
+			irc.send("NOTICE %s :\1VERSION %s\1", e.nick, config.ctcp_version)
 		end
 	end,
 	["CTCP_SOURCE"] = function(e)
-		if CTCP_SOURCE then
-			prin(MAINBUF, "CTCP", "%s requested SOURCE (reply: %s)", e.nick, CTCP_SOURCE)
-			irc.send("NOTICE %s :\1SOURCE %s\1", e.nick, CTCP_SOURCE)
+		if config.ctcp_source then
+			prin(MAINBUF, "CTCP", "%s requested SOURCE (reply: %s)", e.nick, config.ctcp_source)
+			irc.send("NOTICE %s :\1SOURCE %s\1", e.nick, config.ctcp_source)
 		end
 	end,
 	["CTCP_PING"] = function(e)
-		if CTCP_PING then
+		if config.ctcp_ping then
 			prin(MAINBUF, "CTCP", "PING from %s", e.nick)
 			irc.send("NOTICE %s :%s", e.nick, e.fields[2])
 		end
@@ -622,7 +605,7 @@ local cmdhand = {
 		end
 
 		local msg = inp
-		if not inp or inp ~= "" then msg = PART_MSG end
+		if not inp or inp ~= "" then msg = config.part_msg end
 
 		irc.send(":%s PART %s :%s", nick, buffers[cur_buf].name, msg)
 	end,
@@ -638,7 +621,7 @@ local cmdhand = {
 	end,
 	["/quit"] = function(a, args, inp)
 		local msg = inp
-		if not inp or inp ~= "" then msg = QUIT_MSG end
+		if not inp or inp ~= "" then msg = config.quit_msg end
 
 		irc.send("QUIT :%s", msg)
 		eprintf("[lurch exited]\n")
@@ -667,11 +650,12 @@ end
 function rt.init()
 	tui.refresh()
 
-	local _nick = NICK or os.getenv("IRCNICK") or os.getenv("USER")
-	local user  = USER or os.getenv("IRCUSER") or os.getenv("USER")
-	local name  = NAME or _nick
+	local _nick = config.nick or os.getenv("IRCNICK") or os.getenv("USER")
+	local user  = config.user or os.getenv("IRCUSER") or os.getenv("USER")
+	local name  = config.name or _nick
 
-	local r, e = irc.connect(HOST, PORT, _nick, user, name, PASS)
+	local r, e = irc.connect(config.server, config.port,
+		_nick, user, name, config.server_password)
 	if not r then panic("error: %s\n", e) end
 
 	load_nick_highlight_colors()
@@ -701,7 +685,7 @@ local sighand = {
 }
 
 function rt.on_signal(sig)
-	local quitmsg = QUIT_MSG or "*poof*"
+	local quitmsg = config.quit_msg or "*poof*"
 	local handler = sighand[sig] or sighand[0]
 	if (handler)() then
 		tui.clean()

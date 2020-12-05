@@ -107,4 +107,12 @@ function util.hash(value, max)
 	return h % (max or HASH_MOD)
 end
 
+function util.strrepeat(ch, count)
+	local buf = ""
+	for i = 1, count do
+		buf = buf .. ch
+	end
+	return buf
+end
+
 return util
