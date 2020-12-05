@@ -416,8 +416,14 @@ local irchand = {
 
 	-- TOPIC last set by nick!user@host
 	["333"] = function(e)
+		-- sometimes, the nick is in the fields
 		local n = (e.fields[4]):gmatch("(.-)!")()
-		prin(e.dest, "--", "Topic last set by %s (%s)", ncolor(n), e.fields[4])
+		if n then
+			prin(e.dest, "--", "Topic last set by %s (%s)", ncolor(n), e.fields[4])
+		else
+			local datetime = os.date("%Y-%m-%d %H:%M:%S", e.msg)
+			prin(e.dest, "--", "Topic last set by %s on %s", ncolor(e.fields[4]), datetime)
+		end
 	end,
 
 	-- invited <nick> to <chan> (response to /invite)
@@ -584,9 +590,7 @@ local cmdhand = {
 		end
 
 		-- if we are the ones joining, then switch to that buffer.
-		if whom == nick then
-			switch_buf(#channels)
-		end
+		switch_buf(#channels)
 	end,
 	["/part"] = function(a, args, inp)
 		if not (channels[chan]):find("#") then
