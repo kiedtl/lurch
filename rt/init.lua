@@ -251,6 +251,9 @@ local irchand = {
 	["PART"] = function(e)
 		prin(e.dest, "<--", "%s has left %s (%s)", ncolor(e.nick), e.dest, e.msg)
 	end,
+	["KICK"] = function(e)
+		prin(e.dest, "<--", "%s has kicked %s (%s)", ncolor(e.nick), ncolor(e.fields[3]), e.msg)
+	end,
 	["INVITE"] = function(e)
 		-- TODO: auto-join on invite?
 		prin("*", "--", "%s sent an invite to %s", e.nick, e.msg)
