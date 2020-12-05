@@ -399,6 +399,7 @@ local irchand = {
 	-- TOPIC for channel
 	["332"] = function(e) prin(e.dest, "TOPIC", "%s", e.msg) end,
 
+	-- TOPIC last set by nick!user@host
 	["333"] = function(e)
 		local n = (e.fields[4]):gmatch("(.-)!")()
 		prin(e.dest, "--", "Topic last set by %s (%s)", ncolor(n), e.fields[4])
