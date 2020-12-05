@@ -50,6 +50,8 @@ buffers = {}    -- List of all opened buffers
 -- add a new buffer. status() should be run after this
 -- to add the new buffer to the statusline.
 local function buf_add(name)
+	assert(name)
+
 	local newbuf = {}
 	newbuf.history = {}
 	newbuf.name    = name
@@ -173,7 +175,7 @@ local function redraw()
 
 	if buffers[cur_buf].history then
 		for _, msg in ipairs(buffers[cur_buf].history) do
-			printf("\r%s\n\r", msg)
+			printf("\r\x1b[0m%s\n\r", msg)
 		end
 	end
 
@@ -313,6 +315,12 @@ local irchand = {
 		end
 	end,
 	["JOIN"] = function(e)
+		-- sometimes the channel joined is contained in the message.
+		if not e.dest or e.dest == "" then
+			e.dest = e.msg
+		end
+
+		-- if the buffer isn't open yet, create it.
 		if not buf_idx(e.dest) then
 			buf_add(e.dest)
 		end
@@ -320,11 +328,6 @@ local irchand = {
 		-- if we are the ones joining, then switch to that buffer.
 		if e.nick == nick then
 			switch_buf(#buffers)
-		end
-
-		-- sometimes the channel joined is contained in the message.
-		if not e.dest or e.dest == "" then
-			e.dest = e.msg
 		end
 
 		prin(e.dest, "-->", "%s has joined %s", ncolor(e.nick), e.dest)
@@ -603,10 +606,10 @@ local cmdhand = {
 		irc.send(":%s JOIN %s", nick, a)
 		status()
 
-		local bufidx = buf_idx(dest)
+		local bufidx = buf_idx(a)
 		if not bufidx then
-			buf_add(dest)
-			bufidx = buf_idx(dest)
+			buf_add(a)
+			bufidx = buf_idx(a)
 			status()
 		end
 
@@ -665,8 +668,8 @@ function rt.init()
 	tui.refresh()
 
 	local _nick = NICK or os.getenv("IRCNICK") or os.getenv("USER")
-	local user = USER or os.getenv("IRCUSER") or os.getenv("USER")
-	local name = NAME or "hii im drukn"
+	local user  = USER or os.getenv("IRCUSER") or os.getenv("USER")
+	local name  = NAME or _nick
 
 	local r, e = irc.connect(HOST, PORT, _nick, user, name, PASS)
 	if not r then panic("error: %s\n", e) end

@@ -1,7 +1,7 @@
 local util = {}
 
 function util.last_gmatch(s, pat)
-	last = ""
+	local last = ""
 	for i in s:gmatch(pat) do
 		last = i
 	end
@@ -48,10 +48,10 @@ end
 -- Fold text to width, adding newlines between words. This is basically a /bin/fold
 -- implementation in Lua.
 function util.fold(text, width)
-	local _raw_len = function(text)
-		text = text:gsub("\x1b%[.-m", "")
-		text = text:gsub("\x1b%[m", "")
-		return #text
+	local _raw_len = function(data)
+		data = data:gsub("\x1b%[.-m", "")
+		data = data:gsub("\x1b%[m", "")
+		return #data
 	end
 
 	local res = ""
@@ -97,12 +97,10 @@ end
 
 -- This hash function was stolen from the QBE project.
 -- git://c9x.me/qbe.git, ./minic/minic.y:104
-HASH_BEG = 42
-HASH_MOD = 512
+local HASH_BEG = 42
+local HASH_MOD = 512
 function util.hash(value, max)
-	local h = 0
-
-	h = HASH_BEG
+	local h = HASH_BEG
 	for char in value:gmatch(".") do
 		h = h + (11 * h + utf8.codepoint(char))
 	end
