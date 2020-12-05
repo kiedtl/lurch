@@ -34,8 +34,9 @@ void signal_fatal(int sig);
 
 void die(const char *fmt, ...);
 char *format(const char *format, ...);
-void rl_handler(char *line);
-int  rl_getc(FILE *f);
+void lurch_rl_handler(char *line);
+int  lurch_rl_getc(FILE *f);
+int  lurch_rl_keyseq(int count, int key);
 
 int  llua_panic(lua_State *pL);
 void llua_sdump(lua_State *pL);
@@ -43,6 +44,7 @@ void llua_call(lua_State *pL, const char *fnname, size_t nargs,
 		size_t nret);
 
 /* TODO: move to separate file */
+int api_bind_keyseq(lua_State *pL);
 int api_tty_size(lua_State *pL);
 int api_conn_init(lua_State *pL);
 int api_conn_fd(lua_State *pL);
@@ -74,8 +76,8 @@ main(int argc, char **argv)
 
 	/* init readline */
 	rl_readline_name = "lurch";
-	rl_getc_function = rl_getc;
-	rl_callback_handler_install(NULL, rl_handler);
+	rl_getc_function = lurch_rl_getc;
+	rl_callback_handler_install(NULL, lurch_rl_handler);
 	rl_bind_key('\t', rl_insert);
 	rl_initialize();
 
@@ -115,11 +117,12 @@ main(int argc, char **argv)
 
 	/* setup lurch api functions */
 	static const struct luaL_Reg lurch_lib[] = {
-		{ "tty_size", api_tty_size },
-		{ "conn_init", api_conn_init },
-		{ "conn_fd", api_conn_fd },
-		{ "conn_send", api_conn_send },
-		{ "conn_receive", api_conn_receive },
+		{ "bind_keyseq",   api_bind_keyseq  },
+		{ "tty_size",      api_tty_size     },
+		{ "conn_init",     api_conn_init    },
+		{ "conn_fd",       api_conn_fd      },
+		{ "conn_send",     api_conn_send    },
+		{ "conn_receive",  api_conn_receive },
 		{ NULL, NULL },
 	};
 
@@ -205,8 +208,10 @@ main(int argc, char **argv)
 void
 signal_lhand(int sig)
 {
-	/* run error handler */
-	/* TODO: do not run sig-unsafe code in this fn */
+	if (sig == SIGWINCH)
+		rl_resize_terminal();
+
+	/* run signal handler */
 	lua_pushinteger(L, (lua_Integer) sig);
 	llua_call(L, "on_signal", 1, 0);
 }
@@ -214,7 +219,6 @@ signal_lhand(int sig)
 void
 signal_fatal(int sig)
 {
-	/* TODO: do not run sig-unsafe code in this fn */
 	die("received signal %d; aborting.", sig);
 }
 
@@ -262,8 +266,16 @@ format(const char *fmt, ...)
 	return (char *) &buf;
 }
 
+int
+lurch_rl_keyseq(int count, int key)
+{
+	lua_pushinteger(L, (lua_Integer) key);
+	llua_call(L, "on_keyseq", 1, 0);
+	return 0;
+}
+
 void
-rl_handler(char *line)
+lurch_rl_handler(char *line)
 {
 	add_history(line);
 	lua_pushstring(L, line);
@@ -271,7 +283,7 @@ rl_handler(char *line)
 }
 
 int
-rl_getc(FILE *f)
+lurch_rl_getc(FILE *f)
 {
 	int c = getc(f);
 
@@ -304,6 +316,8 @@ llua_panic(lua_State *pL)
 		fflush(stdin);
 	}
 
+	fprintf(stderr, "\rlua_call error: %s\n\n", lua_tostring(pL, -1));
+
 	/* call debug.traceback and get backtrace */
 	lua_getglobal(pL, "debug");
 	lua_getfield(pL, -1, "traceback");
@@ -312,7 +326,7 @@ llua_panic(lua_State *pL)
 	lua_pushinteger(pL, (lua_Integer) 2);
 	lua_pcall(pL, 2, 1, 0);
 
-	fprintf(stderr, "\rlua_call error: %s\n\n", lua_tostring(pL, -1));
+	fprintf(stderr, "\rtraceback: %s\n\n", lua_tostring(pL, -1));
 	die("unable to recover; exiting");
 	return 0;
 }
@@ -357,6 +371,21 @@ llua_call(lua_State *pL, const char *fnname, size_t nargs, size_t nret)
 // API functions
 
 int
+api_bind_keyseq(lua_State *pL)
+{
+	char *keyseq = (char *) luaL_checkstring(pL, 1);
+	int ret = rl_bind_keyseq((const char *) keyseq, lurch_rl_keyseq);
+
+	if (ret != 0) {
+		lua_pushnil(pL);
+		lua_pushstring(pL, "rl_bind_keyseq() != 0");
+		return 2;
+	}
+
+	return 0;
+}
+
+int
 api_tty_size(lua_State *pL)
 {
 	struct winsize w;
@@ -367,7 +396,6 @@ api_tty_size(lua_State *pL)
 
 	return 2;
 }
-
 
 int
 api_conn_init(lua_State *pL)

@@ -3,8 +3,6 @@
 
 local rt = {}
 
-local readline = require('readline')
-
 local irc = require('irc')
 local mirc = require('mirc')
 local tty = require('tty')
@@ -636,20 +634,8 @@ function rt.init()
 	channels[#channels + 1] = "*"
 	switch_buf(1)
 
-	-- other misc options
-	readline.set_readline_name('lurch')
-
-	-- set completion list to nicknames
-	-- TODO
-	--readline.set_complete_list(names)
-
-	-- create the server buffer.
-	local linehandler = function(line)
-		-- save the sent input to readline's history
-		readline.add_history(line)
-		parsecmd(line)
-	end
-	readline.handler_install("", linehandler)
+	lurch.bind_keyseq("\\C-n")
+	lurch.bind_keyseq("\\C-p")
 end
 
 local sighand = {
@@ -709,6 +695,19 @@ end
 
 function rt.on_rl_input(inp)
 	parsecmd(inp)
+end
+
+
+local keyseq_handler = {
+	-- Ctrl+n, Ctrl+p
+	[14] = function() switch_buf(chan + 1) end,
+	[16] = function() switch_buf(chan - 1) end,
+}
+
+function rt.on_keyseq(key)
+	if keyseq_handler[key] then
+		(keyseq_handler[key])()
+	end
 end
 
 return rt
