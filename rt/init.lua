@@ -4,6 +4,7 @@
 local rt = {}
 
 local irc = require('irc')
+local tui = require('tui')
 local mirc = require('mirc')
 local tty = require('tty')
 local util = require('util')
@@ -35,31 +36,43 @@ CTCP_SOURCE  = "(null)"
 
 MIRC_COLORS_ENABLED = true
 
--- dimensions of the terminal
-tty_width = 80
-tty_height = 24
-
 MAINBUF = "<server>"
 
 colors = {}     -- List of colors used for nick highlighting
 set_colors = {} -- list of cached colors used for each nick/text
+
 nick = NICK     -- The current nickname
+nicks = {}      -- Table of all nicknames
+
 cur_buf = nil   -- The current buffer
 buffers = {}    -- List of all opened buffers
-nicks = {}      -- Table of all nicknames
-history = {}    -- History of each buffer
-unread = {}     -- list of buffers with unread items
 
-local function clean()
-	tty.line_wrap()
-	tty.clear()
-	tty.reset_scroll_area()
-	tty.main_buffer()
-	io.flush(1)
+-- add a new buffer. status() should be run after this
+-- to add the new buffer to the statusline.
+local function buf_add(name)
+	local newbuf = {}
+	newbuf.history = {}
+	newbuf.name    = name
+	newbuf.unread  = 0
+
+	buffers[#buffers + 1] = newbuf
+end
+
+-- check if a buffer exists, and if so, return the index
+-- for that buffer.
+local function buf_idx(name)
+	local idx = nil
+	for i = 1, #buffers do
+		if buffers[i].name == name then
+			idx = i
+			break
+		end
+	end
+	return idx
 end
 
 local function panic(fmt, ...)
-	clean()
+	tui.clean()
 	eprintf(fmt, ...)
 	os.exit(1)
 end
@@ -122,32 +135,18 @@ local function ncolor(text, text_as, no_bold)
 	return format("%s%s%s\x1b[m", access, esc, text)
 end
 
-local function refresh()
-	tty_height, tty_width = tty.dimensions()
-
-	assert(tty_height)
-	assert(tty_width)
-
-	tty.alt_buffer()
-	tty.no_line_wrap()
-	tty.clear()
-	tty.set_scroll_area(tty_height - 1)
-	tty.curs_move_to_line(999)
-end
-
 local function status()
 	local chanlist = " "
 	for buf = 1, #buffers do
-		local ch = buffers[buf]
+		local ch = buffers[buf].name
 
 		if buf == cur_buf then
 			local pnch = ncolor(format(" %d %s ", buf, ch), ch, true)
 			chanlist = chanlist .. "\x1b[7m" .. pnch .. "\x1b[0m "
 		else
-			if not unread[buf] then unread[buf] = 0 end
-			if unread[buf] > 0 then
+			if buffers[buf].unread > 0 then
 				local nch = ncolor(format(" %d %s %s%d ", buf, ch,
-					"+", unread[buf]), ch, true)
+					"+", buffers[buf].unread), ch, true)
 				chanlist = chanlist .. nch .. " "
 			end
 		end
@@ -163,7 +162,7 @@ local function status()
 end
 
 local function redraw()
-	refresh()
+	tui.refresh()
 
 	tty.curs_save()
 	tty.curs_hide()
@@ -172,8 +171,8 @@ local function redraw()
 	tty.curs_down(999)
 	tty.curs_up(1)
 
-	if history[buffers[cur_buf]] then
-		for _, msg in ipairs(history[buffers[cur_buf]]) do
+	if buffers[cur_buf].history then
+		for _, msg in ipairs(buffers[cur_buf].history) do
 			printf("\r%s\n\r", msg)
 		end
 	end
@@ -187,7 +186,7 @@ end
 local function switch_buf(ch)
 	if buffers[ch] then
 		cur_buf = ch
-		unread[cur_buf] = 0
+		buffers[cur_buf].unread = 0
 		redraw()
 	end
 end
@@ -220,12 +219,14 @@ local function prin(dest, left, right_fmt, ...)
 
 	local out = format("\x1b[%sC%s %s", pad, left, right):gsub("\n+$", "")
 
-	if not util.contains(buffers, dest) then
-		buffers[#buffers + 1] = dest
+	local bufidx = buf_idx(dest)
+	if not bufidx then
+		buf_add(dest)
+		bufidx = buf_idx(dest)
 		status()
 	end
 
-	if dest == buffers[cur_buf] then
+	if dest == buffers[cur_buf].name then
 		tty.curs_hide()
 		tty.curs_save()
 
@@ -238,18 +239,13 @@ local function prin(dest, left, right_fmt, ...)
 		tty.curs_restore()
 		tty.curs_show()
 	else
-		local bufnm = util.indexof(buffers, dest)
-		if not unread[bufnm] then unread[bufnm] = 0 end
-		unread[bufnm] = unread[bufnm] + 1
+		buffers[bufidx].unread = buffers[bufidx].unread + 1
 		status()
 	end
 
 	-- save to buffer history.
-	if not history[dest] then
-		history[dest] = {}
-	end
-
-	history[dest][#history[dest] + 1] = out
+	local histsz = #buffers[bufidx].history
+	buffers[bufidx].history[histsz + 1] = out
 end
 
 local function none(_) end
@@ -317,8 +313,8 @@ local irchand = {
 		end
 	end,
 	["JOIN"] = function(e)
-		if not util.contains(buffers, e.dest) then
-			buffers[#buffers + 1] = e.dest
+		if not buf_idx(e.dest) then
+			buf_add(e.dest)
 		end
 
 		-- if we are the ones joining, then switch to that buffer.
@@ -346,7 +342,10 @@ local irchand = {
 		-- display nick message for all buffers that user has joined.
 		local bufs = nil
 		if e.nick == nick or not nicks[e.nick] then
-			bufs = buffers
+			bufs = {}
+			for i = 1, #buffers do
+				bufs[#bufs + 1] = buffers[i].name
+			end
 		else
 			bufs = nicks[e.nick].joined
 		end
@@ -504,7 +503,7 @@ local irchand = {
 	-- cannot join channel (you are banned)
 	["474"] = function(e)
 		prin(e.fields[3], "-!-", "you're banned creep")
-		local buf = util.indexof(buffers, e.fields[3])
+		local buf = buf_idx(e.fields[3])
 		if buf then switch_buf(buf) end
 	end,
 
@@ -583,19 +582,19 @@ local cmdhand = {
 		switch_buf(cur_buf - 1)
 	end,
 	["/invite"] = function(a, args, inp)
-		if not (buffers[cur_buf]):find("#") then
+		if not (buffers[cur_buf].name):find("#") then
 			prin(MAINBUF, "-!-", "/invite must be executed in a channel buffer.")
 			return
 		end
 
 		if not a or a == "" then return end
-		irc.send(":%s INVITE %s :%s", nick, a, buffers[cur_buf])
+		irc.send(":%s INVITE %s :%s", nick, a, buffers[cur_buf].name)
 	end,
 	["/names"] = function(a, args, inp)
-		irc.send("NAMES %s", a or buffers[cur_buf])
+		irc.send("NAMES %s", a or buffers[cur_buf].name)
 	end,
 	["/topic"] = function(a, args, inp)
-		irc.send("TOPIC %s", a or buffers[cur_buf])
+		irc.send("TOPIC %s", a or buffers[cur_buf].name)
 	end,
 	["/whois"] = function(a, args, inp)
 		if a and a ~= "" then irc.send("WHOIS %s", a) end
@@ -604,15 +603,17 @@ local cmdhand = {
 		irc.send(":%s JOIN %s", nick, a)
 		status()
 
-		if not util.contains(buffers, dest) then
-			buffers[#buffers + 1] = dest
+		local bufidx = buf_idx(dest)
+		if not bufidx then
+			buf_add(dest)
+			bufidx = buf_idx(dest)
+			status()
 		end
 
-		-- if we are the ones joining, then switch to that buffer.
-		switch_buf(#buffers)
+		switch_buf(bufidx)
 	end,
 	["/part"] = function(a, args, inp)
-		if not (buffers[cur_buf]):find("#") then
+		if not (buffers[cur_buf].name):find("#") then
 			prin(MAINBUF, "-!-", "/invite must be executed in a channel buffer.")
 			return
 		end
@@ -620,7 +621,7 @@ local cmdhand = {
 		local msg = inp
 		if not inp or inp ~= "" then msg = PART_MSG end
 
-		irc.send(":%s PART %s :%s", nick, buffers[cur_buf], msg)
+		irc.send(":%s PART %s :%s", nick, buffers[cur_buf].name, msg)
 	end,
 	["/nick"] = function(a, args, inp)
 		irc.send("NICK %s", a)
@@ -638,14 +639,14 @@ local cmdhand = {
 
 		irc.send("QUIT :%s", msg)
 		eprintf("[lurch exited]\n")
-		clean()
+		tui.clean()
 		os.exit(0)
 	end,
 	["/me"] = function(a, args, inp)
-		send_both(":%s PRIVMSG %s :\1ACTION %s %s\1", nick, buffers[cur_buf], a, args)
+		send_both(":%s PRIVMSG %s :\1ACTION %s %s\1", nick, buffers[cur_buf].name, a, args)
 	end,
 	[0] = function(a, args, inp)
-		send_both(":%s PRIVMSG %s :%s", nick, buffers[cur_buf], inp)
+		send_both(":%s PRIVMSG %s :%s", nick, buffers[cur_buf].name, inp)
 	end
 }
 
@@ -661,7 +662,7 @@ local function parsecmd(inp)
 end
 
 function rt.init()
-	refresh()
+	tui.refresh()
 
 	local _nick = NICK or os.getenv("IRCNICK") or os.getenv("USER")
 	local user = USER or os.getenv("IRCUSER") or os.getenv("USER")
@@ -672,7 +673,7 @@ function rt.init()
 
 	load_nick_highlight_colors()
 
-	buffers[#buffers + 1] = MAINBUF
+	buf_add(MAINBUF)
 	switch_buf(1)
 
 	lurch.bind_keyseq("\\C-n")
@@ -700,7 +701,7 @@ function rt.on_signal(sig)
 	local quitmsg = QUIT_MSG or "*poof*"
 	local handler = sighand[sig] or sighand[0]
 	if (handler)() then
-		clean()
+		tui.clean()
 		irc.send("QUIT :%s", quitmsg)
 		eprintf("[lurch exited]\n")
 		os.exit(0)
@@ -708,7 +709,7 @@ function rt.on_signal(sig)
 end
 
 function rt.on_lerror(err)
-	clean()
+	tui.clean()
 	irc.send("QUIT :%s", "*poof*")
 end
 
