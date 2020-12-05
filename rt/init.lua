@@ -240,7 +240,19 @@ local function default(e) prin(e.dest, "--", "%s", e.msg) end
 local irchand = {
 	["PING"] = function(e)   irc.send("PONG :%s", e.dest or "(null)") end,
 	["AWAY"] = function(e)   prin("*", "--", "Away status: %s", e.msg) end,
-	["MODE"] = function(e)   prin("*", "MODE", "%s", e.msg) end,
+	["MODE"] = function(e)
+		if (e.dest):find("#") then
+			local mode = e.fields[3]
+			for i = 4, #e.fields do
+				if not e.fields[i] then break end
+				mode = mode .. " " .. e.fields[i]
+			end
+			mode = mode .. " " .. e.msg
+			prin(e.dest, "MODE", "[%s] by %s", mode, ncolor(e.nick))
+		else
+			prin("*", "MODE", "%s", e.msg)
+		end
+	end,
 	["NOTICE"] = function(e)
 		if e.host then
 			prin(e.nick, "NOTE", "%s: %s", e.nick, e.msg)
