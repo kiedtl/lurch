@@ -399,8 +399,10 @@ local irchand = {
 	-- TOPIC for channel
 	["332"] = function(e) prin(e.dest, "TOPIC", "%s", e.msg) end,
 
-	-- ???
-	["333"] = none,
+	["333"] = function(e)
+		local n = (e.fields[4]):gmatch("(.-)!")()
+		prin(e.dest, "--", "Topic last set by %s (%s)", ncolor(n), e.fields[4])
+	end,
 
 	-- invited <nick> to <chan> (response to /invite)
 	["341"] = function(e)
