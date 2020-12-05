@@ -15,7 +15,7 @@ M.user = nil
 M.name = "hii im drunk"
 
 -- channels to join by on startup.
-M.channels = { }
+M.channels = { "#chaos" }
 
 -- default quit/part message. default to ""
 M.quit_msg = "*thud*"

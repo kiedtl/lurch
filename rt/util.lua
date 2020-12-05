@@ -74,6 +74,8 @@ function util.fold(text, width)
 end
 
 function util.contains(src, value)
+	assert(src)
+
 	local has = false
 	for i = 1, #src do
 		if src[i] == value then

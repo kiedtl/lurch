@@ -27,6 +27,16 @@ nicks = {}      -- Table of all nicknames
 cur_buf = nil   -- The current buffer
 buffers = {}    -- List of all opened buffers
 
+local function nick_add(nick)
+	assert(nick)
+
+	local newnick = {}
+	newnick.joined = {}
+	newnick.access = {}
+
+	nicks[nick] = newnick
+end
+
 -- add a new buffer. status() should be run after this
 -- to add the new buffer to the statusline.
 local function buf_add(name)
@@ -83,15 +93,8 @@ local function load_nick_highlight_colors()
 end
 
 local function ncolor(text, text_as, no_bold)
-	local access = ""
-
 	assert(text)
 	if not text_as then text_as = text end
-
-	if text_as:find("^[~@%&+!]") then
-		access = nick:gmatch("(.)")()
-		text_as = nick:gsub("^.", "")
-	end
 
 	if not nicks[text_as] then
 		nicks[text_as] = {}
@@ -114,7 +117,7 @@ local function ncolor(text, text_as, no_bold)
 		esc = esc .. format("\x1b[38;2;%s;%s;%sm", color.r, color.g, color.b)
 	end
 
-	return format("%s%s%s\x1b[m", access, esc, text)
+	return format("%s%s\x1b[m", esc, text)
 end
 
 local function status()
@@ -439,15 +442,20 @@ local irchand = {
 		local nicklist = ""
 
 		for _nick in (e.msg):gmatch("([^%s]+)%s?") do
-			nicklist = nicklist .. format("%s ", ncolor(_nick))
-
-			if not nicks[_nick] then
-				nicks[_nick] = {}
+			local access = ""
+			if _nick:find("[%~@%%&%+!]") then
+				access = _nick:gmatch(".")()
+				_nick = _nick:gsub(access, "")
 			end
 
-			if not nicks[_nick].joined then
-				nicks[_nick].joined = {}
-			end
+			nicklist = format("%s%s%s ", nicklist, access, ncolor(_nick))
+
+			if not nicks[_nick] then nick_add(_nick) end
+			if not nicks[_nick].access then nicks[_nick].access = {} end
+			if not nicks[_nick].joined then nicks[_nick].joined = {} end
+
+			-- TODO: update access with mode changes
+			nicks[_nick].access[e.dest] = access
 
 			if not util.contains(nicks[_nick].joined, e.dest) then
 				local sz = #nicks[_nick].joined
