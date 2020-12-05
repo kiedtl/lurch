@@ -18,7 +18,7 @@ LEFT_PADDING = 10
 RIGHT_PADDING = 80
 
 
-HOST = "irc.freenode.net"
+HOST = "localhost"--"irc.freenode.net"
 NICK = "inebriate|lurch"
 PASS = nil
 USER = nil
