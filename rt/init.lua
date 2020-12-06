@@ -654,11 +654,22 @@ local function parsecmd(inp)
 	-- clear the input line.
 	printf("\r\x1b[2K\r")
 
+	-- split the input line into the command (first word), a (second
+	-- word), and args (the rest of the input)
 	local _cmd, a, args = inp:gmatch("([^%s]+)%s?([^%s]*)%s?(.*)")()
 	if not _cmd then return end
 
+	-- if the command exists, then run it
 	if cmdhand[_cmd] then
 		(cmdhand[_cmd])(a, args, inp)
+		return
+	end
+
+	-- since the command doesn't exist, just send it as a message (unless it
+	-- begins with a "/", in which case notify the user that the command
+	-- doesn't exist
+	if _cmd:find("/") == 1 then
+		prin(buffers[cur_buf].name, "NOTE", "%s not implemented yet", _cmd)
 	else
 		send_both(":%s PRIVMSG %s :%s", nick, buffers[cur_buf].name, inp)
 	end
