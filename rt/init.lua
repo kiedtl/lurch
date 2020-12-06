@@ -648,9 +648,6 @@ local cmdhand = {
 	["/me"] = function(a, args, inp)
 		send_both(":%s PRIVMSG %s :\1ACTION %s %s\1", nick, buffers[cur_buf].name, a, args)
 	end,
-	[0] = function(a, args, inp)
-		send_both(":%s PRIVMSG %s :%s", nick, buffers[cur_buf].name, inp)
-	end
 }
 
 local function parsecmd(inp)
@@ -658,9 +655,12 @@ local function parsecmd(inp)
 	printf("\r\x1b[2K\r")
 
 	local _cmd, a, args = inp:gmatch("([^%s]+)%s?([^%s]*)%s?(.*)")()
+	if not _cmd then return end
 
-	if _cmd then
-		local ac = (cmdhand[_cmd] or cmdhand[0]); ac(a, args, inp)
+	if cmdhand[_cmd] then
+		(cmdhand[_cmd])(a, args, inp)
+	else
+		send_both(":%s PRIVMSG %s :%s", nick, buffers[cur_buf].name, inp)
 	end
 end
 
