@@ -259,9 +259,9 @@ local irchand = {
 				mode = mode .. " " .. e.fields[i]
 			end
 			mode = mode .. " " .. e.msg
-			prin(e.dest, "MODE", "[%s] by %s", mode, ncolor(e.nick))
+			prin(e.dest, "--", "Mode [%s] by %s", mode, ncolor(e.nick))
 		else
-			prin(MAINBUF, "MODE", "%s", e.msg)
+			prin(MAINBUF, "--", "Mode %s", e.msg)
 		end
 	end,
 	["NOTICE"] = function(e)
