@@ -27,7 +27,7 @@ nicks = {}      -- Table of all nicknames
 cur_buf = nil   -- The current buffer
 buffers = {}    -- List of all opened buffers
 
-local function nick_add(nick)
+function nick_add(nick)
 	assert(nick)
 
 	local newnick = {}
@@ -39,7 +39,7 @@ end
 
 -- add a new buffer. statusbar() should be run after this
 -- to add the new buffer to the statusline.
-local function buf_add(name)
+function buf_add(name)
 	assert(name)
 
 	local newbuf = {}
@@ -53,7 +53,7 @@ end
 
 -- check if a buffer exists, and if so, return the index
 -- for that buffer.
-local function buf_idx(name)
+function buf_idx(name)
 	local idx = nil
 	for i = 1, #buffers do
 		if buffers[i].name == name then
@@ -64,14 +64,14 @@ local function buf_idx(name)
 	return idx
 end
 
-local function panic(fmt, ...)
+function panic(fmt, ...)
 	tui.clean()
 	eprintf(fmt, ...)
 	os.exit(1)
 end
 
 -- check if a message will ping a user.
-local function msg_pings(msg)
+function msg_pings(msg)
 	local rawmsg = mirc.remove(msg)
 	local pingwords = config.pingwords
 	pingwords[#pingwords + 1] = nick
@@ -85,7 +85,7 @@ local function msg_pings(msg)
 	return false
 end
 
-local function load_nick_highlight_colors()
+function load_nick_highlight_colors()
 	-- read a list of newline-separated colors from ./colors.
 	-- the colors are in RRGGBB and may or may not be prefixed
 	-- with a #
@@ -108,7 +108,7 @@ local function load_nick_highlight_colors()
 	end
 end
 
-local function ncolor(text, text_as, no_bold)
+function ncolor(text, text_as, no_bold)
 	assert(text)
 	if not text_as then text_as = text end
 
@@ -136,7 +136,7 @@ local function ncolor(text, text_as, no_bold)
 	return format("%s%s\x1b[m", esc, text)
 end
 
-local function inputbar()
+function inputbar()
 	local inp, cursor = lurch.rl_info()
 
 	-- strip off trailing newline
@@ -174,7 +174,7 @@ local function inputbar()
 	printf("\r\x1b[%sC", cursor + #rawprompt)
 end
 
-local function statusbar()
+function statusbar()
 	local chanlist = " "
 	for buf = 1, #buffers do
 		local ch = buffers[buf].name
@@ -202,7 +202,7 @@ local function statusbar()
 	tty.curs_restore()
 end
 
-local function redraw()
+function redraw()
 	tui.refresh()
 
 	tty.curs_save()
@@ -231,7 +231,7 @@ local function redraw()
 	tty.curs_restore()
 end
 
-local function buf_switch(ch)
+function buf_switch(ch)
 	if buffers[ch] then
 		cur_buf = ch
 		buffers[cur_buf].unread = 0
@@ -240,7 +240,7 @@ local function buf_switch(ch)
 	end
 end
 
-local function prin(dest, left, right_fmt, ...)
+function prin(dest, left, right_fmt, ...)
 	local right = format(right_fmt, ...)
 
 	assert(dest)
@@ -302,9 +302,9 @@ local function prin(dest, left, right_fmt, ...)
 	buffers[bufidx].history[histsz + 1] = out
 end
 
-local function none(_) end
-local function default2(e) prin(MAINBUF, "--", "There are %s %s", e.fields[3], e.msg) end
-local function default(e) prin(e.dest, "--", "%s", e.msg) end
+function none(_) end
+function default2(e) prin(MAINBUF, "--", "There are %s %s", e.fields[3], e.msg) end
+function default(e) prin(e.dest, "--", "%s", e.msg) end
 
 local irchand = {
 	["PING"] = function(e)   irc.send("PONG :%s", e.dest or "(null)") end,
@@ -614,7 +614,7 @@ local irchand = {
 	end
 }
 
-local function parseirc(reply)
+function parseirc(reply)
 	-- DEBUG
 	util.append("logs", reply .. "\n")
 
@@ -643,87 +643,8 @@ local function parseirc(reply)
 	handler(event)
 end
 
-local function send_both(fmt, ...)
-	-- this is a simple function to send the input to the
-	-- terminal and to the server at the same time.
-	irc.send(fmt, ...)
-	parseirc(format(fmt, ...))
-end
-
-local cmdhand = {
-	["/next"] = function(a, args, inp)
-		buf_switch(cur_buf + 1)
-	end,
-	["/prev"] = function(a, args, inp)
-		buf_switch(cur_buf - 1)
-	end,
-	["/invite"] = function(a, args, inp)
-		if not (buffers[cur_buf].name):find("#") then
-			prin(MAINBUF, "-!-", "/invite must be executed in a channel buffer.")
-			return
-		end
-
-		if not a or a == "" then return end
-		irc.send(":%s INVITE %s :%s", nick, a, buffers[cur_buf].name)
-	end,
-	["/names"] = function(a, args, inp)
-		irc.send("NAMES %s", a or buffers[cur_buf].name)
-	end,
-	["/topic"] = function(a, args, inp)
-		irc.send("TOPIC %s", a or buffers[cur_buf].name)
-	end,
-	["/whois"] = function(a, args, inp)
-		if a and a ~= "" then irc.send("WHOIS %s", a) end
-	end,
-	["/join"] = function(a, args, inp)
-		irc.send(":%s JOIN %s", nick, a)
-		statusbar()
-
-		local bufidx = buf_idx(a)
-		if not bufidx then
-			buf_add(a)
-			bufidx = buf_idx(a)
-			statusbar()
-		end
-
-		buf_switch(bufidx)
-	end,
-	["/part"] = function(a, args, inp)
-		if not (buffers[cur_buf].name):find("#") then
-			prin(MAINBUF, "-!-", "/invite must be executed in a channel buffer.")
-			return
-		end
-
-		local msg = inp
-		if not inp or inp ~= "" then msg = config.part_msg end
-
-		irc.send(":%s PART %s :%s", nick, buffers[cur_buf].name, msg)
-	end,
-	["/nick"] = function(a, args, inp)
-		irc.send("NICK %s", a)
-		nick = a
-	end,
-	["/msg"] = function(a, args, inp)
-		send_both(":%s PRIVMSG %s :%s", nick, a, args)
-	end,
-	["/raw"] = function(a, args, inp)
-		irc.send("%s %s", a, args)
-	end,
-	["/quit"] = function(a, args, inp)
-		local msg = inp
-		if not inp or inp ~= "" then msg = config.quit_msg end
-
-		irc.send("QUIT :%s", msg)
-		eprintf("[lurch exited]\n")
-		tui.clean()
-		os.exit(0)
-	end,
-	["/me"] = function(a, args, inp)
-		send_both(":%s PRIVMSG %s :\1ACTION %s %s\1", nick, buffers[cur_buf].name, a, args)
-	end,
-}
-
-local function parsecmd(inp)
+local commands = require('commands')
+function parsecmd(inp)
 	-- clear the input line.
 	printf("\r\x1b[2K\r")
 
@@ -733,8 +654,27 @@ local function parsecmd(inp)
 	if not _cmd then return end
 
 	-- if the command exists, then run it
-	if cmdhand[_cmd] then
-		(cmdhand[_cmd])(a, args, inp)
+	if commands.handlers[_cmd] then
+		local hand = commands.handlers[_cmd]
+		if hand.REQUIRE_CHANBUF and not (buffers[cur_buf].name):find("#") then
+			prin(buffers[cur_buf].name, "-!-",
+				"%s must be executed in a channel buffer.", _cmd)
+			return
+		end
+
+		if hand.REQUIRE_ARG and (not a or a == "") then
+			prin(buffers[cur_buf].name, "-!-",
+				"%s requires an argument.", _cmd)
+			return
+		end
+
+		if hand.REQUIRE_CHANBUF_OR_ARG and (not a or a == "") and not (buffers[cur_buf].name):find("#") then
+			prin(buffers[cur_buf].name, "-!-",
+				"%s must be executed in a channel buffer or must be run with an argument.", _cmd)
+			return
+		end
+
+		(hand.fn)(a, args, inp)
 		return
 	end
 
@@ -744,7 +684,8 @@ local function parsecmd(inp)
 	if _cmd:find("/") == 1 then
 		prin(buffers[cur_buf].name, "NOTE", "%s not implemented yet", _cmd)
 	else
-		send_both(":%s PRIVMSG %s :%s", nick, buffers[cur_buf].name, inp)
+		local m = format(":%s PRIVMSG %s :%s", nick, buffers[cur_buf].name, inp)
+		irc.send("%s", m); parseirc(m)
 	end
 end
 
@@ -824,16 +765,16 @@ end
 
 local keyseq_handler = {
 	-- Ctrl+l
-	[12] = function() redraw() end,
+	[12] = "/redraw",
 
 	-- Ctrl+n, Ctrl+p
-	[14] = function() buf_switch(cur_buf + 1) end,
-	[16] = function() buf_switch(cur_buf - 1) end,
+	[14] = "/next",
+	[16] = "/prev",
 }
 
 function rt.on_keyseq(key)
 	if keyseq_handler[key] then
-		(keyseq_handler[key])()
+		parsecmd(keyseq_handler[key])
 	end
 end
 
