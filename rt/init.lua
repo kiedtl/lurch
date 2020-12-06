@@ -64,14 +64,6 @@ local function buf_idx(name)
 	return idx
 end
 
-local function buf_switch(ch)
-	if buffers[ch] then
-		cur_buf = ch
-		buffers[cur_buf].unread = 0
-		redraw()
-	end
-end
-
 local function panic(fmt, ...)
 	tui.clean()
 	eprintf(fmt, ...)
@@ -191,9 +183,11 @@ local function statusbar()
 			local pnch = ncolor(format(" %d %s ", buf, ch), ch, true)
 			chanlist = chanlist .. "\x1b[7m" .. pnch .. "\x1b[0m "
 		else
+			local bold = false
+			if buffers[buf].pings  > 0 then bold = true end
 			if buffers[buf].unread > 0 then
 				local nch = ncolor(format(" %d %s %s%d ", buf, ch,
-					"+", buffers[buf].unread), ch, true)
+					"+", buffers[buf].unread), ch, not bold)
 				chanlist = chanlist .. nch .. " "
 			end
 		end
@@ -235,6 +229,15 @@ local function redraw()
 
 	tty.curs_show()
 	tty.curs_restore()
+end
+
+local function buf_switch(ch)
+	if buffers[ch] then
+		cur_buf = ch
+		buffers[cur_buf].unread = 0
+		buffers[cur_buf].pings  = 0
+		redraw()
+	end
 end
 
 local function prin(dest, left, right_fmt, ...)
@@ -347,6 +350,13 @@ local irchand = {
 
 		if msg_pings(e.msg) then
 			sender = format("<\x1b[7m%s\x1b[m>", ncolor(sender, e.nick))
+
+			-- normally, we'd wait for prin() to create the buffer,
+			-- but since we need to manipulate the number of pings we
+			-- can't wait
+			if not buf_idx(e.dest) then buf_add(e.dest) end
+			local bufidx = buf_idx(e.dest)
+			buffers[bufidx].pings = buffers[bufidx].pings + 1
 		else
 			sender = format("<%s>", ncolor(sender, e.nick))
 		end
