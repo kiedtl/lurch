@@ -168,7 +168,10 @@ local function redraw()
 		end
 	end
 
+	-- redraw status bar and input line.
 	status()
+	local rl_buf, rl_pos = lurch.rl_info()
+	rt.on_input(rl_buf, rl_pos)
 
 	tty.curs_show()
 	tty.curs_restore()
@@ -279,7 +282,7 @@ local irchand = {
 		prin(MAINBUF, "--", "%s sent an invite to %s", e.nick, e.msg)
 	end,
 	["PRIVMSG"] = function(e)
-		local sender = e.nick
+		local sender = e.nick or e.from
 		-- remove extra characters from nick that won't fit.
 		if #sender > 10 then
 			sender = (sender):sub(1, 9) .. "\x1b[m\x1b[37m+\x1b[m"
@@ -513,7 +516,7 @@ local irchand = {
 	end,
 
 	-- CTCP stuff.
-	["CTCP_ACTION"] = function(e) prin(e.dest, MAINBUF, "%s %s", ncolor(e.nick or nick), e.msg) end,
+	["CTCP_ACTION"] = function(e) prin(e.dest, "*", "%s %s", ncolor(e.nick or nick), e.msg) end,
 	["CTCP_VERSION"] = function(e)
 		if config.ctcp_version then
 			prin(MAINBUF, "CTCP", "%s requested VERSION (reply: %s)", e.nick, config.ctcp_version)
@@ -679,6 +682,7 @@ function rt.init()
 
 	lurch.bind_keyseq("\\C-n")
 	lurch.bind_keyseq("\\C-p")
+	lurch.bind_keyseq("\\C-l")
 end
 
 local sighand = {
@@ -719,25 +723,57 @@ function rt.on_timeout()
 end
 
 function rt.on_reply(reply)
-	--local reply, e = lurch.conn_receive()
-	--if not reply then panic("%s", e) end
-
 	for line in reply:gmatch("(.-\r\n)") do
 		parseirc(line)
 	end
 end
 
-function rt.on_input()
+-- every time a key is pressed, redraw the prompt, and
+-- write the input buffer.
+function rt.on_input(inp, cursor)
+	-- strip off trailing newline
+	inp = inp:gsub("\n", "")
+
 	tty.curs_down(999)
 	tty.curs_show()
+
+	-- by default, the prompt is <NICK>, but if the
+	-- user is typing a command, change to prompt to an empty
+	-- string; if the user has typed "/me", change the prompt
+	-- to "* "
+	local prompt = ""
+	if inp:find("/me ") == 1 then
+		prompt = format("* %s ", ncolor(nick))
+		inp = inp:sub(5, #inp)
+		cursor = cursor - 4
+	elseif inp:find("/") == 1 then
+		prompt = "\x1b[1m/\x1b[m"
+		inp = inp:sub(2, #inp)
+		cursor = cursor - 1
+	else
+		prompt = ncolor(format("<%s> ", nick), nick, true)
+	end
+	local rawprompt = prompt:gsub("\x1b%[.-m", "")
+
+	-- strip off stuff from input that can't be shown on the
+	-- screen
+	local tr = -(tui.tty_width - #rawprompt)
+	inp = inp:sub(-(tui.tty_width - #rawprompt))
+
+	-- draw the input buffer and move the cursor to the appropriate
+	-- position.
+	printf("\r\x1b[2K\r%s%s", prompt, inp)
+	printf("\r\x1b[%sC", cursor + #rawprompt)
 end
 
 function rt.on_rl_input(inp)
 	parsecmd(inp)
 end
 
-
 local keyseq_handler = {
+	-- Ctrl+l
+	[12] = function() redraw() end,
+
 	-- Ctrl+n, Ctrl+p
 	[14] = function() switch_buf(cur_buf + 1) end,
 	[16] = function() switch_buf(cur_buf - 1) end,

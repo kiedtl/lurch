@@ -8,7 +8,7 @@
 #include <lualib.h>
 #include <netdb.h>
 #include <readline/readline.h>
-#include <readline/history.h> /* TODO: remove. */
+#include <readline/history.h>
 #include <signal.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -44,6 +44,7 @@ void llua_call(lua_State *pL, const char *fnname, size_t nargs,
 		size_t nret);
 
 /* TODO: move to separate file */
+int api_rl_info(lua_State *pL);
 int api_bind_keyseq(lua_State *pL);
 int api_tty_size(lua_State *pL);
 int api_conn_init(lua_State *pL);
@@ -118,6 +119,7 @@ main(int argc, char **argv)
 
 	/* setup lurch api functions */
 	static const struct luaL_Reg lurch_lib[] = {
+		{ "rl_info",       api_rl_info      },
 		{ "bind_keyseq",   api_bind_keyseq  },
 		{ "tty_size",      api_tty_size     },
 		{ "conn_init",     api_conn_init    },
@@ -195,17 +197,10 @@ main(int argc, char **argv)
 		}
 
 		if (FD_ISSET(0, &rd)) {
-			llua_call(L, "on_input", 0, 0);
 			rl_callback_read_char();
-
-			/*
-			 * for some reason, callback readline interface
-			 * doesn't print the current line buffer, so print it manually.
-			 * \r:       move cursor the the start of the terminal row.
-			 * \x1b[2K:  clear the current line.
-			 * \r:       move back to the start of the terminal row.
-			 */
-			printf("\r\x1b[2K\r%s", rl_line_buffer);
+			lua_pushstring(L, rl_line_buffer);
+			lua_pushinteger(L, (lua_Integer) rl_point);
+			llua_call(L, "on_input", 2, 0);
 		}
 	}
 	
@@ -382,6 +377,14 @@ llua_call(lua_State *pL, const char *fnname, size_t nargs, size_t nret)
 // API functions
 
 int
+api_rl_info(lua_State *pL)
+{
+	lua_pushstring(L, rl_line_buffer);
+	lua_pushinteger(L, (lua_Integer) rl_point);
+	return 2;
+}
+
+int
 api_bind_keyseq(lua_State *pL)
 {
 	char *keyseq = (char *) luaL_checkstring(pL, 1);
@@ -482,6 +485,5 @@ api_conn_send(lua_State *pL)
 int
 api_conn_receive(lua_State *pL)
 {
-
 	return 1;
 }
