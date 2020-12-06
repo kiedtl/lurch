@@ -37,7 +37,7 @@ local function nick_add(nick)
 	nicks[nick] = newnick
 end
 
--- add a new buffer. status() should be run after this
+-- add a new buffer. statusbar() should be run after this
 -- to add the new buffer to the statusline.
 local function buf_add(name)
 	assert(name)
@@ -46,6 +46,7 @@ local function buf_add(name)
 	newbuf.history = {}
 	newbuf.name    = name
 	newbuf.unread  = 0
+	newbuf.pings   = 0
 
 	buffers[#buffers + 1] = newbuf
 end
@@ -67,6 +68,21 @@ local function panic(fmt, ...)
 	tui.clean()
 	eprintf(fmt, ...)
 	os.exit(1)
+end
+
+-- check if a message will ping a user.
+local function msg_pings(msg)
+	local rawmsg = mirc.remove(msg)
+	local pingwords = config.pingwords
+	pingwords[#pingwords + 1] = nick
+
+	for _, pingw in ipairs(pingwords) do
+		if rawmsg:find(pingw) then
+			return true
+		end
+	end
+
+	return false
 end
 
 local function load_nick_highlight_colors()
@@ -120,7 +136,45 @@ local function ncolor(text, text_as, no_bold)
 	return format("%s%s\x1b[m", esc, text)
 end
 
-local function status()
+local function inputbar()
+	local inp, cursor = lurch.rl_info()
+
+	-- strip off trailing newline
+	inp = inp:gsub("\n", "")
+
+	tty.curs_down(999)
+	tty.curs_show()
+
+	-- by default, the prompt is <NICK>, but if the
+	-- user is typing a command, change to prompt to an empty
+	-- string; if the user has typed "/me", change the prompt
+	-- to "* "
+	local prompt = ""
+	if inp:find("/me ") == 1 then
+		prompt = format("* %s ", ncolor(nick))
+		inp = inp:sub(5, #inp)
+		cursor = cursor - 4
+	elseif inp:find("/") == 1 then
+		prompt = "\x1b[38m/\x1b[m"
+		inp = inp:sub(2, #inp)
+		cursor = cursor - 1
+	else
+		prompt = format("<%s> ", ncolor(nick))
+	end
+	local rawprompt = prompt:gsub("\x1b%[.-m", "")
+
+	-- strip off stuff from input that can't be shown on the
+	-- screen
+	local tr = -(tui.tty_width - #rawprompt)
+	inp = inp:sub(-(tui.tty_width - #rawprompt))
+
+	-- draw the input buffer and move the cursor to the appropriate
+	-- position.
+	printf("\r\x1b[2K\r%s%s", prompt, inp)
+	printf("\r\x1b[%sC", cursor + #rawprompt)
+end
+
+local function statusbar()
 	local chanlist = " "
 	for buf = 1, #buffers do
 		local ch = buffers[buf].name
@@ -168,10 +222,8 @@ local function redraw()
 		end
 	end
 
-	-- redraw status bar and input line.
-	status()
-	local rl_buf, rl_pos = lurch.rl_info()
-	rt.on_input(rl_buf, rl_pos)
+	-- redraw statusbar bar and input line.
+	statusbar(); inputbar()
 
 	tty.curs_show()
 	tty.curs_restore()
@@ -219,7 +271,7 @@ local function prin(dest, left, right_fmt, ...)
 	if not bufidx then
 		buf_add(dest)
 		bufidx = buf_idx(dest)
-		status()
+		statusbar()
 	end
 
 	if dest == buffers[cur_buf].name then
@@ -234,9 +286,12 @@ local function prin(dest, left, right_fmt, ...)
 
 		tty.curs_restore()
 		tty.curs_show()
+
+		-- since we overwrote the inputbar, redraw it
+		inputbar()
 	else
 		buffers[bufidx].unread = buffers[bufidx].unread + 1
-		status()
+		statusbar()
 	end
 
 	-- save to buffer history.
@@ -283,9 +338,17 @@ local irchand = {
 	end,
 	["PRIVMSG"] = function(e)
 		local sender = e.nick or e.from
+
 		-- remove extra characters from nick that won't fit.
-		if #sender > 10 then
-			sender = (sender):sub(1, 9) .. "\x1b[m\x1b[37m+\x1b[m"
+		if #sender > (config.left_col_width-2) then
+			sender = (sender):sub(1, config.left_col_width-3)
+			sender = sender .. "\x1b[m\x1b[37m+\x1b[m"
+		end
+
+		if msg_pings(e.msg) then
+			sender = format("<\x1b[7m%s\x1b[m>", ncolor(sender, e.nick))
+		else
+			sender = format("<%s>", ncolor(sender, e.nick))
 		end
 
 		-- convert or remove mIRC IRC colors.
@@ -295,7 +358,7 @@ local irchand = {
 			e.msg = mirc.remove(e.msg)
 		end
 
-		prin(e.dest, ncolor(sender, e.nick), "%s", e.msg)
+		prin(e.dest, sender, "%s", e.msg)
 	end,
 	["QUIT"] = function(e)
 		if not nicks[e.nick] or not nicks[e.nick].joined then
@@ -604,13 +667,13 @@ local cmdhand = {
 	end,
 	["/join"] = function(a, args, inp)
 		irc.send(":%s JOIN %s", nick, a)
-		status()
+		statusbar()
 
 		local bufidx = buf_idx(a)
 		if not bufidx then
 			buf_add(a)
 			bufidx = buf_idx(a)
-			status()
+			statusbar()
 		end
 
 		switch_buf(bufidx)
@@ -741,40 +804,8 @@ end
 
 -- every time a key is pressed, redraw the prompt, and
 -- write the input buffer.
-function rt.on_input(inp, cursor)
-	-- strip off trailing newline
-	inp = inp:gsub("\n", "")
-
-	tty.curs_down(999)
-	tty.curs_show()
-
-	-- by default, the prompt is <NICK>, but if the
-	-- user is typing a command, change to prompt to an empty
-	-- string; if the user has typed "/me", change the prompt
-	-- to "* "
-	local prompt = ""
-	if inp:find("/me ") == 1 then
-		prompt = format("* %s ", ncolor(nick))
-		inp = inp:sub(5, #inp)
-		cursor = cursor - 4
-	elseif inp:find("/") == 1 then
-		prompt = "\x1b[1m/\x1b[m"
-		inp = inp:sub(2, #inp)
-		cursor = cursor - 1
-	else
-		prompt = ncolor(format("<%s> ", nick), nick, true)
-	end
-	local rawprompt = prompt:gsub("\x1b%[.-m", "")
-
-	-- strip off stuff from input that can't be shown on the
-	-- screen
-	local tr = -(tui.tty_width - #rawprompt)
-	inp = inp:sub(-(tui.tty_width - #rawprompt))
-
-	-- draw the input buffer and move the cursor to the appropriate
-	-- position.
-	printf("\r\x1b[2K\r%s%s", prompt, inp)
-	printf("\r\x1b[%sC", cursor + #rawprompt)
+function rt.on_input()
+	inputbar()
 end
 
 function rt.on_rl_input(inp)

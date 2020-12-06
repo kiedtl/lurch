@@ -198,9 +198,7 @@ main(int argc, char **argv)
 
 		if (FD_ISSET(0, &rd)) {
 			rl_callback_read_char();
-			lua_pushstring(L, rl_line_buffer);
-			lua_pushinteger(L, (lua_Integer) rl_point);
-			llua_call(L, "on_input", 2, 0);
+			llua_call(L, "on_input", 1, 0);
 		}
 	}
 	
