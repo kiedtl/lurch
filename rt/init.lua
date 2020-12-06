@@ -64,6 +64,14 @@ local function buf_idx(name)
 	return idx
 end
 
+local function buf_switch(ch)
+	if buffers[ch] then
+		cur_buf = ch
+		buffers[cur_buf].unread = 0
+		redraw()
+	end
+end
+
 local function panic(fmt, ...)
 	tui.clean()
 	eprintf(fmt, ...)
@@ -229,14 +237,6 @@ local function redraw()
 	tty.curs_restore()
 end
 
-local function switch_buf(ch)
-	if buffers[ch] then
-		cur_buf = ch
-		buffers[cur_buf].unread = 0
-		redraw()
-	end
-end
-
 local function prin(dest, left, right_fmt, ...)
 	local right = format(right_fmt, ...)
 
@@ -384,7 +384,7 @@ local irchand = {
 
 		-- if we are the ones joining, then switch to that buffer.
 		if e.nick == nick then
-			switch_buf(#buffers)
+			buf_switch(#buffers)
 		end
 
 		prin(e.dest, "-->", "%s has joined %s", ncolor(e.nick), e.dest)
@@ -570,7 +570,7 @@ local irchand = {
 	["474"] = function(e)
 		prin(e.fields[3], "-!-", "you're banned creep")
 		local buf = buf_idx(e.fields[3])
-		if buf then switch_buf(buf) end
+		if buf then buf_switch(buf) end
 	end,
 
 	-- WHOIS: <nick> is using a secure connection (response to /whois)
@@ -642,10 +642,10 @@ end
 
 local cmdhand = {
 	["/next"] = function(a, args, inp)
-		switch_buf(cur_buf + 1)
+		buf_switch(cur_buf + 1)
 	end,
 	["/prev"] = function(a, args, inp)
-		switch_buf(cur_buf - 1)
+		buf_switch(cur_buf - 1)
 	end,
 	["/invite"] = function(a, args, inp)
 		if not (buffers[cur_buf].name):find("#") then
@@ -676,7 +676,7 @@ local cmdhand = {
 			statusbar()
 		end
 
-		switch_buf(bufidx)
+		buf_switch(bufidx)
 	end,
 	["/part"] = function(a, args, inp)
 		if not (buffers[cur_buf].name):find("#") then
@@ -752,7 +752,7 @@ function rt.init()
 	load_nick_highlight_colors()
 
 	buf_add(MAINBUF)
-	switch_buf(1)
+	buf_switch(1)
 
 	lurch.bind_keyseq("\\C-n")
 	lurch.bind_keyseq("\\C-p")
@@ -817,8 +817,8 @@ local keyseq_handler = {
 	[12] = function() redraw() end,
 
 	-- Ctrl+n, Ctrl+p
-	[14] = function() switch_buf(cur_buf + 1) end,
-	[16] = function() switch_buf(cur_buf - 1) end,
+	[14] = function() buf_switch(cur_buf + 1) end,
+	[16] = function() buf_switch(cur_buf - 1) end,
 }
 
 function rt.on_keyseq(key)
