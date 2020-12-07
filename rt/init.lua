@@ -652,6 +652,10 @@ end
 
 local cmdhand
 cmdhand = {
+	["/clear"] = {
+		help = { "Clear the current buffer." },
+		fn = function(_, _, _) buffers[cur_buf].history = {}; redraw() end
+	},
 	["/redraw"] = {
 		help = { "Redraw the screen. Ctrl+L may also be used." },
 		fn = function(_, _, _) redraw() end,
