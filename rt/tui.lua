@@ -9,6 +9,7 @@ function M.clean()
 	tty.clear()
 	tty.reset_scroll_area()
 	tty.main_buffer()
+	tty.curs_show()
 	io.flush(1)
 end
 
