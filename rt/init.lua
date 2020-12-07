@@ -994,7 +994,34 @@ function rt.on_complete(text, from, to)
 	local incomplete = text:sub(from, to)
 	local matches = {}
 
-	for i, v in ipairs({ "test", "test2" }) do
+	-- Possible matches:
+	--     for start of line: "/<command>", "/#<channel>", "nick: "
+	--     for middle of line: "nick "
+	local possible = {}
+	if from == 1 then
+		for k, _ in pairs(cmdhand) do possible[#possible + 1] = k end
+		for _, v in ipairs(buffers) do
+			if (v.name):find("#") == 1 then
+				possible[#possible + 1] = format("/%s", v.name)
+			end
+		end
+
+		-- FIXME: here be inefficient code
+		for k, v in pairs(nicks) do
+			if v.joined and util.contains(v.joined, buffers[cur_buf].name) then
+				possible[#possible + 1] = format("%s:", k)
+			end
+		end
+	else
+		-- FIXME: here be inefficient code
+		for k, v in pairs(nicks) do
+			if v.joined and util.contains(v.joined, buffers[cur_buf].name) then
+				possible[#possible + 1] = format("%s", k)
+			end
+		end
+	end
+
+	for _, v in ipairs(possible) do
 		if incomplete == v:sub(1, #incomplete) then
 			matches[#matches + 1] = v
 		end
