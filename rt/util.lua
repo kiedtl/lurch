@@ -111,7 +111,7 @@ end
 
 function util.strrepeat(ch, count)
 	local buf = ""
-	for i = 1, count do
+	for _ = 1, count do
 		buf = buf .. ch
 	end
 	return buf

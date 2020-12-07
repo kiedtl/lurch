@@ -35,4 +35,7 @@ M.right_col_width = nil -- defaults to $(terminal_width - left_col_width)
 -- words that will generate a notification if they appear in a message
 M.pingwords = { "kiedtl" }
 
+-- user defined commands. These take the place of aliases.
+M.commands = { }
+
 return M

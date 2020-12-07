@@ -3,6 +3,8 @@
 
 local rt = {}
 
+local inspect = require('inspect')
+
 local config = require('config')
 local irc = require('irc')
 local mirc = require('mirc')
@@ -16,30 +18,30 @@ local format = string.format
 
 math.randomseed(os.time())
 
-MAINBUF = "<server>"
+local MAINBUF = "<server>"
 
-colors = {}     -- List of colors used for nick highlighting
-set_colors = {} -- list of cached colors used for each nick/text
+local colors = {}     -- List of colors used for nick highlighting
+local set_colors = {} -- list of cached colors used for each nick/text
 
-nick = config.nick     -- The current nickname
-nicks = {}      -- Table of all nicknames
+local nick = config.nick     -- The current nickname
+local nicks = {}      -- Table of all nicknames
 
-cur_buf = nil   -- The current buffer
-buffers = {}    -- List of all opened buffers
+local cur_buf = nil   -- The current buffer
+local buffers = {}    -- List of all opened buffers
 
-function nick_add(nick)
-	assert(nick)
+local function nick_add(n)
+	assert(n)
 
 	local newnick = {}
 	newnick.joined = {}
 	newnick.access = {}
 
-	nicks[nick] = newnick
+	nicks[n] = newnick
 end
 
 -- add a new buffer. statusbar() should be run after this
 -- to add the new buffer to the statusline.
-function buf_add(name)
+local function buf_add(name)
 	assert(name)
 
 	local newbuf = {}
@@ -53,7 +55,7 @@ end
 
 -- check if a buffer exists, and if so, return the index
 -- for that buffer.
-function buf_idx(name)
+local function buf_idx(name)
 	local idx = nil
 	for i = 1, #buffers do
 		if buffers[i].name == name then
@@ -64,14 +66,14 @@ function buf_idx(name)
 	return idx
 end
 
-function panic(fmt, ...)
+local function panic(fmt, ...)
 	tui.clean()
 	eprintf(fmt, ...)
 	os.exit(1)
 end
 
 -- check if a message will ping a user.
-function msg_pings(msg)
+local function msg_pings(msg)
 	local rawmsg = mirc.remove(msg)
 	local pingwords = config.pingwords
 	pingwords[#pingwords + 1] = nick
@@ -85,7 +87,7 @@ function msg_pings(msg)
 	return false
 end
 
-function load_nick_highlight_colors()
+local function load_nick_highlight_colors()
 	-- read a list of newline-separated colors from ./colors.
 	-- the colors are in RRGGBB and may or may not be prefixed
 	-- with a #
@@ -108,7 +110,7 @@ function load_nick_highlight_colors()
 	end
 end
 
-function ncolor(text, text_as, no_bold)
+local function ncolor(text, text_as, no_bold)
 	assert(text)
 	if not text_as then text_as = text end
 
@@ -136,7 +138,7 @@ function ncolor(text, text_as, no_bold)
 	return format("%s%s\x1b[m", esc, text)
 end
 
-function inputbar()
+local function inputbar()
 	local inp, cursor = lurch.rl_info()
 
 	-- strip off trailing newline
@@ -149,7 +151,7 @@ function inputbar()
 	-- user is typing a command, change to prompt to an empty
 	-- string; if the user has typed "/me", change the prompt
 	-- to "* "
-	local prompt = ""
+	local prompt
 	if inp:find("/me ") == 1 then
 		prompt = format("* %s ", ncolor(nick))
 		inp = inp:sub(5, #inp)
@@ -165,7 +167,6 @@ function inputbar()
 
 	-- strip off stuff from input that can't be shown on the
 	-- screen
-	local tr = -(tui.tty_width - #rawprompt)
 	inp = inp:sub(-(tui.tty_width - #rawprompt))
 
 	-- draw the input buffer and move the cursor to the appropriate
@@ -174,7 +175,7 @@ function inputbar()
 	printf("\r\x1b[%sC", cursor + #rawprompt)
 end
 
-function statusbar()
+local function statusbar()
 	local chanlist = " "
 	for buf = 1, #buffers do
 		local ch = buffers[buf].name
@@ -202,7 +203,7 @@ function statusbar()
 	tty.curs_restore()
 end
 
-function redraw()
+local function redraw()
 	tui.refresh()
 
 	tty.curs_save()
@@ -231,7 +232,7 @@ function redraw()
 	tty.curs_restore()
 end
 
-function buf_switch(ch)
+local function buf_switch(ch)
 	if buffers[ch] then
 		cur_buf = ch
 		buffers[cur_buf].unread = 0
@@ -240,7 +241,7 @@ function buf_switch(ch)
 	end
 end
 
-function prin(dest, left, right_fmt, ...)
+local function prin(dest, left, right_fmt, ...)
 	local right = format(right_fmt, ...)
 
 	assert(dest)
@@ -249,7 +250,7 @@ function prin(dest, left, right_fmt, ...)
 
 	-- fold message to width
 	local default_width = tui.tty_width - config.left_col_width
-	right = util.fold(right, right_col_width or default_width)
+	right = util.fold(right, config.right_col_width or default_width)
 	right = right:gsub("\n", format("\n%s",
 		util.strrepeat(" ", config.left_col_width + 2)))
 
@@ -302,9 +303,9 @@ function prin(dest, left, right_fmt, ...)
 	buffers[bufidx].history[histsz + 1] = out
 end
 
-function none(_) end
-function default2(e) prin(MAINBUF, "--", "There are %s %s", e.fields[3], e.msg) end
-function default(e) prin(e.dest, "--", "%s", e.msg) end
+local function none(_) end
+local function default2(e) prin(MAINBUF, "--", "There are %s %s", e.fields[3], e.msg) end
+local function default(e) prin(e.dest, "--", "%s", e.msg) end
 
 local irchand = {
 	["PING"] = function(e)   irc.send("PONG :%s", e.dest or "(null)") end,
@@ -410,7 +411,7 @@ local irchand = {
 		end
 
 		-- display nick message for all buffers that user has joined.
-		local bufs = nil
+		local bufs
 		if e.nick == nick or not nicks[e.nick] then
 			bufs = {}
 			for i = 1, #buffers do
@@ -553,12 +554,12 @@ local irchand = {
 
 	-- MOTD message
 	["372"] = default,
-	
+
 	-- Beginning of MOTD
 	["375"] = default,
 
 	-- End of MOTD
-	["376"] = function(fields, whom, mesg, dest)
+	["376"] = function(_, _, _, _)
 		for c = 1, #config.channels do
 			irc.send(":%s JOIN %s", nick, config.channels[c])
 		end
@@ -614,7 +615,7 @@ local irchand = {
 	end
 }
 
-function parseirc(reply)
+local function parseirc(reply)
 	-- DEBUG
 	util.append("logs", reply .. "\n")
 
@@ -626,8 +627,7 @@ function parseirc(reply)
 	local cmd = event.fields[1]
 
 	-- TODO: remove this
-	i=require'inspect'
-	if not cmd then panic("cmd null (ev=%s) on reply %s\n", i(event), reply) end
+	if not cmd then panic("cmd null (ev=%s) on reply %s\n", inspect(event), reply) end
 
 	-- When recieving MOTD messages and similar stuff from
 	-- the IRCd, send it to the main tab
@@ -643,8 +643,200 @@ function parseirc(reply)
 	handler(event)
 end
 
-local commands = require('commands')
-function parsecmd(inp)
+local function send_both(fmt, ...)
+	-- this is a simple function to send the input to the
+	-- terminal and to the server at the same time.
+	irc.send(fmt, ...)
+	parseirc(format(fmt, ...))
+end
+
+local cmdhand
+cmdhand = {
+	["/redraw"] = {
+		help = { "Redraw the screen. Ctrl+L may also be used." },
+		fn = function(_, _, _) redraw() end,
+	},
+	["/next"] = {
+		help = { "Switch to the next buffer. Ctrl+N may also be used." },
+		fn = function(_, _, _) buf_switch(cur_buf + 1) end
+	},
+	["/prev"] = {
+		help = { "Switch to the previous buffer. Ctrl+P may also be used." },
+		fn = function(_, _, _) buf_switch(cur_buf - 1) end
+	},
+	["/invite"] = {
+		REQUIRE_CHANBUF = true,
+		REQUIRE_ARG = true,
+		help = { "Invite a user to the current channel." },
+		usage = "<user>",
+		fn = function(a, _, _)
+			irc.send(":%s INVITE %s :%s", nick, a, buffers[cur_buf].name)
+		end
+	},
+	["/names"] = {
+		REQUIRE_CHANBUF_OR_ARG = true,
+		help = { "See the users for a channel (the current one by default)." },
+		usage = "[channel]",
+		fn = function(a, _, _) irc.send("NAMES %s", a or buffers[cur_buf].name) end
+	},
+	["/topic"] = {
+		-- TODO: separate settopic command
+		REQUIRE_CHANBUF_OR_ARG = true,
+		help = { "See the current topic for a channel (the current one by default)." },
+		usage = "[channel]",
+		fn = function(a, _, _) irc.send("TOPIC %s", a or buffers[cur_buf].name) end
+	},
+	["/whois"] = {
+		REQUIRE_ARG = true,
+		help = { "See WHOIS information for a user." },
+		usage = "<user>",
+		fn = function(a, _, _) irc.send("WHOIS %s", a) end
+	},
+	["/join"] = {
+		REQUIRE_ARG = true,
+		help = { "Join a channel; if already joined, focus that buffer." },
+		usage = "[channel]",
+		fn = function(a, _, _)
+			irc.send(":%s JOIN %s", nick, a)
+			statusbar()
+
+			local bufidx = buf_idx(a)
+			if not bufidx then
+				buf_add(a)
+				bufidx = buf_idx(a)
+				statusbar()
+			end
+
+			buf_switch(bufidx)
+		end
+	},
+	["/part"] = {
+		REQUIRE_CHANBUF_OR_ARG = true,
+		help = { "Part the current channel." },
+		usage = "[part_message]",
+		fn = function(a, args, _)
+			local msg = config.part_msg
+			if a and a ~= "" then msg = format("%s %s", a, args) end
+			irc.send(":%s PART %s :%s", nick, buffers[cur_buf].name, msg)
+		end
+	},
+	["/quit"] = {
+		help = { "Exit lurch." },
+		usage = "[quit_message]",
+		fn = function(a, args, _)
+			local msg
+			if not a or a == "" then
+				msg = config.quit_msg
+			else
+				msg = format("%s %s", a, args)
+			end
+
+			irc.send("QUIT :%s", msg)
+			eprintf("[lurch exited]\n")
+			tui.clean()
+			os.exit(0)
+		end
+	},
+	["/nick"] = {
+		REQUIRE_ARG = true,
+		help = { "Change nickname." },
+		usage = "<nickname>",
+		fn = function(a, _, _) irc.send("NICK %s", a); nick = a; end
+	},
+	["/msg"] = {
+		REQUIRE_ARG = true,
+		help = { "Privately message a user. Opens a new buffer." },
+		usage = "<user> <message...>",
+		fn = function(a, args, _)
+			send_both(":%s PRIVMSG %s :%s", nick, a, args)
+		end
+	},
+	["/raw"] = {
+		REQUIRE_ARG = true,
+		help = { "Send a raw IRC command to the server." },
+		usage = "<command> <args>",
+		fn = function(a, args, _) irc.send("%s %s", a, args) end
+	},
+	["/me"] = {
+		REQUIRE_ARG = true,
+		REQUIRE_CHAN_OR_USERBUF = true,
+		help = { "Send a CTCP action to the current channel." },
+		usage = "<text>",
+		fn = function(a, args, _)
+			send_both(":%s PRIVMSG %s :\1ACTION %s %s\1", nick,
+				buffers[cur_buf].name, a, args)
+		end,
+	},
+	["/shrug"] = {
+		REQUIRE_CHAN_OR_USERBUF = true,
+		help = { "Send a shrug to the current channel." },
+		fn = function(_, _, _)
+			send_both(":%s PRIVMSG %s :¯\\_(ツ)_/¯", nick, buffers[cur_buf].name)
+		end,
+	},
+	["/help"] = {
+		help = { "You know what this command is for." },
+		usage = "[command]",
+		fn = function(a, _, _)
+			local curbuf = buffers[cur_buf].name
+
+			if not a or a == "" then
+				-- all set up and ready to go !!!
+				prin(curbuf, "--", "hello bastard !!!")
+				return
+			end
+
+			local cmd = a
+			if not (cmd:find("/") == 1) then cmd = "/" .. cmd end
+
+			if not cmdhand[cmd] then
+				prin(curbuf, "-!-", "No such command '%s'", a)
+				return
+			end
+
+			local cmdinfo = cmdhand[cmd]
+			prin(curbuf, "--", "")
+			prin(curbuf, "--", "Help for %s", cmd)
+
+			if cmdinfo.usage then
+				prin(curbuf, "--", "usage: %s %s", cmd, cmdinfo.usage)
+			end
+
+			prin(curbuf, "--", "")
+
+			for i = 1, #cmdinfo.help do
+				prin(curbuf, "--", "%s", cmdinfo.help[i])
+				prin(curbuf, "--", "")
+			end
+
+			if cmdinfo.REQUIRE_CHANBUF then
+				prin(curbuf, "--", "This command must be run in a channel buffer.")
+				prin(curbuf, "--", "")
+			elseif cmdinfo.REQUIRE_CHAN_OR_USERBUF then
+				prin(curbuf, "--", "This command must be run in a channel or a user buffer.")
+				prin(curbuf, "--", "")
+			end
+		end,
+	},
+	["/list"] = {
+		-- TODO: list user-defined commands.
+		help = { "List builtin and user-defined lurch commands." },
+		fn = function(_, _, _)
+			local curbuf = buffers[cur_buf].name
+			prin(curbuf, "--", "")
+			prin(curbuf, "--", "[builtin]")
+
+			local cmdlist = ""
+			for k, _ in pairs(cmdhand) do
+				cmdlist = cmdlist .. k .. " "
+			end
+
+			prin(curbuf, "--", "%s", cmdlist)
+		end,
+	},
+}
+
+local function parsecmd(inp)
 	-- clear the input line.
 	printf("\r\x1b[2K\r")
 
@@ -654,8 +846,14 @@ function parsecmd(inp)
 	if not _cmd then return end
 
 	-- if the command exists, then run it
-	if commands.handlers[_cmd] then
-		local hand = commands.handlers[_cmd]
+	if _cmd:find("/") == 1 then
+		if not cmdhand[_cmd] and not config.commands[_cmd] then
+			prin(buffers[cur_buf].name, "NOTE", "%s not implemented yet", _cmd)
+			return
+		end
+
+		local hand = cmdhand[_cmd] or config.commands[_cmd]
+
 		if hand.REQUIRE_CHANBUF and not (buffers[cur_buf].name):find("#") then
 			prin(buffers[cur_buf].name, "-!-",
 				"%s must be executed in a channel buffer.", _cmd)
@@ -663,8 +861,7 @@ function parsecmd(inp)
 		end
 
 		if hand.REQUIRE_ARG and (not a or a == "") then
-			prin(buffers[cur_buf].name, "-!-",
-				"%s requires an argument.", _cmd)
+			prin(buffers[cur_buf].name, "-!-", "%s requires an argument.", _cmd)
 			return
 		end
 
@@ -674,16 +871,14 @@ function parsecmd(inp)
 			return
 		end
 
-		(hand.fn)(a, args, inp)
-		return
-	end
+		if hand.REQUIRE_CHAN_OR_USERBUF and cur_buf == 1 then
+			prin(buffers[cur_buf].name, "-!-",
+				"%s must be executed in a channel or user buffer.", _cmd)
+		end
 
-	-- since the command doesn't exist, just send it as a message (unless it
-	-- begins with a "/", in which case notify the user that the command
-	-- doesn't exist
-	if _cmd:find("/") == 1 then
-		prin(buffers[cur_buf].name, "NOTE", "%s not implemented yet", _cmd)
+		(hand.fn)(a, args, inp)
 	else
+		-- since the command doesn't exist, just send it as a message
 		local m = format(":%s PRIVMSG %s :%s", nick, buffers[cur_buf].name, inp)
 		irc.send("%s", m); parseirc(m)
 	end
@@ -738,7 +933,7 @@ function rt.on_signal(sig)
 	end
 end
 
-function rt.on_lerror(err)
+function rt.on_lerror(_)
 	tui.clean()
 	irc.send("QUIT :%s", "*poof*")
 end
