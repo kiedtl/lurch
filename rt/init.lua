@@ -145,7 +145,8 @@ local function inputbar()
 	-- if we've scrolled up, don't draw the input.
 	if buffers[cur_buf].scroll ~= #buffers[cur_buf].history then
 		tty.curs_hide()
-		printf("\r\x1b[2K\r-- more --")
+		tty.clear_line()
+		printf("-- more --")
 		return
 	end
 
@@ -180,7 +181,8 @@ local function inputbar()
 
 	-- draw the input buffer and move the cursor to the appropriate
 	-- position.
-	printf("\r\x1b[2K\r%s%s", prompt, inp)
+	tty.clear_line()
+	printf("%s%s", prompt, inp)
 	printf("\r\x1b[%sC", cursor + #rawprompt)
 end
 
@@ -881,8 +883,7 @@ cmdhand = {
 }
 
 local function parsecmd(inp)
-	-- clear the input line.
-	printf("\r\x1b[2K\r")
+	-- the input line clears itself, there's no need to clear it...
 
 	-- split the input line into the command (first word), a (second
 	-- word), and args (the rest of the input)
