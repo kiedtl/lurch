@@ -49,6 +49,7 @@ local function buf_add(name)
 	newbuf.name    = name
 	newbuf.unread  = 0
 	newbuf.pings   = 0
+	newbuf.scroll  = #newbuf.history
 
 	buffers[#buffers + 1] = newbuf
 end
@@ -139,13 +140,21 @@ local function ncolor(text, text_as, no_bold)
 end
 
 local function inputbar()
+	tty.curs_down(999)
+
+	-- if we've scrolled up, don't draw the input.
+	if buffers[cur_buf].scroll ~= #buffers[cur_buf].history then
+		tty.curs_hide()
+		printf("\r\x1b[2K\r-- more --")
+		return
+	end
+
+	tty.curs_show()
+
 	local inp, cursor = lurch.rl_info()
 
 	-- strip off trailing newline
 	inp = inp:gsub("\n", "")
-
-	tty.curs_down(999)
-	tty.curs_show()
 
 	-- by default, the prompt is <NICK>, but if the
 	-- user is typing a command, change to prompt to an empty
@@ -179,12 +188,19 @@ local function statusbar()
 	local chanlist = " "
 	for buf = 1, #buffers do
 		local ch = buffers[buf].name
+		local bold = false
 
 		if buf == cur_buf then
-			local pnch = ncolor(format(" %d %s ", buf, ch), ch, true)
-			chanlist = chanlist .. "\x1b[7m" .. pnch .. "\x1b[0m "
+			if buffers[buf].pings  > 0 then bold = true end
+			if buffers[buf].unread > 0 then
+				local pnch = ncolor(format(" %d %s %s%d ", buf, ch,
+					"+", buffers[buf].unread), ch, not bold)
+				chanlist = chanlist .. "\x1b[7m" .. pnch .. "\x1b[0m "
+			else
+				local pnch = ncolor(format(" %d %s ", buf, ch), ch, true)
+				chanlist = chanlist .. "\x1b[7m" .. pnch .. "\x1b[0m "
+			end
 		else
-			local bold = false
 			if buffers[buf].pings  > 0 then bold = true end
 			if buffers[buf].unread > 0 then
 				local nch = ncolor(format(" %d %s %s%d ", buf, ch,
@@ -214,8 +230,8 @@ local function redraw()
 	tty.curs_up(1)
 
 	if buffers[cur_buf].history then
-		local start = #buffers[cur_buf].history - (tui.tty_height-2)
-		for i = start, #buffers[cur_buf].history do
+		local start = buffers[cur_buf].scroll - (tui.tty_height-2)
+		for i = start, buffers[cur_buf].scroll do
 			local msg = buffers[cur_buf].history[i]
 			if msg then
 				printf("\r\x1b[0m%s\n\r", msg)
@@ -278,7 +294,7 @@ local function prin(dest, left, right_fmt, ...)
 		statusbar()
 	end
 
-	if dest == buffers[cur_buf].name then
+	if dest == buffers[cur_buf].name and buffers[cur_buf].scroll == #buffers[cur_buf].history then
 		tty.curs_hide()
 		tty.curs_save()
 
@@ -293,6 +309,9 @@ local function prin(dest, left, right_fmt, ...)
 
 		-- since we overwrote the inputbar, redraw it
 		inputbar()
+
+		-- update the scroll offset.
+		buffers[bufidx].scroll = #buffers[bufidx].history + 1
 	else
 		buffers[bufidx].unread = buffers[bufidx].unread + 1
 		statusbar()
@@ -652,6 +671,26 @@ end
 
 local cmdhand
 cmdhand = {
+	["/up"] = {
+		help = {},
+		fn = function(_, _, _)
+			local scr = tui.tty_height - 3
+			if buffers[cur_buf].scroll >= 0 then
+				buffers[cur_buf].scroll = buffers[cur_buf].scroll - scr
+			end
+			redraw()
+		end
+	},
+	["/down"] = {
+		help = {},
+		fn = function(_, _, _)
+			local scr = tui.tty_height - 3
+			if buffers[cur_buf].scroll <= #buffers[cur_buf].history then
+				buffers[cur_buf].scroll = buffers[cur_buf].scroll + scr
+			end
+			redraw()
+		end
+	},
 	["/clear"] = {
 		help = { "Clear the current buffer." },
 		fn = function(_, _, _) buffers[cur_buf].history = {}; redraw() end
@@ -920,6 +959,8 @@ function rt.init()
 	lurch.bind_keyseq("\\C-n")
 	lurch.bind_keyseq("\\C-p")
 	lurch.bind_keyseq("\\C-l")
+	lurch.bind_keyseq("\\C-w")
+	lurch.bind_keyseq("\\C-r")
 end
 
 local sighand = {
@@ -982,6 +1023,10 @@ local keyseq_handler = {
 	-- Ctrl+n, Ctrl+p
 	[14] = "/next",
 	[16] = "/prev",
+
+	-- TODO: PageUp, PageDown
+	[23] = "/up",
+	[18] = "/down",
 }
 
 function rt.on_keyseq(key)
