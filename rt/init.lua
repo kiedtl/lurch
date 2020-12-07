@@ -845,6 +845,19 @@ local function parsecmd(inp)
 	local _cmd, a, args = inp:gmatch("([^%s]+)%s?([^%s]*)%s?(.*)")()
 	if not _cmd then return end
 
+	-- if the command matches "/<number>", switch to that buffer.
+	if _cmd:match("/%d+$") then
+		buf_switch(tonumber(_cmd:sub(2, #_cmd)))
+		return
+	end
+
+	-- if the command matches "/#<channel>", switch to that buffer.
+	if _cmd:match("/#[^%s]+$") then
+		local bufidx = buf_idx(_cmd:sub(2, #_cmd))
+		if bufidx then buf_switch(bufidx) end
+		return
+	end
+
 	-- if the command exists, then run it
 	if _cmd:find("/") == 1 then
 		if not cmdhand[_cmd] and not config.commands[_cmd] then
