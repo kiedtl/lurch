@@ -5,8 +5,8 @@ local rt = {}
 
 local inspect = require('inspect')
 
-local config  = require('config')
 local irc     = require('irc')
+local config  = require('config')
 local mirc    = require('mirc')
 local util    = require('util')
 local tui     = require('tui')
