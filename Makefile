@@ -1,4 +1,4 @@
-CC      = gcc
+CC      = clang
 CFLAGS  = -Og -g -D_POSIX_C_SOURCE=200112L -I/usr/include/lua5.3/
 LDFLAGS = -L/usr/include -llua5.3 -lm -lreadline
 SRC     = main.c
