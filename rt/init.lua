@@ -224,20 +224,18 @@ local function redraw()
 
 	tty.curs_save()
 	tty.curs_hide()
-	tty.clear()
 
-	tty.curs_down(999)
-	tty.curs_up(1)
+	tty.curs_move_to_line(2)
 
 	if buffers[cur_buf].history then
-		local start = buffers[cur_buf].scroll - (tui.tty_height-2)
+		local start = buffers[cur_buf].scroll - (tui.tty_height-4)
 		for i = start, buffers[cur_buf].scroll do
+			tty.clear_line()
+
 			local msg = buffers[cur_buf].history[i]
-			if msg then
-				printf("\r\x1b[0m%s\n\r", msg)
-			else
-				printf("\n\r", msg)
-			end
+			if msg then printf("\x1b[0m%s", msg) end
+
+			tty.curs_down(1)
 		end
 	end
 
@@ -309,17 +307,20 @@ local function prin(dest, left, right_fmt, ...)
 
 		-- since we overwrote the inputbar, redraw it
 		inputbar()
-
-		-- update the scroll offset.
-		buffers[bufidx].scroll = #buffers[bufidx].history + 1
 	else
 		buffers[bufidx].unread = buffers[bufidx].unread + 1
 		statusbar()
 	end
 
-	-- save to buffer history.
-	local histsz = #buffers[bufidx].history
-	buffers[bufidx].history[histsz + 1] = out
+	-- save to buffer history and update the scroll offset.
+	local prev_hist_sz = #buffers[cur_buf].history
+	for line in out:gmatch("([^\n]+)\n?") do
+		local histsz = #buffers[bufidx].history
+		buffers[bufidx].history[histsz + 1] = line
+	end
+	if buffers[cur_buf].scroll == prev_hist_sz then
+		buffers[bufidx].scroll = #buffers[bufidx].history
+	end
 end
 
 local function none(_) end
