@@ -5,16 +5,16 @@ local rt = {}
 
 local inspect = require('inspect')
 
-local config = require('config')
-local irc = require('irc')
-local mirc = require('mirc')
-local util = require('util')
-local tui = require('tui')
-local tty = require('tty')
+local config  = require('config')
+local irc     = require('irc')
+local mirc    = require('mirc')
+local util    = require('util')
+local tui     = require('tui')
+local tty     = require('tty')
 
-local printf = util.printf
+local printf  = util.printf
 local eprintf = util.eprintf
-local format = string.format
+local format  = string.format
 
 math.randomseed(os.time())
 
