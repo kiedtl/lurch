@@ -990,4 +990,17 @@ function rt.on_keyseq(key)
 	end
 end
 
+function rt.on_complete(text, from, to)
+	local incomplete = text:sub(from, to)
+	local matches = {}
+
+	for i, v in ipairs({ "test", "test2" }) do
+		if incomplete == v:sub(1, #incomplete) then
+			matches[#matches + 1] = v
+		end
+	end
+
+	return matches
+end
+
 return rt

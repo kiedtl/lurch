@@ -35,6 +35,7 @@ void signal_fatal(int sig);
 void die(const char *fmt, ...);
 char *format(const char *format, ...);
 void lurch_rl_handler(char *line);
+char **lurch_rl_completer(const char *text, int start, int end);
 int  lurch_rl_getc(FILE *f);
 int  lurch_rl_keyseq(int count, int key);
 
@@ -77,9 +78,9 @@ main(int argc, char **argv)
 
 	/* init readline */
 	rl_readline_name = "lurch";
+	rl_attempted_completion_function = lurch_rl_completer;
 	rl_getc_function = lurch_rl_getc;
 	rl_callback_handler_install(NULL, lurch_rl_handler);
-	rl_bind_key('\t', rl_insert);
 	rl_initialize();
 
 	/* init lua */
@@ -277,6 +278,57 @@ lurch_rl_keyseq(int count, int key)
 	return 0;
 }
 
+static char **completions = NULL;
+static char
+*dummy_generator(const char *text, int state)
+{
+	return completions[state];
+}
+
+/* TODO: note here where I stole this from */
+char **
+lurch_rl_completer(const char *text, int start, int end)
+{
+	/* if we couldn't find any matches, don't let readline
+	 * use its stupid filename completion. */
+	rl_attempted_completion_over = 1;
+
+	size_t i;
+	size_t completions_len;
+
+	lua_settop(L, 0);
+	lua_pushstring(L, rl_line_buffer);
+	lua_pushinteger(L, (lua_Integer) start + 1);
+	lua_pushinteger(L, (lua_Integer) end + 1);
+	llua_call(L, "on_complete", 3, 1);
+
+	luaL_checktype(L, -1, LUA_TTABLE);
+	completions_len = lua_rawlen(L, -1);
+	
+	if (completions_len == 0)
+		return NULL;
+
+	completions = malloc(sizeof(char *) * (completions_len + 1));
+	assert(completions);
+
+	for (i = 0; i < completions_len; ++i) {
+		size_t length;
+		const char *tmp;
+		lua_rawgeti(L, 1, i + 1);
+		tmp = luaL_checkstring(L, 2);
+		length = lua_rawlen(L, 2) + 1;
+		completions[i] = malloc(sizeof(char) * length);
+		assert(completions[i]);
+		strncpy(completions[i], tmp, length);
+		lua_remove(L, 2);
+	}
+
+	/* add sentinel NULL */
+	completions[completions_len] = NULL;
+
+	return rl_completion_matches(text, dummy_generator);
+}
+
 void
 lurch_rl_handler(char *line)
 {
@@ -321,6 +373,7 @@ llua_panic(lua_State *pL)
 	}
 
 	fprintf(stderr, "\r\x1b[2K\rlua_call error: %s\n\n", err);
+	llua_sdump(L);
 
 	/* call debug.traceback and get backtrace */
 	lua_getglobal(pL, "debug");
