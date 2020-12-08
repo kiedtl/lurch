@@ -24,6 +24,7 @@ local buffers = {}           -- List of all opened buffers
 -- prototypes
 local buf_add
 local buf_idx
+local buf_cur
 local panic
 local msg_pings
 local buf_switch
@@ -69,6 +70,11 @@ function buf_idx(name)
 	return idx
 end
 
+function buf_cur()
+	return buffers[cur_buf].name
+end
+
+-- switch to a buffer and redraw the screen.
 function buf_switch(ch)
 	if buffers[ch] then
 		cur_buf = ch
@@ -534,21 +540,21 @@ cmdhand = {
 		help = { "Invite a user to the current channel." },
 		usage = "<user>",
 		fn = function(a, _, _)
-			irc.send(":%s INVITE %s :%s", nick, a, buffers[cur_buf].name)
+			irc.send(":%s INVITE %s :%s", nick, a, buf_cur())
 		end
 	},
 	["/names"] = {
 		REQUIRE_CHANBUF_OR_ARG = true,
 		help = { "See the users for a channel (the current one by default)." },
 		usage = "[channel]",
-		fn = function(a, _, _) irc.send("NAMES %s", a or buffers[cur_buf].name) end
+		fn = function(a, _, _) irc.send("NAMES %s", a or buf_cur()) end
 	},
 	["/topic"] = {
 		-- TODO: separate settopic command
 		REQUIRE_CHANBUF_OR_ARG = true,
 		help = { "See the current topic for a channel (the current one by default)." },
 		usage = "[channel]",
-		fn = function(a, _, _) irc.send("TOPIC %s", a or buffers[cur_buf].name) end
+		fn = function(a, _, _) irc.send("TOPIC %s", a or buf_cur()) end
 	},
 	["/whois"] = {
 		REQUIRE_ARG = true,
@@ -578,7 +584,7 @@ cmdhand = {
 		fn = function(a, args, _)
 			local msg = config.part_msg
 			if a and a ~= "" then msg = format("%s %s", a, args) end
-			irc.send(":%s PART %s :%s", nick, buffers[cur_buf].name, msg)
+			irc.send(":%s PART %s :%s", nick, buf_cur(), msg)
 		end
 	},
 	["/quit"] = {
@@ -625,21 +631,21 @@ cmdhand = {
 		usage = "<text>",
 		fn = function(a, args, _)
 			send_both(":%s PRIVMSG %s :\1ACTION %s %s\1", nick,
-				buffers[cur_buf].name, a, args)
+				buf_cur(), a, args)
 		end,
 	},
 	["/shrug"] = {
 		REQUIRE_CHAN_OR_USERBUF = true,
 		help = { "Send a shrug to the current channel." },
 		fn = function(_, _, _)
-			send_both(":%s PRIVMSG %s :¯\\_(ツ)_/¯", nick, buffers[cur_buf].name)
+			send_both(":%s PRIVMSG %s :¯\\_(ツ)_/¯", nick, buf_cur())
 		end,
 	},
 	["/help"] = {
 		help = { "You know what this command is for." },
 		usage = "[command]",
 		fn = function(a, _, _)
-			local curbuf = buffers[cur_buf].name
+			local curbuf = buf_cur()
 
 			if not a or a == "" then
 				-- all set up and ready to go !!!
@@ -683,7 +689,7 @@ cmdhand = {
 		-- TODO: list user-defined commands.
 		help = { "List builtin and user-defined lurch commands." },
 		fn = function(_, _, _)
-			local curbuf = buffers[cur_buf].name
+			local curbuf = buf_cur()
 			prin(curbuf, "--", "")
 			prin(curbuf, "--", "[builtin]")
 
@@ -721,38 +727,38 @@ function parsecmd(inp)
 	-- if the command exists, then run it
 	if _cmd:find("/") == 1 then
 		if not cmdhand[_cmd] and not config.commands[_cmd] then
-			prin(buffers[cur_buf].name, "NOTE", "%s not implemented yet", _cmd)
+			prin(buf_cur(), "NOTE", "%s not implemented yet", _cmd)
 			return
 		end
 
 		local hand = cmdhand[_cmd] or config.commands[_cmd]
 
-		if hand.REQUIRE_CHANBUF and not (buffers[cur_buf].name):find("#") then
-			prin(buffers[cur_buf].name, "-!-",
+		if hand.REQUIRE_CHANBUF and not (buf_cur()):find("#") then
+			prin(buf_cur(), "-!-",
 				"%s must be executed in a channel buffer.", _cmd)
 			return
 		end
 
 		if hand.REQUIRE_ARG and (not a or a == "") then
-			prin(buffers[cur_buf].name, "-!-", "%s requires an argument.", _cmd)
+			prin(buf_cur(), "-!-", "%s requires an argument.", _cmd)
 			return
 		end
 
-		if hand.REQUIRE_CHANBUF_OR_ARG and (not a or a == "") and not (buffers[cur_buf].name):find("#") then
-			prin(buffers[cur_buf].name, "-!-",
+		if hand.REQUIRE_CHANBUF_OR_ARG and (not a or a == "") and not (buf_cur()):find("#") then
+			prin(buf_cur(), "-!-",
 				"%s must be executed in a channel buffer or must be run with an argument.", _cmd)
 			return
 		end
 
 		if hand.REQUIRE_CHAN_OR_USERBUF and cur_buf == 1 then
-			prin(buffers[cur_buf].name, "-!-",
+			prin(buf_cur(), "-!-",
 				"%s must be executed in a channel or user buffer.", _cmd)
 		end
 
 		(hand.fn)(a, args, inp)
 	else
 		-- since the command doesn't exist, just send it as a message
-		local m = format(":%s PRIVMSG %s :%s", nick, buffers[cur_buf].name, inp)
+		local m = format(":%s PRIVMSG %s :%s", nick, buf_cur(), inp)
 		irc.send("%s", m); parseirc(m)
 	end
 end
@@ -874,11 +880,11 @@ function rt.on_complete(text, from, to)
 			end
 		end
 
-		for k, _ in pairs(buffers[cur_buf].names) do
+		for k, _ in pairs(buf_cur()) do
 			possible[#possible + 1] = format("%s:", k)
 		end
 	else
-		for k, _ in pairs(buffers[cur_buf].names) do
+		for k, _ in pairs(buf_cur()) do
 			possible[#possible + 1] = format("%s", k)
 		end
 	end
