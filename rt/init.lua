@@ -428,8 +428,11 @@ local irchand = {
 		set_colors[e.nick] = nil
 		for _, buf in ipairs(buffers) do
 			if not buf.names[e.nick] then return end
-
 			buf.names[e.nick] = nil; buf.names[e.msg]  = true
+		end
+
+		for _, buf in ipairs(buffers) do
+			if not buf.names[e.nick] and e.nick ~= nick then return end
 			prin(ch, "--@", "%s is now known as %s", highlight(e.nick),
 				highlight(e.msg))
 		end
