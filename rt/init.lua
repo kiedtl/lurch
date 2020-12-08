@@ -384,22 +384,20 @@ local irchand = {
 	["QUIT"] = function(e)
 		-- display quit message for all buffers that user has joined.
 		for _, buf in ipairs(buffers) do
-			if not buffers[i].names[e.nick] then return end
+			if not buf.names[e.nick] then return end
 			prin(buf, "<--", "%s has quit %s (%s)", highlight(e.nick), e.dest, e.msg)
 		end
 	end,
 	["JOIN"] = function(e)
 		-- sometimes the channel joined is contained in the message.
-		if not e.dest or e.dest == "" then
-			e.dest = e.msg
-		end
+		if not e.dest or e.dest == "" then e.dest = e.msg end
 
 		-- if the buffer isn't open yet, create it.
-		local buf_idx = buf_idx(e.dest)
-		if not buf_idx then buf_idx = buf_add(e.dest) end
+		local bufidx = buf_idx(e.dest)
+		if not bufidx then bufidx = buf_add(e.dest) end
 
 		-- add to the list of users in that channel.
-		buffers[buf_idx].names[e.nick] = true
+		buffers[bufidx].names[e.nick] = true
 
 		-- if we are the ones joining, then switch to that buffer.
 		if e.nick == nick then buf_switch(#buffers) end
@@ -422,7 +420,7 @@ local irchand = {
 
 		for _, buf in ipairs(buffers) do
 			if not buf.names[e.nick] and e.nick ~= nick then return end
-			prin(ch, "--@", "%s is now known as %s", highlight(e.nick),
+			prin(buf, "--@", "%s is now known as %s", highlight(e.nick),
 				highlight(e.msg))
 		end
 	end,
@@ -523,8 +521,8 @@ local irchand = {
 	-- Reply to /names
 	["353"] = function(e)
 		-- if the buffer isn't open yet, create it.
-		local buf_idx = buf_idx(e.dest)
-		if not buf_idx then buf_idx = buf_add(e.dest) end
+		local bufidx = buf_idx(e.dest)
+		if not bufidx then bufidx = buf_add(e.dest) end
 
 		local nicklist = ""
 
@@ -538,8 +536,8 @@ local irchand = {
 			nicklist = format("%s%s%s ", nicklist, access, highlight(_nick))
 
 			-- TODO: update access with mode changes
-			buffers[buf_idx].names[_nick] = true
-			buffers[buf_idx].access[_nick] = access
+			buffers[bufidx].names[_nick] = true
+			buffers[bufidx].access[_nick] = access
 		end
 
 		prin(e.dest, "NAMES", "%s", nicklist)
