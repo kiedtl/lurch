@@ -20,17 +20,33 @@ math.randomseed(os.time())
 
 local MAINBUF = "<server>"
 
-local colors = {}     -- List of colors used for nick highlighting
-local set_colors = {} -- list of cached colors used for each nick/text
-
 local nick = config.nick     -- The current nickname
 
 local cur_buf = nil   -- The current buffer
 local buffers = {}    -- List of all opened buffers
 
+-- prototypes
+local buf_add
+local buf_idx
+local panic
+local msg_pings
+local inputbar
+local statusbar
+local redraw
+local buf_switch
+local prin
+local parseirc
+local parsecmd
+
+function panic(fmt, ...)
+	tui.clean()
+	eprintf(fmt, ...)
+	os.exit(1)
+end
+
 -- add a new buffer. statusbar() should be run after this
 -- to add the new buffer to the statusline.
-local function buf_add(name)
+function buf_add(name)
 	assert(name)
 
 	local newbuf = {}
@@ -48,7 +64,7 @@ end
 
 -- check if a buffer exists, and if so, return the index
 -- for that buffer.
-local function buf_idx(name)
+function buf_idx(name)
 	local idx = nil
 	for i = 1, #buffers do
 		if buffers[i].name == name then
@@ -59,14 +75,20 @@ local function buf_idx(name)
 	return idx
 end
 
-local function panic(fmt, ...)
-	tui.clean()
-	eprintf(fmt, ...)
-	os.exit(1)
+function buf_switch(ch)
+	if buffers[ch] then
+		cur_buf = ch
+
+		-- reset scroll, unread notifications
+		buffers[ch].scroll = #buffers[ch].history
+		buffers[ch].unread = 0; buffers[ch].pings  = 0
+
+		redraw()
+	end
 end
 
 -- check if a message will ping a user.
-local function msg_pings(msg)
+function msg_pings(msg)
 	local rawmsg = mirc.remove(msg)
 	local pingwords = config.pingwords
 	pingwords[#pingwords + 1] = nick
@@ -80,54 +102,7 @@ local function msg_pings(msg)
 	return false
 end
 
-local function load_highlight_colors()
-	-- read a list of newline-separated colors from ./colors.
-	-- the colors are in RRGGBB and may or may not be prefixed
-	-- with a #
-	local data = util.read(__LURCH_EXEDIR .. "/conf/colors")
-
-	-- iterate through each line, and parse each color into
-	-- the R, G, and B values. this allows us to easily construct
-	-- the appropriate escape codes to change text to that color
-	-- later on.
-	for line in data:gmatch("([^\n]+)\n?") do
-		-- strip off any prefixed #
-		line = line:gsub("^#", "")
-
-		local r, g, b = line:gmatch("(..)(..)(..)")()
-
-		colors[#colors + 1] = {}
-		colors[#colors].r = tonumber(r, 16)
-		colors[#colors].g = tonumber(g, 16)
-		colors[#colors].b = tonumber(b, 16)
-	end
-end
-
-local function highlight(text, text_as, no_bold)
-	assert(text)
-	if not text_as then text_as = text end
-
-	-- store nickname highlight color, so that we don't have to
-	-- calculate the text's hash each time
-	if not set_colors[text_as] then
-		-- add one to the hash value, as the hash value may be 0
-		set_colors[text_as] = util.hash(text_as, #colors - 1)
-		set_colors[text_as] = set_colors[text_as] + 1
-	end
-
-	local color = colors[set_colors[text_as]]
-	local esc = "\x1b[1m"
-	if no_bold then esc = "" end
-
-	-- if no color could be found, just use the default of black
-	if color then
-		esc = esc .. format("\x1b[38;2;%s;%s;%sm", color.r, color.g, color.b)
-	end
-
-	return format("%s%s\x1b[m", esc, text)
-end
-
-local function inputbar()
+function inputbar()
 	tty.curs_down(999)
 
 	-- if we've scrolled up, don't draw the input.
@@ -151,7 +126,7 @@ local function inputbar()
 	-- to "* "
 	local prompt
 	if inp:find("/me ") == 1 then
-		prompt = format("* %s ", highlight(nick))
+		prompt = format("* %s ", tui.highlight(nick))
 		inp = inp:sub(5, #inp)
 		cursor = cursor - 4
 	elseif inp:find("/") == 1 then
@@ -159,7 +134,7 @@ local function inputbar()
 		inp = inp:sub(2, #inp)
 		cursor = cursor - 1
 	else
-		prompt = format("<%s> ", highlight(nick))
+		prompt = format("<%s> ", tui.highlight(nick))
 	end
 	local rawprompt = prompt:gsub("\x1b%[.-m", "")
 
@@ -174,7 +149,7 @@ local function inputbar()
 	printf("\r\x1b[%sC", cursor + #rawprompt)
 end
 
-local function statusbar()
+function statusbar()
 	local chanlist = " "
 	for buf = 1, #buffers do
 		local ch = buffers[buf].name
@@ -183,17 +158,17 @@ local function statusbar()
 		if buf == cur_buf then
 			if buffers[buf].pings  > 0 then bold = true end
 			if buffers[buf].unread > 0 then
-				local pnch = highlight(format(" %d %s %s%d ", buf, ch,
+				local pnch = tui.highlight(format(" %d %s %s%d ", buf, ch,
 					"+", buffers[buf].unread), ch, not bold)
 				chanlist = chanlist .. "\x1b[7m" .. pnch .. "\x1b[0m "
 			else
-				local pnch = highlight(format(" %d %s ", buf, ch), ch, true)
+				local pnch = tui.highlight(format(" %d %s ", buf, ch), ch, true)
 				chanlist = chanlist .. "\x1b[7m" .. pnch .. "\x1b[0m "
 			end
 		else
 			if buffers[buf].pings  > 0 then bold = true end
 			if buffers[buf].unread > 0 then
-				local nch = highlight(format(" %d %s %s%d ", buf, ch,
+				local nch = tui.highlight(format(" %d %s %s%d ", buf, ch,
 					"+", buffers[buf].unread), ch, not bold)
 				chanlist = chanlist .. nch .. " "
 			end
@@ -209,7 +184,7 @@ local function statusbar()
 	tty.curs_restore()
 end
 
-local function redraw()
+function redraw()
 	tui.refresh()
 
 	tty.curs_save()
@@ -236,16 +211,7 @@ local function redraw()
 	tty.curs_restore()
 end
 
-local function buf_switch(ch)
-	if buffers[ch] then
-		cur_buf = ch
-		buffers[cur_buf].unread = 0
-		buffers[cur_buf].pings  = 0
-		redraw()
-	end
-end
-
-local function prin(dest, left, right_fmt, ...)
+function prin(dest, left, right_fmt, ...)
 	local right = format(right_fmt, ...)
 
 	assert(dest)
@@ -328,7 +294,7 @@ local irchand = {
 				mode = mode .. " " .. e.fields[i]
 			end
 			mode = mode .. " " .. e.msg
-			prin(e.dest, "--", "Mode [%s] by %s", mode, highlight(e.nick))
+			prin(e.dest, "--", "Mode [%s] by %s", mode, tui.highlight(e.nick))
 		else
 			prin(MAINBUF, "--", "Mode %s", e.msg)
 		end
@@ -341,10 +307,10 @@ local irchand = {
 		end
 	end,
 	["PART"] = function(e)
-		prin(e.dest, "<--", "%s has left %s (%s)", highlight(e.nick), e.dest, e.msg)
+		prin(e.dest, "<--", "%s has left %s (%s)", tui.highlight(e.nick), e.dest, e.msg)
 	end,
 	["KICK"] = function(e)
-		prin(e.dest, "<--", "%s has kicked %s (%s)", highlight(e.nick), highlight(e.fields[3]), e.msg)
+		prin(e.dest, "<--", "%s has kicked %s (%s)", tui.highlight(e.nick), tui.highlight(e.fields[3]), e.msg)
 	end,
 	["INVITE"] = function(e)
 		-- TODO: auto-join on invite?
@@ -360,7 +326,7 @@ local irchand = {
 		end
 
 		if msg_pings(e.msg) then
-			sender = format("<\x1b[7m%s\x1b[m>", highlight(sender, e.nick))
+			sender = format("<\x1b[7m%s\x1b[m>", tui.highlight(sender, e.nick))
 
 			-- normally, we'd wait for prin() to create the buffer,
 			-- but since we need to manipulate the number of pings we
@@ -369,7 +335,7 @@ local irchand = {
 			local bufidx = buf_idx(e.dest)
 			buffers[bufidx].pings = buffers[bufidx].pings + 1
 		else
-			sender = format("<%s>", highlight(sender, e.nick))
+			sender = format("<%s>", tui.highlight(sender, e.nick))
 		end
 
 		-- convert or remove mIRC IRC colors.
@@ -385,7 +351,7 @@ local irchand = {
 		-- display quit message for all buffers that user has joined.
 		for _, buf in ipairs(buffers) do
 			if not buf.names[e.nick] then return end
-			prin(buf, "<--", "%s has quit %s (%s)", highlight(e.nick), e.dest, e.msg)
+			prin(buf, "<--", "%s has quit %s (%s)", tui.highlight(e.nick), e.dest, e.msg)
 		end
 	end,
 	["JOIN"] = function(e)
@@ -402,7 +368,7 @@ local irchand = {
 		-- if we are the ones joining, then switch to that buffer.
 		if e.nick == nick then buf_switch(#buffers) end
 
-		prin(e.dest, "-->", "%s has joined %s", highlight(e.nick), e.dest)
+		prin(e.dest, "-->", "%s has joined %s", tui.highlight(e.nick), e.dest)
 	end,
 	["NICK"] = function(e)
 		-- if the user changed the nickname, update the current nick.
@@ -411,8 +377,8 @@ local irchand = {
 		-- copy across nick information (this preserves nick highlighting across
 		-- nickname changes), and display the nick change for all buffers that
 		-- have that user
-		set_colors[e.msg] = set_colors[e.nick]
-		set_colors[e.nick] = nil
+		tui.set_colors[e.msg]  = tui.set_colors[e.nick]
+		tui.set_colors[e.nick] = nil
 		for _, buf in ipairs(buffers) do
 			if not buf.names[e.nick] then return end
 			buf.names[e.nick] = nil; buf.names[e.msg]  = true
@@ -420,8 +386,8 @@ local irchand = {
 
 		for _, buf in ipairs(buffers) do
 			if not buf.names[e.nick] and e.nick ~= nick then return end
-			prin(buf, "--@", "%s is now known as %s", highlight(e.nick),
-				highlight(e.msg))
+			prin(buf, "--@", "%s is now known as %s", tui.highlight(e.nick),
+				tui.highlight(e.msg))
 		end
 	end,
 
@@ -471,19 +437,19 @@ local irchand = {
 	-- WHOIS: RPL_WHOISUSER (response to /whois)
 	-- <nick> <user> <host> * :realname
 	["311"] = function(e)
-		prin(MAINBUF, "WHOIS", "[%s] (%s!%s@%s): %s", highlight(e.fields[3]),
+		prin(MAINBUF, "WHOIS", "[%s] (%s!%s@%s): %s", tui.highlight(e.fields[3]),
 			e.fields[3], e.fields[4], e.fields[5], e.msg)
 	end,
 
 	-- WHOIS: RPL_WHOISSERVER (response to /whois)
 	-- <nick> <server> :serverinfo
 	["312"] = function(e)
-		prin(MAINBUF, "WHOIS", "[%s] %s (%s)", highlight(e.fields[3]), e.fields[4], e.msg)
+		prin(MAINBUF, "WHOIS", "[%s] %s (%s)", tui.highlight(e.fields[3]), e.fields[4], e.msg)
 	end,
 
 	-- End of WHOIS
 	["318"] = function(e)
-		prin(MAINBUF, "WHOIS", "[%s] End of WHOIS info.", highlight(e.fields[3]))
+		prin(MAINBUF, "WHOIS", "[%s] End of WHOIS info.", tui.highlight(e.fields[3]))
 	end,
 
 	-- URL for channel
@@ -491,8 +457,8 @@ local irchand = {
 
 	-- WHOIS: <nick> is logged in as <user> (response to /whois)
 	["330"] = function(e)
-		prin(MAINBUF, "WHOIS", "[%s] is logged in as %s", highlight(e.fields[3]),
-			highlight(e.fields[4]))
+		prin(MAINBUF, "WHOIS", "[%s] is logged in as %s", tui.highlight(e.fields[3]),
+			tui.highlight(e.fields[4]))
 	end,
 
 	-- No topic set
@@ -506,16 +472,16 @@ local irchand = {
 		-- sometimes, the nick is in the fields
 		local n = (e.fields[4]):gmatch("(.-)!")()
 		if n then
-			prin(e.dest, "--", "Topic last set by %s (%s)", highlight(n), e.fields[4])
+			prin(e.dest, "--", "Topic last set by %s (%s)", tui.highlight(n), e.fields[4])
 		else
 			local datetime = os.date("%Y-%m-%d %H:%M:%S", e.msg)
-			prin(e.dest, "--", "Topic last set by %s on %s", highlight(e.fields[4]), datetime)
+			prin(e.dest, "--", "Topic last set by %s on %s", tui.highlight(e.fields[4]), datetime)
 		end
 	end,
 
 	-- invited <nick> to <chan> (response to /invite)
 	["341"] = function(e)
-		prin(e.fields[4], "--", "invited %s to %s", highlight(e.fields[3]), e.fields[4])
+		prin(e.fields[4], "--", "invited %s to %s", tui.highlight(e.fields[3]), e.fields[4])
 	end,
 
 	-- Reply to /names
@@ -533,7 +499,7 @@ local irchand = {
 				_nick = _nick:gsub(access, "")
 			end
 
-			nicklist = format("%s%s%s ", nicklist, access, highlight(_nick))
+			nicklist = format("%s%s%s ", nicklist, access, tui.highlight(_nick))
 
 			-- TODO: update access with mode changes
 			buffers[bufidx].names[_nick] = true
@@ -567,7 +533,7 @@ local irchand = {
 
 	-- <nick> is already in channel (response to /invite)
 	["443"] = function(e)
-		prin(e.fields[4], "-!-", "%s is already in %s", highlight(e.fields[3]),
+		prin(e.fields[4], "-!-", "%s is already in %s", tui.highlight(e.fields[3]),
 			e.fields[4])
 	end,
 
@@ -580,14 +546,14 @@ local irchand = {
 
 	-- WHOIS: <nick> is using a secure connection (response to /whois)
 	["671"] = function(e)
-		prin(MAINBUF, "WHOIS", "[%s] uses a secure connection", highlight(e.fields[3]))
+		prin(MAINBUF, "WHOIS", "[%s] uses a secure connection", tui.highlight(e.fields[3]))
 	end,
 
 	-- You are now logged in as xyz
 	["900"] = function(e) prin(MAINBUF, "--", "%s", e.msg) end,
 
 	-- CTCP stuff.
-	["CTCP_ACTION"] = function(e) prin(e.dest, "*", "%s %s", highlight(e.nick or nick), e.msg) end,
+	["CTCP_ACTION"] = function(e) prin(e.dest, "*", "%s %s", tui.highlight(e.nick or nick), e.msg) end,
 	["CTCP_VERSION"] = function(e)
 		if config.ctcp_version then
 			prin(MAINBUF, "CTCP", "%s requested VERSION (reply: %s)", e.nick, config.ctcp_version)
@@ -612,7 +578,7 @@ local irchand = {
 	end
 }
 
-local function parseirc(reply)
+function parseirc(reply)
 	-- DEBUG
 	util.append("logs", reply .. "\n")
 
@@ -857,7 +823,7 @@ cmdhand = {
 	},
 }
 
-local function parsecmd(inp)
+function parsecmd(inp)
 	-- the input line clears itself, there's no need to clear it...
 
 	-- split the input line into the command (first word), a (second
@@ -928,7 +894,7 @@ function rt.init()
 		_nick, user, name, config.server_password)
 	if not r then panic("error: %s\n", e) end
 
-	load_highlight_colors()
+	tui.load_highlight_colors()
 
 	buf_add(MAINBUF)
 	buf_switch(1)
