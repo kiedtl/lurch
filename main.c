@@ -40,6 +40,18 @@ char **lurch_rl_completer(const char *text, int start, int end);
 int  lurch_rl_getc(FILE *f);
 int  lurch_rl_keyseq(int count, int key);
 
+#if LUA_VERSION_NUM >= 502
+#define llua_rawlen(ST, NM) lua_rawlen(ST, NM)
+#else
+#define llua_rawlen(ST, NM) lua_objlen(ST, NM)
+#endif
+
+#if LUA_VERSION_NUM >= 502
+#define llua_setfuncs(ST, FN) luaL_setfuncs(ST,   FN,  0);
+#else
+#define llua_setfuncs(ST, FN) luaL_register(ST, NULL, FN);
+#endif
+
 int  llua_panic(lua_State *pL);
 void llua_sdump(lua_State *pL);
 void llua_call(lua_State *pL, const char *fnname, size_t nargs,
@@ -134,7 +146,7 @@ main(int argc, char **argv)
 	};
 
 	lua_newtable(L);
-	luaL_setfuncs(L, (luaL_Reg *) &lurch_lib, 0);
+	llua_setfuncs(L, (luaL_Reg *) &lurch_lib);
 	lua_pushvalue(L, -1);
 	lua_setglobal(L, "lurch");
 
@@ -299,7 +311,7 @@ lurch_rl_completer(const char *text, int start, int end)
 	llua_call(L, "on_complete", 3, 1);
 
 	luaL_checktype(L, -1, LUA_TTABLE);
-	completions_len = lua_rawlen(L, -1);
+	completions_len = llua_rawlen(L, -1);
 	
 	if (completions_len == 0)
 		return NULL;
@@ -312,7 +324,7 @@ lurch_rl_completer(const char *text, int start, int end)
 		const char *tmp;
 		lua_rawgeti(L, 1, i + 1);
 		tmp = luaL_checkstring(L, 2);
-		length = lua_rawlen(L, 2) + 1;
+		length = llua_rawlen(L, 2) + 1;
 		completions[i] = malloc(sizeof(char) * length);
 		assert(completions[i]);
 		strncpy(completions[i], tmp, length);
@@ -400,7 +412,7 @@ llua_sdump(lua_State *pL)
 		break; case LUA_TNIL:
 			fprintf(stderr, "%4d: [nil]\n", i);
 		break; default:
-			fprintf(stderr, "%4d: [%s] #%d <%p>\n", i, lua_typename(L, t), (int) lua_rawlen(L, i), lua_topointer(L, i));
+			fprintf(stderr, "%4d: [%s] #%d <%p>\n", i, lua_typename(L, t), (int) llua_rawlen(L, i), lua_topointer(L, i));
 		break;
 		}
 	}

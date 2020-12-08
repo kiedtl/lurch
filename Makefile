@@ -1,7 +1,7 @@
 LUA      = lua5.3
 READLINE = readline
 CC       = clang
-CFLAGS   = -Og -g -D_POSIX_C_SOURCE=200112L -I/usr/include/lua5.3/
+CFLAGS   = -Og -g -D_POSIX_C_SOURCE=200112L -I/usr/include/$(LUA)/
 LDFLAGS  = -L/usr/include -lm -l$(READLINE) -l$(LUA)
 SRC      = main.c
 

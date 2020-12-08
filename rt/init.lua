@@ -54,6 +54,7 @@ local function buf_add(name)
 	newbuf.access  = {}
 
 	buffers[#buffers + 1] = newbuf
+	return #buffers
 end
 
 -- check if a buffer exists, and if so, return the index
