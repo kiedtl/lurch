@@ -4,13 +4,25 @@ function irc.send(fmt, ...)
 	return lurch.conn_send(fmt:format(...))
 end
 
-function irc.connect(host, port, nick, user, name, pass)
+function irc.connect(host, port, nick, user, name, pass, caps)
 	local r, e = lurch.conn_init(host, port)
 	if not r then return false, e end
 
-	irc.send("USER %s %s %s :%s", user, user, user, name)
+	-- list and request IRCv3 capabilities. The responses are ignored
+	-- for now; they will be processed later on.
+	if caps then
+		irc.send("CAP LS")
+		for _, cap in caps do
+			irc.send("CAP REQ :%s", cap)
+		end
+		irc.send("CAP END")
+	end
+
+	-- send PASS before NICK/USER, as when USER+NICK is sent
+	-- the user is registered.
 	if pass then irc.send("PASS %s", pass) end
 	irc.send("NICK %s", nick)
+	irc.send("USER %s localhost * :%s", user, name)
 
 	return true
 end
@@ -31,12 +43,28 @@ function irc.parse(rawmsg)
 	rawmsg = rawmsg:gsub("\r\n$", "")
 	if not rawmsg then return nil end
 
-	-- grab the first "word" of the IRC message, as we know that
-	-- will be the timestamp of the message
-	--
-	-- TODO: full tag-parsing capability
-	--date, time = string.gmatch(rawmsg, "@time=([%d-]+)T([%d:]+)Z")()
-	--rawmsg = rawmsg:gsub(".-%s", "", 1)
+	event.tags = {}
+	if rawmsg:match(".") == "@" then
+		-- grab everything until the next space.
+		local tags = rawmsg:match("@(.-)%s")
+		assert(tags)
+
+		for tag in tags:gmatch("([^;]+);?") do
+			-- the tag may or may not have a value...
+			local key = tag:match("([^=]+)=?")
+			local val = tag:match("[^=]+=([^;]+);?") or ""
+
+			event.tags[key] = val
+		end
+
+		-- since the first word, and only the first word can be
+		-- an IRC tag(s), we can just strip off the first word to
+		-- removed the processed tags.
+		rawmsg = rawmsg:gsub("(.-)%s", "")
+	end
+
+	-- the message had better not be all tags...
+	assert(rawmsg)
 
 	-- if the next word in the raw IRC message contains ':', '@',
 	-- or '!', split it and grab the sender.
