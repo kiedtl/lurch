@@ -16,6 +16,7 @@ local eprintf = util.eprintf
 local format  = string.format
 
 local MAINBUF = "<server>"
+local server = {}            -- Server information
 local nick = config.nick     -- The current nickname
 local cur_buf = nil          -- The current buffer
 local buffers = {}           -- List of all opened buffers
@@ -425,6 +426,30 @@ local irchand = {
 		end
 	end,
 
+	-- IRCv3 capability negotiation
+	["CAP"] = function(e)
+		local subcmd = (e.fields[3]):lower()
+		if subcmd == "ls" then
+			-- list of all capabilities supported by the server.
+			server.caps = {}
+			for cap in (e.msg):gmatch("([^%s]+)%s?") do
+				server.caps[cap] = false
+			end
+		elseif subcmd == "ack" then
+			-- the server has a capability we requested.
+			server.caps[e.msg] = true
+			prin(MAINBUF, "--", "Enabling IRCv3 capability: %s", e.msg)
+		elseif subcmd == "nak" then
+			-- the server does not have a capability we requested.
+			--
+			-- since all caps are set to false/nil by default we don't really
+			-- need to do this...
+			server.caps[e.msg] = true
+
+			prin(MAINBUF, "--", "Disabling IRCv3 capability: %s", e.msg)
+		end
+	end,
+
 	[0] = function(e)
 		prin(e.dest, e.fields[1] .. " --", "%s", e.msg or e.dest)
 	end
@@ -735,12 +760,18 @@ end
 function rt.init()
 	tui.refresh()
 
+	-- List of IRCv3 capabilities to send.
+	--
+	-- server-time: enables adding the "time" IRCv3 tag to messages
+	-- TODO: echo-message, invite-notify, SASL, account-notify, away-notify
+	--
+	local caps  = { "server-time" }
 	local _nick = config.nick or os.getenv("IRCNICK") or os.getenv("USER")
 	local user  = config.user or os.getenv("IRCUSER") or os.getenv("USER")
 	local name  = config.name or _nick
 
 	local r, e = irc.connect(config.server, config.port,
-		_nick, user, name, config.server_password)
+		_nick, user, name, config.server_password, caps)
 	if not r then panic("error: %s\n", e) end
 
 	tui.load_highlight_colors()
