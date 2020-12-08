@@ -583,6 +583,9 @@ local irchand = {
 		prin(MAINBUF, "WHOIS", "[%s] uses a secure connection", highlight(e.fields[3]))
 	end,
 
+	-- You are now logged in as xyz
+	["900"] = function(e) prin(MAINBUF, "--", "%s", e.msg) end,
+
 	-- CTCP stuff.
 	["CTCP_ACTION"] = function(e) prin(e.dest, "*", "%s %s", highlight(e.nick or nick), e.msg) end,
 	["CTCP_VERSION"] = function(e)
