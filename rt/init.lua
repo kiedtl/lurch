@@ -10,29 +10,21 @@ local config  = require('config')
 local mirc    = require('mirc')
 local util    = require('util')
 local tui     = require('tui')
-local tty     = require('tty')
 
 local printf  = util.printf
 local eprintf = util.eprintf
 local format  = string.format
 
-math.randomseed(os.time())
-
 local MAINBUF = "<server>"
-
 local nick = config.nick     -- The current nickname
-
-local cur_buf = nil   -- The current buffer
-local buffers = {}    -- List of all opened buffers
+local cur_buf = nil          -- The current buffer
+local buffers = {}           -- List of all opened buffers
 
 -- prototypes
 local buf_add
 local buf_idx
 local panic
 local msg_pings
-local inputbar
-local statusbar
-local redraw
 local buf_switch
 local prin
 local parseirc
@@ -58,8 +50,9 @@ function buf_add(name)
 	newbuf.names   = {}
 	newbuf.access  = {}
 
-	buffers[#buffers + 1] = newbuf
-	return #buffers
+	local n_idx = #buffers + 1
+	buffers[n_idx] = newbuf
+	return n_idx
 end
 
 -- check if a buffer exists, and if so, return the index
@@ -83,7 +76,7 @@ function buf_switch(ch)
 		buffers[ch].scroll = #buffers[ch].history
 		buffers[ch].unread = 0; buffers[ch].pings  = 0
 
-		redraw()
+		tui.redraw(buffers, cur_buf, nick)
 	end
 end
 
@@ -102,174 +95,31 @@ function msg_pings(msg)
 	return false
 end
 
-function inputbar()
-	tty.curs_down(999)
-
-	-- if we've scrolled up, don't draw the input.
-	if buffers[cur_buf].scroll ~= #buffers[cur_buf].history then
-		tty.curs_hide()
-		tty.clear_line()
-		printf("-- more --")
-		return
-	end
-
-	tty.curs_show()
-
-	local inp, cursor = lurch.rl_info()
-
-	-- strip off trailing newline
-	inp = inp:gsub("\n", "")
-
-	-- by default, the prompt is <NICK>, but if the
-	-- user is typing a command, change to prompt to an empty
-	-- string; if the user has typed "/me", change the prompt
-	-- to "* "
-	local prompt
-	if inp:find("/me ") == 1 then
-		prompt = format("* %s ", tui.highlight(nick))
-		inp = inp:sub(5, #inp)
-		cursor = cursor - 4
-	elseif inp:find("/") == 1 then
-		prompt = "\x1b[38m/\x1b[m"
-		inp = inp:sub(2, #inp)
-		cursor = cursor - 1
-	else
-		prompt = format("<%s> ", tui.highlight(nick))
-	end
-	local rawprompt = prompt:gsub("\x1b%[.-m", "")
-
-	-- strip off stuff from input that can't be shown on the
-	-- screen
-	inp = inp:sub(-(tui.tty_width - #rawprompt))
-
-	-- draw the input buffer and move the cursor to the appropriate
-	-- position.
-	tty.clear_line()
-	printf("%s%s", prompt, inp)
-	printf("\r\x1b[%sC", cursor + #rawprompt)
-end
-
-function statusbar()
-	local chanlist = " "
-	for buf = 1, #buffers do
-		local ch = buffers[buf].name
-		local bold = false
-
-		if buf == cur_buf then
-			if buffers[buf].pings  > 0 then bold = true end
-			if buffers[buf].unread > 0 then
-				local pnch = tui.highlight(format(" %d %s %s%d ", buf, ch,
-					"+", buffers[buf].unread), ch, not bold)
-				chanlist = chanlist .. "\x1b[7m" .. pnch .. "\x1b[0m "
-			else
-				local pnch = tui.highlight(format(" %d %s ", buf, ch), ch, true)
-				chanlist = chanlist .. "\x1b[7m" .. pnch .. "\x1b[0m "
-			end
-		else
-			if buffers[buf].pings  > 0 then bold = true end
-			if buffers[buf].unread > 0 then
-				local nch = tui.highlight(format(" %d %s %s%d ", buf, ch,
-					"+", buffers[buf].unread), ch, not bold)
-				chanlist = chanlist .. nch .. " "
-			end
-		end
-	end
-
-	tty.curs_save()
-	tty.curs_move_to_line(0)
-
-	tty.clear_line()
-	printf("%s", chanlist)
-
-	tty.curs_restore()
-end
-
-function redraw()
-	tui.refresh()
-
-	tty.curs_save()
-	tty.curs_hide()
-
-	tty.curs_move_to_line(2)
-
-	if buffers[cur_buf].history then
-		local start = buffers[cur_buf].scroll - (tui.tty_height-4)
-		for i = start, buffers[cur_buf].scroll do
-			tty.clear_line()
-
-			local msg = buffers[cur_buf].history[i]
-			if msg then printf("\x1b[0m%s", msg) end
-
-			tty.curs_down(1)
-		end
-	end
-
-	-- redraw statusbar bar and input line.
-	statusbar(); inputbar()
-
-	tty.curs_show()
-	tty.curs_restore()
-end
-
 function prin(dest, left, right_fmt, ...)
-	local right = format(right_fmt, ...)
-
-	assert(dest)
-	assert(left)
-	assert(right)
-
-	-- fold message to width
-	local default_width = tui.tty_width - config.left_col_width
-	right = util.fold(right, config.right_col_width or default_width)
-	right = right:gsub("\n", format("\n%s",
-		util.strrepeat(" ", config.left_col_width + 2)))
-
-	-- Strip escape sequences from the first word in the message
-	-- so that we can calculate how much padding to add for
-	-- alignment.
-	local raw = left:gsub("\x1b%[.-m", "")
-
-	-- Generate a cursor right sequence based on the length of
-	-- the above "raw" word. The nick column is a fixed width
-	-- of LEFT_PADDING so it's simply 'LEFT_PADDING - word_len'
-	local pad
-	if #raw > 10 then
-		pad = 0
-	else
-		pad = (config.left_col_width + 1) - #raw
-	end
-
-	local out = format("\x1b[%sC%s %s", pad, left, right):gsub("\n+$", "")
+	local redraw_statusbar = false
 
 	local bufidx = buf_idx(dest)
 	if not bufidx then
-		buf_add(dest)
-		bufidx = buf_idx(dest)
-		statusbar()
+		buf_add(dest); bufidx = buf_idx(dest)
+		redraw_statusbar = true
 	end
 
-	if dest == buffers[cur_buf].name and buffers[cur_buf].scroll == #buffers[cur_buf].history then
-		tty.curs_hide()
-		tty.curs_save()
+	local out = tui.format_line(left, right_fmt, ...)
 
-		tty.curs_down(999)
-
-		tty.clear_line()
-		printf("%s\n", out)
-		tty.clear_line()
-
-		tty.curs_restore()
-		tty.curs_show()
-
-		-- since we overwrote the inputbar, redraw it
-		inputbar()
+	-- if the buffer we're writing to is focused and is not scrolled up,
+	-- draw the text; otherwise, add to the list of unread notifications
+	local cbuf = buffers[cur_buf]
+	if dest == cbuf.name and cbuf.scroll == #cbuf.history then
+		tui.draw_line(buffers, cur_buf, dest, out, nick)
 	else
 		buffers[bufidx].unread = buffers[bufidx].unread + 1
-		statusbar()
+		redraw_statusbar = true
 	end
 
-	-- save to buffer history and update the scroll offset.
-	local prev_hist_sz = #buffers[cur_buf].history
+	-- for each line of output, which can contain multiple lines, add to
+	-- the buffer's history; update the scroll offset to point to the end
+	-- of that buffer's history.
+	local prev_hist_sz = #buffers[bufidx].history
 	for line in out:gmatch("([^\n]+)\n?") do
 		local histsz = #buffers[bufidx].history
 		buffers[bufidx].history[histsz + 1] = line
@@ -277,6 +127,8 @@ function prin(dest, left, right_fmt, ...)
 	if buffers[cur_buf].scroll == prev_hist_sz then
 		buffers[bufidx].scroll = #buffers[bufidx].history
 	end
+
+	if redraw_statusbar then tui.statusbar(buffers, cur_buf) end
 end
 
 local function none(_) end
@@ -622,7 +474,7 @@ cmdhand = {
 			if buffers[cur_buf].scroll >= 0 then
 				buffers[cur_buf].scroll = buffers[cur_buf].scroll - scr
 			end
-			redraw()
+			tui.redraw(buffers, cur_buf, nick)
 		end
 	},
 	["/down"] = {
@@ -632,16 +484,16 @@ cmdhand = {
 			if buffers[cur_buf].scroll <= #buffers[cur_buf].history then
 				buffers[cur_buf].scroll = buffers[cur_buf].scroll + scr
 			end
-			redraw()
+			tui.redraw(buffers, cur_buf, nick)
 		end
 	},
 	["/clear"] = {
 		help = { "Clear the current buffer." },
-		fn = function(_, _, _) buffers[cur_buf].history = {}; redraw() end
+		fn = function(_, _, _) buffers[cur_buf].history = {}; tui.redraw(buffers, cur_buf, nick) end
 	},
 	["/redraw"] = {
 		help = { "Redraw the screen. Ctrl+L may also be used." },
-		fn = function(_, _, _) redraw() end,
+		fn = function(_, _, _) tui.redraw(buffers, cur_buf, nick) end,
 	},
 	["/next"] = {
 		help = { "Switch to the next buffer. Ctrl+N may also be used." },
@@ -685,15 +537,12 @@ cmdhand = {
 		usage = "[channel]",
 		fn = function(a, _, _)
 			irc.send(":%s JOIN %s", nick, a)
-			statusbar()
 
 			local bufidx = buf_idx(a)
-			if not bufidx then
-				buf_add(a)
-				bufidx = buf_idx(a)
-				statusbar()
-			end
+			if not bufidx then bufidx = buf_add(a) end
 
+			-- draw the new buffer
+			tui.statusbar(buffers, cur_buf)
 			buf_switch(bufidx)
 		end
 	},
@@ -918,7 +767,7 @@ local sighand = {
 	-- SIGUSR2
 	[12] = function() end,
 	-- SIGWINCH
-	[28] = function() redraw() end,
+	[28] = function() tui.redraw(buffers, cur_buf, nick) end,
 	-- catch-all
 	[0] = function() return true end,
 }
@@ -952,7 +801,7 @@ end
 -- every time a key is pressed, redraw the prompt, and
 -- write the input buffer.
 function rt.on_input()
-	inputbar()
+	tui.inputbar(buffers, cur_buf, nick)
 end
 
 function rt.on_rl_input(inp)

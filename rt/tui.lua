@@ -1,6 +1,8 @@
+local config = require('config')
 local util   = require('util')
 local tty    = require('tty')
 local format = string.format
+local printf = util.printf
 
 local M = {}
 
@@ -76,6 +78,159 @@ function M.highlight(text, text_as, no_bold)
 	end
 
 	return format("%s%s\x1b[m", esc, text)
+end
+
+function M.inputbar(bufs, cbuf, nick)
+	tty.curs_down(999)
+
+	-- if we've scrolled up, don't draw the input.
+	if bufs[cbuf].scroll ~= #bufs[cbuf].history then
+		tty.curs_hide()
+		tty.clear_line()
+		printf("-- more --")
+		return
+	end
+
+	tty.curs_show()
+
+	local inp, cursor = lurch.rl_info()
+
+	-- strip off trailing newline
+	inp = inp:gsub("\n", "")
+
+	-- by default, the prompt is <NICK>, but if the
+	-- user is typing a command, change to prompt to an empty
+	-- string; if the user has typed "/me", change the prompt
+	-- to "* "
+	local prompt
+	if inp:find("/me ") == 1 then
+		prompt = format("* %s ", M.highlight(nick))
+		inp = inp:sub(5, #inp)
+		cursor = cursor - 4
+	elseif inp:find("/") == 1 then
+		prompt = "\x1b[38m/\x1b[m"
+		inp = inp:sub(2, #inp)
+		cursor = cursor - 1
+	else
+		prompt = format("<%s> ", M.highlight(nick))
+	end
+	local rawprompt = prompt:gsub("\x1b%[.-m", "")
+
+	-- strip off stuff from input that can't be shown on the
+	-- screen
+	inp = inp:sub(-(M.tty_width - #rawprompt))
+
+	-- draw the input buffer and move the cursor to the appropriate
+	-- position.
+	tty.clear_line()
+	printf("%s%s", prompt, inp)
+	printf("\r\x1b[%sC", cursor + #rawprompt)
+end
+
+function M.statusbar(bufs, cbuf)
+	local chanlist = " "
+	for buf = 1, #bufs do
+		local ch = bufs[buf].name
+		local bold = false
+
+		if buf == cbuf then
+			if bufs[buf].pings  > 0 then bold = true end
+			if bufs[buf].unread > 0 then
+				local pnch = M.highlight(format(" %d %s %s%d ", buf, ch,
+					"+", bufs[buf].unread), ch, not bold)
+				chanlist = chanlist .. "\x1b[7m" .. pnch .. "\x1b[0m "
+			else
+				local pnch = M.highlight(format(" %d %s ", buf, ch), ch, true)
+				chanlist = chanlist .. "\x1b[7m" .. pnch .. "\x1b[0m "
+			end
+		else
+			if bufs[buf].pings  > 0 then bold = true end
+			if bufs[buf].unread > 0 then
+				local nch = M.highlight(format(" %d %s %s%d ", buf, ch,
+					"+", bufs[buf].unread), ch, not bold)
+				chanlist = chanlist .. nch .. " "
+			end
+		end
+	end
+
+	tty.curs_save()
+	tty.curs_move_to_line(0)
+
+	tty.clear_line()
+	printf("%s", chanlist)
+
+	tty.curs_restore()
+end
+
+function M.redraw(bufs, cbuf, nick)
+	M.refresh()
+
+	tty.curs_save()
+	tty.curs_hide()
+
+	tty.curs_move_to_line(2)
+
+	if bufs[cbuf].history then
+		local start = bufs[cbuf].scroll - (M.tty_height-4)
+		for i = start, bufs[cbuf].scroll do
+			tty.clear_line()
+
+			local msg = bufs[cbuf].history[i]
+			if msg then printf("\x1b[0m%s", msg) end
+
+			tty.curs_down(1)
+		end
+	end
+
+	-- redraw statusbar bar and input line.
+	M.statusbar(bufs, cbuf); M.inputbar(bufs, cbuf, nick)
+
+	tty.curs_show()
+	tty.curs_restore()
+end
+
+function M.format_line(left, right_fmt, ...)
+	assert(left)
+	assert(right_fmt)
+
+	local right = format(right_fmt, ...)
+
+	-- fold message to width
+	local default_width = M.tty_width - config.left_col_width
+	right = util.fold(right, config.right_col_width or default_width)
+	right = right:gsub("\n", format("\n%s",
+		util.strrepeat(" ", config.left_col_width + 2)))
+
+	-- Strip escape sequences from the first word in the message
+	-- so that we can calculate how much padding to add for
+	-- alignment.
+	local raw = left:gsub("\x1b%[.-m", "")
+
+	-- Generate a cursor right sequence based on the length of
+	-- the above "raw" word. The nick column is a fixed width
+	-- of LEFT_PADDING so it's simply 'LEFT_PADDING - word_len'
+	local pad = (config.left_col_width + 1) - #raw
+	if #raw > config.left_col_width then pad = 0 end
+
+	return format("\x1b[%sC%s %s", pad, left, right):gsub("\n+$", "")
+
+end
+
+function M.draw_line(bufs, cbuf, dest, out, nick)
+	assert(dest)
+	assert(out)
+
+	tty.curs_hide(); tty.curs_save()
+	tty.curs_down(999)
+
+	tty.clear_line()
+	printf("%s\n", out)
+	tty.clear_line()
+
+	tty.curs_restore(); tty.curs_show()
+
+	-- since we overwrote the inputbar, redraw it
+	M.inputbar(bufs, cbuf, nick)
 end
 
 return M
