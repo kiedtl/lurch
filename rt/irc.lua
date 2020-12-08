@@ -40,7 +40,7 @@ function irc.parse(rawmsg)
 
 	-- if the next word in the raw IRC message contains ':', '@',
 	-- or '!', split it and grab the sender.
-	if rawmsg:gmatch("(.-)%s")():find("[:@!]") then
+	if rawmsg:gmatch("([^%s]+)%s?")():find("[:@!]") then
 		-- There are two types of senders: the server, or a user.
 		-- The 'server' format is just <server>, but the 'user' format
 		-- is more complicated: <nick>!<user>@<host>

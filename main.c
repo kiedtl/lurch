@@ -26,8 +26,9 @@ const size_t TIMEOUT = 4096;
 const size_t BT_BUF_SIZE = 16;
 
 int conn_fd = 0;
-FILE *conn;
-lua_State *L;
+FILE *conn = NULL;
+char bufin[4096];
+lua_State *L = NULL;
 
 void signal_lhand(int sig);
 void signal_fatal(int sig);
@@ -85,6 +86,8 @@ main(int argc, char **argv)
 
 	/* init lua */
 	L = luaL_newstate();
+	assert(L);
+
 	luaL_openlibs(L);
 	luaopen_table(L);
 	luaopen_io(L);
@@ -180,26 +183,18 @@ main(int argc, char **argv)
 		}
 
 		if (FD_ISSET(conn_fd, &rd)) {
-			int len = 0;
-			ioctl(conn_fd, FIONREAD, &len);
-
-			char *bufin = malloc(len + 1);
-			assert(bufin);
-			bufin[len] = '\0';
-
-			int received = read(conn_fd, (void *) bufin, len);
-			assert(received == len);
-
-			lua_pushstring(L, (const char *) bufin);
-			llua_call(L, "on_reply", 1, 0);
-
-			trespond = time(NULL);
-			free(bufin);
+			if (fgets(bufin, sizeof(bufin), conn) == NULL) {
+				llua_call(L, "on_disconnect", 1, 0);
+			} else {
+				lua_pushstring(L, (const char *) &bufin);
+				llua_call(L, "on_reply", 1, 0);
+				trespond = time(NULL);
+			}
 		}
 
 		if (FD_ISSET(0, &rd)) {
 			rl_callback_read_char();
-			llua_call(L, "on_input", 1, 0);
+			llua_call(L, "on_input", 0, 0);
 		}
 	}
 	
@@ -223,6 +218,7 @@ signal_lhand(int sig)
 void
 signal_fatal(int sig)
 {
+	llua_sdump(L);
 	die("received signal %d; aborting.", sig);
 }
 
