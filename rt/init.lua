@@ -24,20 +24,9 @@ local colors = {}     -- List of colors used for nick highlighting
 local set_colors = {} -- list of cached colors used for each nick/text
 
 local nick = config.nick     -- The current nickname
-local nicks = {}      -- Table of all nicknames
 
 local cur_buf = nil   -- The current buffer
 local buffers = {}    -- List of all opened buffers
-
-local function nick_add(n)
-	assert(n)
-
-	local newnick = {}
-	newnick.joined = {}
-	newnick.access = {}
-
-	nicks[n] = newnick
-end
 
 -- add a new buffer. statusbar() should be run after this
 -- to add the new buffer to the statusline.
