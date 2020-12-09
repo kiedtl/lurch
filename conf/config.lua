@@ -46,6 +46,6 @@ M.timezone = "UTC-3:00"
 -- This is done by delaying the registration of the user after connecting to the
 -- IRC server for a few seconds; by then, some servers will have their identd
 -- requests time out.
-M.no_ident = true
+M.no_ident = false
 
 return M
