@@ -108,7 +108,7 @@ function M.inputbar(bufs, cbuf, nick)
 	-- string; if the user has typed "/me", change the prompt
 	-- to "* "
 	local prompt
-	if inp:find("/me ") == 1 then
+	if inp:find("/me ") == 1 and cursor >= 4 then
 		prompt = format("* %s ", M.highlight(nick))
 		inp = inp:sub(5, #inp)
 		cursor = cursor - 4
@@ -129,7 +129,13 @@ function M.inputbar(bufs, cbuf, nick)
 	-- position.
 	tty.clear_line()
 	printf("%s%s", prompt, inp)
-	printf("\r\x1b[%sC", cursor + #rawprompt)
+
+	local curs_pos = cursor + #rawprompt
+	if curs_pos > 0 then
+		printf("\r\x1b[%sC", curs_pos)
+	else
+		printf("\r")
+	end
 end
 
 function M.statusbar(bufs, cbuf)
