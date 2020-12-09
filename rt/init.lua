@@ -39,6 +39,7 @@ local parsecmd
 function panic(fmt, ...)
 	tui.clean()
 	eprintf(fmt, ...)
+	error("panic() called")
 	os.exit(1)
 end
 
