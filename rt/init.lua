@@ -279,8 +279,7 @@ local irchand = {
 		-- nickname changes), and display the nick change for all buffers that
 		-- have that user
 		for _, buf in ipairs(buffers) do
-			if not buf.names[e.nick] and e.nick ~= nick then
-			else
+			if buf.names[e.nick] or e.nick == nick then
 				prin_irc(buf.name, "--@", "%s is now known as %s",
 					tui.highlight(e.nick), tui.highlight(e.msg))
 			end
