@@ -117,4 +117,41 @@ function util.strrepeat(ch, count)
 	return buf
 end
 
+-- parse an UTC timezone offset of the format UTC[+-]<offset>
+function util.parse_offset(offset_str)
+	local offset_h, offset_m = offset_str:match("UTC([+-].-):(.+)")
+	if not offset_h or not offset_m then return nil end
+
+	-- can't divide by zero...
+	if tonumber(offset_m) == 0 then
+		return tonumber(offset_h)
+	else
+		return tonumber(offset_h) + (60 / offset_m)
+	end
+end
+
+-- get current time for a specific UTC offset.
+function util.time_with_offset(offset)
+	local utc_time = tonumber(os.time(os.date("!*t")))
+	local local_time = utc_time + (offset * 60 * 60)
+	return local_time
+end
+
+-- parse dates of the format YYYY-MM-DDThh:mm:ss.sssZ
+-- (see ISO 8601:2004(E) 4.3.2)
+function util.time_from_iso8601(str)
+	local Y, M, D, h, m, s = str:match("(%d-)%-(%d-)%-(%d-)T(%d-):(%d-):([%d.]-)Z")
+
+	-- get rid of the .000 part of the seconds, as os.time()
+	-- doesn't seem to like non-integer fields
+	local utc_time_struct = {
+		isdst = false,
+		year = tonumber(Y), month = tonumber(M),
+		day  = tonumber(D), hour  = tonumber(h),
+		min  = tonumber(m), sec   = math.floor(tonumber(s)),
+	}
+
+	return os.time(utc_time_struct)
+end
+
 return util

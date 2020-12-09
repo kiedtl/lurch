@@ -107,42 +107,33 @@ end
 -- print a response to an irc message.
 local last_ircevent = nil
 function prin_irc(dest, left, right_fmt, ...)
-	local offset_h, offset_m = (config.timezone):match("UTC([+-]%d-):(%d+)")
-	local offset
-	if tonumber(offset_m) == 0 then
-		offset = tonumber(offset_h)
-	else
-		offset = tonumber(offset_h) + (60 / offset_m)
-	end
+	-- get the offset defined in the configuration and parse it.
+	local offset = assert(util.parse_offset(config.timezone))
 
 	-- if server-time is available, use that time instead of the
 	-- local time.
 	if server.caps["server-time"] and last_ircevent and last_ircevent.tags.time then
+		-- the server-time is stored as a tag in the IRC message, in the
+		-- format yyyy-mm-ddThh:mm:ss.sssZ, but is in the UTC timezone.
+		-- convert it to the timezone the user wants.
 		local srvtime = last_ircevent.tags.time
-		local year, month, day, hour, min, sec =
-			srvtime:match("(%d-)%-(%d-)%-(%d-)T(%d-):(%d-):([%d.]-)Z")
-		local utc_time_struct = {
-			isdst = false,
-			year = tonumber(year), month = tonumber(month),
-			day  = tonumber(day),  hour  = tonumber(hour),
-			min  = tonumber(min),  sec   = math.floor(tonumber(sec)),
-		}
-		local utc_time   = os.time(utc_time_struct)
+		local utc_time   = util.time_from_iso8601(srvtime)
 		local local_time = utc_time + (offset * 60 * 60)
 
 		prin(os.date("%H:%M", local_time), dest, left, right_fmt, ...)
 	else
-		local utc_time   = tonumber(os.time(os.date("!*t")))
-		local local_time = utc_time + (offset * 60 * 60)
-		prin(os.date("%H:%M", local_time), dest, left, right_fmt, ...)
+		local now = util.time_with_offset(offset)
+		prin(os.date("%H:%M", now), dest, left, right_fmt, ...)
 	end
 end
 
 -- print text in response to a command.
 function prin_cmd(dest, left, right_fmt, ...)
-	local utc_time   = tonumber(os.date("!%c"))
-	local local_time = utc_time + (offset * 60 * 60)
-	prin(os.date("%H:%M", local_time), dest, left, right_fmt, ...)
+	-- get the offset defined in the configuration and parse it.
+	local offset = assert(util.parse_offset(config.timezone))
+
+	local now = util.time_with_offset(offset)
+	prin(os.date("%H:%M", now), dest, left, right_fmt, ...)
 end
 
 function prin(timestr, dest, left, right_fmt, ...)
