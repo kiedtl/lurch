@@ -380,19 +380,13 @@ llua_panic(lua_State *pL)
 		fflush(stdin);
 	}
 
-	fprintf(stderr, "\r\x1b[2K\rlua_call error: %s\n\n", err);
-	llua_sdump(L);
-
-	/* call debug.traceback and get backtrace */
-	lua_getglobal(pL, "debug");
-	lua_getfield(pL, -1, "traceback");
-	lua_remove(pL, -2);
-	lua_pushstring(pL, err);
-	lua_pushinteger(pL, (lua_Integer) 0);
-	lua_pcall(pL, 2, 1, 0);
-
-	fprintf(stderr, "\rtraceback: %s\n\n", lua_tostring(pL, -1));
+	/* print the error, dump the lua stack, print lua traceback,
+	 * and exit. */
+	fprintf(stderr, "\r\x1b[2K\x1b[0m\rlua_call error: %s\n\n", err);
+	llua_sdump(L); luaL_traceback(pL, pL, NULL, 0);
+	fprintf(stderr, "\ntraceback: %s\n\n", lua_tostring(pL, -1));
 	die("unable to recover; exiting");
+
 	return 0;
 }
 
