@@ -822,8 +822,25 @@ function rt.init()
 	lurch.bind_keyseq("\\C-n")
 	lurch.bind_keyseq("\\C-p")
 	lurch.bind_keyseq("\\C-l")
-	lurch.bind_keyseq("\\C-w")
-	lurch.bind_keyseq("\\C-r")
+end
+
+local keyseq_handler = {
+	-- Ctrl+l
+	[12] = "/redraw",
+
+	-- Ctrl+n, Ctrl+p
+	[14] = "/next",
+	[16] = "/prev",
+
+	-- TODO: PageUp, PageDown
+	[23] = "/up",
+	[18] = "/down",
+}
+
+function rt.on_keyseq(key)
+	if keyseq_handler[key] then
+		parsecmd(keyseq_handler[key])
+	end
 end
 
 local sighand = {
@@ -877,25 +894,6 @@ end
 
 function rt.on_rl_input(inp)
 	parsecmd(inp)
-end
-
-local keyseq_handler = {
-	-- Ctrl+l
-	[12] = "/redraw",
-
-	-- Ctrl+n, Ctrl+p
-	[14] = "/next",
-	[16] = "/prev",
-
-	-- TODO: PageUp, PageDown
-	[23] = "/up",
-	[18] = "/down",
-}
-
-function rt.on_keyseq(key)
-	if keyseq_handler[key] then
-		parsecmd(keyseq_handler[key])
-	end
 end
 
 function rt.on_complete(text, from, to)
