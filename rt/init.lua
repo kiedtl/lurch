@@ -25,6 +25,7 @@ local buffers = {}           -- List of all opened buffers
 local buf_add
 local buf_idx
 local buf_cur
+local buf_addname
 local panic
 local msg_pings
 local buf_switch
