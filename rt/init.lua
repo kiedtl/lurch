@@ -40,7 +40,6 @@ function panic(fmt, ...)
 	tui.clean()
 	eprintf(fmt, ...)
 	error("panic() called")
-	os.exit(1)
 end
 
 -- add a new buffer. statusbar() should be run after this
