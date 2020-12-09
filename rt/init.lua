@@ -39,7 +39,7 @@ local parsecmd
 function panic(fmt, ...)
 	tui.clean()
 	eprintf(fmt, ...)
-	error("panic() called")
+	os.exit(1)
 end
 
 -- add a new buffer. statusbar() should be run after this
@@ -897,6 +897,11 @@ function rt.init()
 	lurch.bind_keyseq("\\C-n")
 	lurch.bind_keyseq("\\C-p")
 	lurch.bind_keyseq("\\C-l")
+
+	lurch.bind_keyseq("\x1b[1;5A")
+	lurch.bind_keyseq("\x1b[1;5B")
+	lurch.bind_keyseq("\x1b[1;5C")
+	lurch.bind_keyseq("\x1b[1;5D")
 end
 
 local keyseq_handler = {
@@ -907,9 +912,11 @@ local keyseq_handler = {
 	[14] = "/next",
 	[16] = "/prev",
 
-	-- TODO: PageUp, PageDown
-	[23] = "/up",
-	[18] = "/down",
+	-- Ctrl+Left, Ctrl+Right, etc
+	[65] = "/up",
+	[66] = "/down",
+	[67] = "/next",
+	[68] = "/prev",
 }
 
 function rt.on_keyseq(key)
