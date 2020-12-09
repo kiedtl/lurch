@@ -113,7 +113,7 @@ function M.inputbar(bufs, cbuf, nick)
 		inp = inp:sub(5, #inp)
 		cursor = cursor - 4
 	elseif inp:find("/") == 1 then
-		prompt = "\x1b[38m/\x1b[m"
+		prompt = "\x1b[90m/\x1b[m"
 		inp = inp:sub(2, #inp)
 		cursor = cursor - 1
 	else
@@ -238,7 +238,7 @@ function M.format_line(timestr, left, right_fmt, ...)
 	if #raw > config.left_col_width then left_pad = 0 end
 	if #timestr > config.time_col_width then time_pad = 0 end
 
-	return format("\x1b[37m%s\x1b[m\x1b[%sC \x1b[%sC%s %s",
+	return format("\x1b[90m%s\x1b[m\x1b[%sC \x1b[%sC%s %s",
 		timestr, time_pad, left_pad, left, right)
 end
 
