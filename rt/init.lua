@@ -473,6 +473,16 @@ local irchand = {
 	-- No such nick/channel
 	["401"] = function(e) prin_irc(MAINBUF, "-!-", "No such nick/channel %s", e.fields[3]) end,
 
+	-- Nickname is already in use
+	["433"] = function(e)
+		assert(e.fields[3] == nick)
+		local newnick = e.fields[3] .. "_" -- sprout a tail
+		prin_irc(MAINBUF, "-!-", "Nickname %s already in use; using %s",
+			e.fields[3], newnick)
+		irc.send("NICK %s", newnick)
+		nick = newnick
+	end,
+
 	-- <nick> is already in channel (response to /invite)
 	["443"] = function(e)
 		prin_irc(e.fields[4], "-!-", "%s is already in %s", tui.highlight(e.fields[3]),
