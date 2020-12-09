@@ -150,7 +150,7 @@ main(int argc, char **argv)
 	lua_pushvalue(L, -1);
 	lua_setglobal(L, "lurch");
 
-	luaL_dofile(L, "./rt/init.lua");
+	!luaL_dofile(L, "./rt/init.lua") || llua_panic(L);
 	lua_setglobal(L, "rt");
 
 	/* run init function */
@@ -361,29 +361,32 @@ lurch_rl_getc(FILE *f)
 int
 llua_panic(lua_State *pL)
 {
-	int ret;
 	char *err = (char *) lua_tostring(pL, -1);
 
 	/* run error handler */
 	lua_getglobal(pL, "rt");
-	lua_getfield(pL, -1, "on_lerror");
-	lua_remove(pL, -2);
-	ret = lua_pcall(pL, 0, 0, 0);
+	if (lua_type(L, -1) != LUA_TNIL) {
+		lua_getfield(pL, -1, "on_lerror");
+		lua_remove(pL, -2);
+		int ret = lua_pcall(pL, 0, 0, 0);
 
-	if (ret != 0) {
-		/* if the call to rt.on_lerror failed, just ignore
-		 * the error message and pop it. */
+		if (ret != 0) {
+			/* if the call to rt.on_lerror failed, just ignore
+			 * the error message and pop it. */
+			lua_pop(pL, 1);
+
+			/* flush stdin, as rt.on_lerror probably didn't do
+			 * it for us */
+			fflush(stdin);
+		}
+	} else {
 		lua_pop(pL, 1);
-
-		/* flush stdin, as rt.on_lerror probably didn't do
-		 * it for us */
-		fflush(stdin);
 	}
 
 	/* print the error, dump the lua stack, print lua traceback,
 	 * and exit. */
 	fprintf(stderr, "\r\x1b[2K\x1b[0m\rlua_call error: %s\n\n", err);
-	llua_sdump(L); luaL_traceback(pL, pL, NULL, 0);
+	llua_sdump(L); luaL_traceback(pL, pL, err, 0);
 	fprintf(stderr, "\ntraceback: %s\n\n", lua_tostring(pL, -1));
 	die("unable to recover; exiting");
 
