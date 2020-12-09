@@ -190,8 +190,13 @@ function M.redraw(bufs, cbuf, nick)
 	tty.curs_save()
 	tty.curs_hide()
 
-	tty.curs_move_to_line(2)
+	-- keep one blank line in between statusbar and text.
+	tty.curs_move_to_line(3)
 
+	-- beginning at the top of the terminal, draw each line
+	-- of text from that buffer's history, then move down.
+	-- If there is nothing to draw, just clear the line and
+	-- move on.
 	if bufs[cbuf].history then
 		local start = bufs[cbuf].scroll - (M.tty_height-4)
 		for i = start, bufs[cbuf].scroll do
