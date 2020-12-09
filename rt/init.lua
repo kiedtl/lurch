@@ -264,12 +264,16 @@ local irchand = {
 		prin_irc(e.dest, "-->", "%s has joined %s", tui.highlight(e.nick), e.dest)
 	end,
 	["NICK"] = function(e)
-		-- if the user changed the nickname, update the current nick.
-		if e.nick == nick then nick = e.msg end
-
 		-- copy across nick information (this preserves nick highlighting across
 		-- nickname changes), and display the nick change for all buffers that
 		-- have that user
+		for _, buf in ipairs(buffers) do
+			if not buf.names[e.nick] and e.nick ~= nick then
+			else
+				prin_irc(buf.name, "--@", "%s is now known as %s",
+					tui.highlight(e.nick), tui.highlight(e.msg))
+			end
+		end
 		tui.set_colors[e.msg]  = tui.set_colors[e.nick]
 		tui.set_colors[e.nick] = nil
 		for _, buf in ipairs(buffers) do
@@ -277,11 +281,8 @@ local irchand = {
 			buf.names[e.nick] = nil; buf.names[e.msg]  = true
 		end
 
-		for _, buf in ipairs(buffers) do
-			if not buf.names[e.nick] and e.nick ~= nick then return end
-			prin_irc(buf, "--@", "%s is now known as %s", tui.highlight(e.nick),
-				tui.highlight(e.msg))
-		end
+		-- if the user changed the nickname, update the current nick.
+		if e.nick == nick then nick = e.msg end
 	end,
 
 	-- Welcome to the xyz Internet Relay Chat Network, foo!

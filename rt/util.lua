@@ -102,6 +102,7 @@ end
 local HASH_BEG = 42
 local HASH_MOD = 512
 function util.hash(value, max)
+	assert(value)
 	local h = HASH_BEG
 	for char in value:gmatch(".") do
 		h = h + (11 * h + utf8.codepoint(char))
