@@ -137,6 +137,11 @@ function prin_cmd(dest, left, right_fmt, ...)
 end
 
 function prin(timestr, dest, left, right_fmt, ...)
+	assert(timestr)
+	assert(dest)
+	assert(left)
+	assert(right_fmt)
+
 	local redraw_statusbar = false
 
 	local bufidx = buf_idx(dest)
@@ -328,22 +333,49 @@ local irchand = {
 	["255"] = none, ["265"] = none,
 	["266"] = none, ["250"] = none,
 
+	-- WHOIS: <nick> has TLS cert fingerprint of sdflkjsdflksdf
+	["276"] = function(e)
+		prin_irc(buf_cur(), "WHOIS", "[%s] %s", tui.highlight(e.fields[3]), e.msg)
+	end,
+
+	-- WHOIS: <nick> is a registered nick
+	["307"] = function(e)
+		prin_irc(buf_cur(), "WHOIS", "[%s] %s", tui.highlight(e.fields[3]), e.msg)
+	end,
+
 	-- WHOIS: RPL_WHOISUSER (response to /whois)
 	-- <nick> <user> <host> * :realname
 	["311"] = function(e)
-		prin_irc(MAINBUF, "WHOIS", "[%s] (%s!%s@%s): %s", tui.highlight(e.fields[3]),
+		prin_irc(buf_cur(), "WHOIS", "[%s] (%s!%s@%s): %s", tui.highlight(e.fields[3]),
 			e.fields[3], e.fields[4], e.fields[5], e.msg)
 	end,
 
 	-- WHOIS: RPL_WHOISSERVER (response to /whois)
 	-- <nick> <server> :serverinfo
 	["312"] = function(e)
-		prin_irc(MAINBUF, "WHOIS", "[%s] %s (%s)", tui.highlight(e.fields[3]), e.fields[4], e.msg)
+		prin_irc(buf_cur(), "WHOIS", "[%s] %s (%s)", tui.highlight(e.fields[3]), e.fields[4], e.msg)
+	end,
+
+	-- WHOIS: <nick> has been idle for 45345 seconds, and has been online since 4534534534
+	["317"] = function(e)
+		prin_irc(buf_cur(), "WHOIS", "[%s] has been idle for %s",
+			tui.highlight(e.fields[3]), e.fields[4])
+
+		-- not all servers send the "has been online" bit...
+		if e.fields[5] then
+			prin_irc(buf_cur(), "WHOIS", "[%s] has been online since %s",
+				tui.highlight(e.fields[3]), os.date("%Y-%m-%d %H:%M", e.fields[5]))
+		end
 	end,
 
 	-- End of WHOIS
 	["318"] = function(e)
-		prin_irc(MAINBUF, "WHOIS", "[%s] End of WHOIS info.", tui.highlight(e.fields[3]))
+		prin_irc(buf_cur(), "WHOIS", "[%s] End of WHOIS info.", tui.highlight(e.fields[3]))
+	end,
+
+	-- WHOIS: <user> has joined #chan1, #chan2, #chan3
+	["319"] = function(e)
+		prin_irc(buf_cur(), "WHOIS", "[%s] has joined %s", tui.highlight(e.fields[3]), e.msg)
 	end,
 
 	-- URL for channel
@@ -351,7 +383,7 @@ local irchand = {
 
 	-- WHOIS: <nick> is logged in as <user> (response to /whois)
 	["330"] = function(e)
-		prin_irc(MAINBUF, "WHOIS", "[%s] is logged in as %s", tui.highlight(e.fields[3]),
+		prin_irc(buf_cur(), "WHOIS", "[%s] is logged in as %s", tui.highlight(e.fields[3]),
 			tui.highlight(e.fields[4]))
 	end,
 
@@ -419,6 +451,16 @@ local irchand = {
 		end
 	end,
 
+	-- WHOIS: <nick> is connecting from <host>
+	["378"] = function(e)
+		prin_irc(buf_cur(), "WHOIS", "[%s] %s", tui.highlight(e.fields[3]), e.msg)
+	end,
+
+	-- WHOIS: <nick> is using modes +abcd
+	["379"] = function(e)
+		prin_irc(buf_cur(), "WHOIS", "[%s] %s", tui.highlight(e.fields[3]), e.msg)
+	end,
+
 	-- "xyz" is now your hidden host (set by foo)
 	["396"] = function(e) prin_irc(MAINBUF, "--", "%s %s", e.fields[3], e.msg) end,
 
@@ -440,7 +482,7 @@ local irchand = {
 
 	-- WHOIS: <nick> is using a secure connection (response to /whois)
 	["671"] = function(e)
-		prin_irc(MAINBUF, "WHOIS", "[%s] uses a secure connection", tui.highlight(e.fields[3]))
+		prin_irc(buf_cur(), "WHOIS", "[%s] uses a secure connection", tui.highlight(e.fields[3]))
 	end,
 
 	-- You are now logged in as xyz
