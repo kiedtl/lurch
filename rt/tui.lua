@@ -178,6 +178,10 @@ function M.statusbar(bufs, cbuf)
 	printf("%s\x1b[m", chanlist)
 
 	tty.curs_restore()
+
+	-- set the terminal title. This is a big help when using terminal
+	-- tabs to mimic a multi-server feature.
+	tty.title("[%s] %s", config.server, bufs[cbuf].name)
 end
 
 function M.redraw(bufs, cbuf, nick)

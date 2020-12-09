@@ -7,6 +7,11 @@ function tty.dimensions()
 	return lurch.tty_size()
 end
 
+-- set terminal title
+function tty.title(fmt, ...)
+	printf("\x1b]0;%s\a", fmt:format(...))
+end
+
 -- switch to alternate buffer and back
 function tty.main_buffer()
 	printf("\x1b[?1049l")
