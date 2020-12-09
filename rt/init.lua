@@ -14,6 +14,7 @@ local tui     = require('tui')
 local printf  = util.printf
 local eprintf = util.eprintf
 local format  = string.format
+local hcol    = tui.highlight
 
 local MAINBUF = "<server>"
 local server  = { caps = {} } -- Server information
@@ -198,7 +199,7 @@ local irchand = {
 				mode = mode .. " " .. e.fields[i]
 			end
 			mode = mode .. " " .. e.msg
-			prin_irc(e.dest, "--", "Mode [%s] by %s", mode, tui.highlight(e.nick))
+			prin_irc(e.dest, "--", "Mode [%s] by %s", mode, hcol(e.nick))
 		else
 			prin_irc(MAINBUF, "--", "Mode %s", e.msg)
 		end
@@ -212,13 +213,13 @@ local irchand = {
 	end,
 	["PART"] = function(e)
 		prin_irc(e.dest, "<--", "%s has left %s (%s)",
-			tui.highlight(e.nick), e.dest, e.msg)
+			hcol(e.nick), e.dest, e.msg)
 		local idx = buf_idx(e.dest)
 		if not idx then idx = buf_add(e.dest) end
 		buffers[idx].names[e.nick] = false
 	end,
 	["KICK"] = function(e)
-		prin_irc(e.dest, "<--", "%s has kicked %s (%s)", tui.highlight(e.nick), tui.highlight(e.fields[3]), e.msg)
+		prin_irc(e.dest, "<--", "%s has kicked %s (%s)", hcol(e.nick), hcol(e.fields[3]), e.msg)
 	end,
 	["INVITE"] = function(e)
 		-- TODO: auto-join on invite?
@@ -234,7 +235,7 @@ local irchand = {
 		end
 
 		if msg_pings(e.msg) then
-			sender = format("<\x1b[7m%s\x1b[m>", tui.highlight(sender, e.nick))
+			sender = format("<\x1b[7m%s\x1b[m>", hcol(sender, e.nick))
 
 			-- normally, we'd wait for prin() to create the buffer,
 			-- but since we need to manipulate the number of pings we
@@ -243,7 +244,7 @@ local irchand = {
 			local bufidx = buf_idx(e.dest)
 			buffers[bufidx].pings = buffers[bufidx].pings + 1
 		else
-			sender = format("<%s>", tui.highlight(sender, e.nick))
+			sender = format("<%s>", hcol(sender, e.nick))
 		end
 
 		-- convert or remove mIRC IRC colors.
@@ -261,7 +262,7 @@ local irchand = {
 		for _, buf in ipairs(buffers) do
 			local ch = buf.name
 			if ch ~= MAINBUF and buf.names[e.nick] then
-				prin_irc(ch, "<--", "%s has quit (%s)", tui.highlight(e.nick), e.msg)
+				prin_irc(ch, "<--", "%s has quit (%s)", hcol(e.nick), e.msg)
 				buf.names[e.nick] = false
 			end
 		end
@@ -280,7 +281,7 @@ local irchand = {
 		-- if we are the ones joining, then switch to that buffer.
 		if e.nick == nick then buf_switch(#buffers) end
 
-		prin_irc(e.dest, "-->", "%s has joined %s", tui.highlight(e.nick), e.dest)
+		prin_irc(e.dest, "-->", "%s has joined %s", hcol(e.nick), e.dest)
 	end,
 	["NICK"] = function(e)
 		-- copy across nick information (this preserves nick highlighting across
@@ -289,7 +290,7 @@ local irchand = {
 		for _, buf in ipairs(buffers) do
 			if buf.names[e.nick] or e.nick == nick then
 				prin_irc(buf.name, "--@", "%s is now known as %s",
-					tui.highlight(e.nick), tui.highlight(e.msg))
+					hcol(e.nick), hcol(e.msg))
 			end
 		end
 		tui.set_colors[e.msg]  = tui.set_colors[e.nick]
@@ -348,47 +349,47 @@ local irchand = {
 
 	-- WHOIS: <nick> has TLS cert fingerprint of sdflkjsdflsdf
 	["276"] = function(e)
-		prin_irc(buf_cur(), "WHOIS", "[%s] %s", tui.highlight(e.fields[3]), e.msg)
+		prin_irc(buf_cur(), "WHOIS", "[%s] %s", hcol(e.fields[3]), e.msg)
 	end,
 
 	-- WHOIS: <nick> is a registered nick
 	["307"] = function(e)
-		prin_irc(buf_cur(), "WHOIS", "[%s] %s", tui.highlight(e.fields[3]), e.msg)
+		prin_irc(buf_cur(), "WHOIS", "[%s] %s", hcol(e.fields[3]), e.msg)
 	end,
 
 	-- WHOIS: RPL_WHOISUSER (response to /whois)
 	-- <nick> <user> <host> * :realname
 	["311"] = function(e)
-		prin_irc(buf_cur(), "WHOIS", "[%s] (%s!%s@%s): %s", tui.highlight(e.fields[3]),
+		prin_irc(buf_cur(), "WHOIS", "[%s] (%s!%s@%s): %s", hcol(e.fields[3]),
 			e.fields[3], e.fields[4], e.fields[5], e.msg)
 	end,
 
 	-- WHOIS: RPL_WHOISSERVER (response to /whois)
 	-- <nick> <server> :serverinfo
 	["312"] = function(e)
-		prin_irc(buf_cur(), "WHOIS", "[%s] %s (%s)", tui.highlight(e.fields[3]), e.fields[4], e.msg)
+		prin_irc(buf_cur(), "WHOIS", "[%s] %s (%s)", hcol(e.fields[3]), e.fields[4], e.msg)
 	end,
 
 	-- WHOIS: <nick> has been idle for 45345 seconds, and has been online since 4534534534
 	["317"] = function(e)
 		prin_irc(buf_cur(), "WHOIS", "[%s] has been idle for %s",
-			tui.highlight(e.fields[3]), util.fmt_duration(tonumber(e.fields[4])))
+			hcol(e.fields[3]), util.fmt_duration(tonumber(e.fields[4])))
 
 		-- not all servers send the "has been online" bit...
 		if e.fields[5] then
 			prin_irc(buf_cur(), "WHOIS", "[%s] has been online since %s",
-				tui.highlight(e.fields[3]), os.date("%Y-%m-%d %H:%M", e.fields[5]))
+				hcol(e.fields[3]), os.date("%Y-%m-%d %H:%M", e.fields[5]))
 		end
 	end,
 
 	-- End of WHOIS
 	["318"] = function(e)
-		prin_irc(buf_cur(), "WHOIS", "[%s] End of WHOIS info.", tui.highlight(e.fields[3]))
+		prin_irc(buf_cur(), "WHOIS", "[%s] End of WHOIS info.", hcol(e.fields[3]))
 	end,
 
 	-- WHOIS: <user> has joined #chan1, #chan2, #chan3
 	["319"] = function(e)
-		prin_irc(buf_cur(), "WHOIS", "[%s] has joined %s", tui.highlight(e.fields[3]), e.msg)
+		prin_irc(buf_cur(), "WHOIS", "[%s] has joined %s", hcol(e.fields[3]), e.msg)
 	end,
 
 	-- URL for channel
@@ -396,8 +397,8 @@ local irchand = {
 
 	-- WHOIS: <nick> is logged in as <user> (response to /whois)
 	["330"] = function(e)
-		prin_irc(buf_cur(), "WHOIS", "[%s] is logged in as %s", tui.highlight(e.fields[3]),
-			tui.highlight(e.fields[4]))
+		prin_irc(buf_cur(), "WHOIS", "[%s] is logged in as %s", hcol(e.fields[3]),
+			hcol(e.fields[4]))
 	end,
 
 	-- No topic set
@@ -411,16 +412,16 @@ local irchand = {
 		-- sometimes, the nick is in the fields
 		local n = (e.fields[4]):gmatch("(.-)!")()
 		if n then
-			prin_irc(e.dest, "--", "Topic last set by %s (%s)", tui.highlight(n), e.fields[4])
+			prin_irc(e.dest, "--", "Topic last set by %s (%s)", hcol(n), e.fields[4])
 		else
 			local datetime = os.date("%Y-%m-%d %H:%M:%S", e.msg)
-			prin_irc(e.dest, "--", "Topic last set by %s on %s", tui.highlight(e.fields[4]), datetime)
+			prin_irc(e.dest, "--", "Topic last set by %s on %s", hcol(e.fields[4]), datetime)
 		end
 	end,
 
 	-- invited <nick> to <chan> (response to /invite)
 	["341"] = function(e)
-		prin_irc(e.fields[4], "--", "invited %s to %s", tui.highlight(e.fields[3]), e.fields[4])
+		prin_irc(e.fields[4], "--", "invited %s to %s", hcol(e.fields[3]), e.fields[4])
 	end,
 
 	-- Reply to /names
@@ -438,7 +439,7 @@ local irchand = {
 				_nick = _nick:gsub(access, "")
 			end
 
-			nicklist = format("%s%s%s ", nicklist, access, tui.highlight(_nick))
+			nicklist = format("%s%s%s ", nicklist, access, hcol(_nick))
 
 			-- TODO: update access with mode changes
 			-- TODO: show access in PRIVMSGs
@@ -467,12 +468,12 @@ local irchand = {
 
 	-- WHOIS: <nick> is connecting from <host>
 	["378"] = function(e)
-		prin_irc(buf_cur(), "WHOIS", "[%s] %s", tui.highlight(e.fields[3]), e.msg)
+		prin_irc(buf_cur(), "WHOIS", "[%s] %s", hcol(e.fields[3]), e.msg)
 	end,
 
 	-- WHOIS: <nick> is using modes +abcd
 	["379"] = function(e)
-		prin_irc(buf_cur(), "WHOIS", "[%s] %s", tui.highlight(e.fields[3]), e.msg)
+		prin_irc(buf_cur(), "WHOIS", "[%s] %s", hcol(e.fields[3]), e.msg)
 	end,
 
 	-- "xyz" is now your hidden host (set by foo)
@@ -493,7 +494,7 @@ local irchand = {
 
 	-- <nick> is already in channel (response to /invite)
 	["443"] = function(e)
-		prin_irc(e.fields[4], "-!-", "%s is already in %s", tui.highlight(e.fields[3]),
+		prin_irc(e.fields[4], "-!-", "%s is already in %s", hcol(e.fields[3]),
 			e.fields[4])
 	end,
 
@@ -506,14 +507,14 @@ local irchand = {
 
 	-- WHOIS: <nick> is using a secure connection (response to /whois)
 	["671"] = function(e)
-		prin_irc(buf_cur(), "WHOIS", "[%s] uses a secure connection", tui.highlight(e.fields[3]))
+		prin_irc(buf_cur(), "WHOIS", "[%s] uses a secure connection", hcol(e.fields[3]))
 	end,
 
 	-- You are now logged in as xyz
 	["900"] = function(e) prin_irc(MAINBUF, "--", "%s", e.msg) end,
 
 	-- CTCP stuff.
-	["CTCP_ACTION"] = function(e) prin_irc(e.dest, "*", "%s %s", tui.highlight(e.nick or nick), e.msg) end,
+	["CTCP_ACTION"] = function(e) prin_irc(e.dest, "*", "%s %s", hcol(e.nick or nick), e.msg) end,
 	["CTCP_VERSION"] = function(e)
 		if config.ctcp_version then
 			prin_irc(MAINBUF, "CTCP", "%s requested VERSION (reply: %s)", e.nick, config.ctcp_version)
