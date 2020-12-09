@@ -12,7 +12,7 @@ function irc.connect(host, port, nick, user, name, pass, caps)
 	-- for now; they will be processed later on.
 	if caps then
 		irc.send("CAP LS")
-		for _, cap in caps do
+		for _, cap in ipairs(caps) do
 			irc.send("CAP REQ :%s", cap)
 		end
 		irc.send("CAP END")
@@ -60,7 +60,7 @@ function irc.parse(rawmsg)
 		-- since the first word, and only the first word can be
 		-- an IRC tag(s), we can just strip off the first word to
 		-- removed the processed tags.
-		rawmsg = rawmsg:gsub("(.-)%s", "")
+		rawmsg = rawmsg:match(".-%s(.+)")
 	end
 
 	-- the message had better not be all tags...

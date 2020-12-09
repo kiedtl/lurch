@@ -29,13 +29,17 @@ M.ctcp_ping    = true
 -- if set to false, will simply filter out mirc colors.
 M.show_mirc_colors = true
 
+M.time_col_width = 5
+M.right_col_width = nil -- defaults to $(terminal_width - left_col_width - time_col_width)
 M.left_col_width = 10
-M.right_col_width = nil -- defaults to $(terminal_width - left_col_width)
 
 -- words that will generate a notification if they appear in a message
 M.pingwords = { "kiedtl" }
 
 -- user defined commands. These take the place of aliases.
 M.commands = { }
+
+-- what timezone to display times in. (format: "UTC[+-]<offset>")
+M.timezone = "UTC-3:00"
 
 return M

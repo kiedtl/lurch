@@ -189,31 +189,35 @@ function M.redraw(bufs, cbuf, nick)
 	tty.curs_restore()
 end
 
-function M.format_line(left, right_fmt, ...)
+function M.format_line(timestr, left, right_fmt, ...)
+	assert(timestr)
 	assert(left)
 	assert(right_fmt)
 
 	local right = format(right_fmt, ...)
 
-	-- fold message to width
-	local default_width = M.tty_width - config.left_col_width
-	right = util.fold(right, config.right_col_width or default_width)
+	-- fold message to width (see /bin/fold)
+	local infocol_width = config.left_col_width + config.time_col_width
+	local def_width = M.tty_width - infocol_width
+	right = util.fold(right, config.right_col_width or def_width)
 	right = right:gsub("\n", format("\n%s",
-		util.strrepeat(" ", config.left_col_width + 2)))
+		util.strrepeat(" ", infocol_width + 4)))
 
-	-- Strip escape sequences from the first word in the message
-	-- so that we can calculate how much padding to add for
-	-- alignment.
+	-- Strip escape sequences from the left column so that
+	-- we can calculate how much padding to add for alignment, and
+	-- not get confused by the invisible escape sequences.
 	local raw = left:gsub("\x1b%[.-m", "")
 
 	-- Generate a cursor right sequence based on the length of
 	-- the above "raw" word. The nick column is a fixed width
 	-- of LEFT_PADDING so it's simply 'LEFT_PADDING - word_len'
-	local pad = (config.left_col_width + 1) - #raw
-	if #raw > config.left_col_width then pad = 0 end
+	local left_pad = (config.left_col_width + 1) - #raw
+	local time_pad = (config.time_col_width + 1) - #timestr
+	if #raw > config.left_col_width then left_pad = 0 end
+	if #timestr > config.time_col_width then time_pad = 0 end
 
-	return format("\x1b[%sC%s %s", pad, left, right):gsub("\n+$", "")
-
+	return format("\x1b[37m%s\x1b[m\x1b[%sC \x1b[%sC%s %s",
+		timestr, time_pad, left_pad, left, right)
 end
 
 function M.draw_line(bufs, cbuf, dest, out, nick)
