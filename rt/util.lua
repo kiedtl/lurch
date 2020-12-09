@@ -1,3 +1,4 @@
+local format = string.format
 local util = {}
 
 function util.last_gmatch(s, pat)
@@ -153,6 +154,23 @@ function util.time_from_iso8601(str)
 	}
 
 	return os.time(utc_time_struct)
+end
+
+-- format a duration (e.g. "4534534") as "38d 2h 1m 45s"
+function util.fmt_duration(secs)
+	local dur_str = ""
+	assert(type(secs) == "number")
+
+	local days  = math.floor(secs / 60 / 60 / 24)
+	local hours = math.floor(secs / 60 / 60 % 24)
+	local mins  = math.floor(secs / 60 % 60)
+
+	if days > 0 then dur_str = format("%s%sd", dur_str, days) end
+	if hours > 0 then dur_str = format("%s%sh", dur_str, hours) end
+	if mins > 0 then dur_str = format("%s%sm", dur_str, mins) end
+
+	if dur_str == "" then dur_str = format("%s%ss", dur_str, secs) end
+	return dur_str
 end
 
 return util

@@ -364,7 +364,7 @@ local irchand = {
 	-- WHOIS: <nick> has been idle for 45345 seconds, and has been online since 4534534534
 	["317"] = function(e)
 		prin_irc(buf_cur(), "WHOIS", "[%s] has been idle for %s",
-			tui.highlight(e.fields[3]), e.fields[4])
+			tui.highlight(e.fields[3]), util.fmt_duration(tonumber(e.fields[4])))
 
 		-- not all servers send the "has been online" bit...
 		if e.fields[5] then
