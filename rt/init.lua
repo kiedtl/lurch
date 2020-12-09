@@ -624,7 +624,11 @@ cmdhand = {
 	},
 	["/clear"] = {
 		help = { "Clear the current buffer." },
-		fn = function(_, _, _) buffers[cur_buf].history = {}; tui.redraw(buffers, cur_buf, nick) end
+		fn = function(_, _, _)
+			buffers[cur_buf].history = {}
+			buffers[cur_buf].scroll = 0
+			tui.redraw(buffers, cur_buf, nick)
+		end
 	},
 	["/redraw"] = {
 		help = { "Redraw the screen. Ctrl+L may also be used." },
