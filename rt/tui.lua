@@ -1,8 +1,9 @@
-local config = require('config')
-local util   = require('util')
-local tty    = require('tty')
-local format = string.format
-local printf = util.printf
+local config  = require('config')
+local inspect = require('inspect')
+local util    = require('util')
+local tty     = require('tty')
+local format  = string.format
+local printf  = util.printf
 
 local M = {}
 
@@ -58,7 +59,11 @@ end
 
 function M.highlight(text, text_as, no_bold)
 	assert(text)
+	assert(type(text) == "string",
+		format("text of type %s, not string", type(text)))
 	if not text_as then text_as = text end
+	assert(type(text_as) == "string",
+		format("text_as of type %s, not string", type(text_as)))
 
 	-- store nickname highlight color, so that we don't have to
 	-- calculate the text's hash each time
@@ -128,21 +133,28 @@ function M.inputbar(bufs, cbuf, nick)
 end
 
 function M.statusbar(bufs, cbuf)
+	assert(type(cbuf) == "number",
+		format("cbuf of type %s, not number", type(cbuf)))
+	assert(type(bufs) == "table",
+		format("bufs of type %s, not table", type(bufs)))
+
 	local chanlist = " "
 	for buf = 1, #bufs do
 		local ch = bufs[buf].name
 		local bold = false
 
 		if buf == cbuf then
+			local pnch
+
 			if bufs[buf].pings  > 0 then bold = true end
 			if bufs[buf].unread > 0 then
-				local pnch = M.highlight(format(" %d %s %s%d ", buf, ch,
+				pnch = M.highlight(format(" %d %s %s%d ", buf, ch,
 					"+", bufs[buf].unread), ch, not bold)
-				chanlist = chanlist .. "\x1b[7m" .. pnch .. "\x1b[0m "
 			else
-				local pnch = M.highlight(format(" %d %s ", buf, ch), ch, true)
-				chanlist = chanlist .. "\x1b[7m" .. pnch .. "\x1b[0m "
+				pnch = M.highlight(format(" %d %s ", buf, ch), ch, true)
 			end
+
+			chanlist = chanlist .. "\x1b[7m" .. pnch .. "\x1b[m "
 		else
 			if bufs[buf].pings  > 0 then bold = true end
 			if bufs[buf].unread > 0 then
@@ -157,7 +169,7 @@ function M.statusbar(bufs, cbuf)
 	tty.curs_move_to_line(0)
 
 	tty.clear_line()
-	printf("%s", chanlist)
+	printf("%s\x1b[m", chanlist)
 
 	tty.curs_restore()
 end

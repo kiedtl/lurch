@@ -211,7 +211,11 @@ local irchand = {
 		end
 	end,
 	["PART"] = function(e)
-		prin_irc(e.dest, "<--", "%s has left %s (%s)", tui.highlight(e.nick), e.dest, e.msg)
+		prin_irc(e.dest, "<--", "%s has left %s (%s)",
+			tui.highlight(e.nick), e.dest, e.msg)
+		local idx = buf_idx(e.dest)
+		if not idx then idx = buf_add(e.dest) end
+		buffers[idx].names[e.nick] = false
 	end,
 	["KICK"] = function(e)
 		prin_irc(e.dest, "<--", "%s has kicked %s (%s)", tui.highlight(e.nick), tui.highlight(e.fields[3]), e.msg)
@@ -252,10 +256,14 @@ local irchand = {
 		prin_irc(e.dest, sender, "%s", e.msg)
 	end,
 	["QUIT"] = function(e)
-		-- display quit message for all buffers that user has joined.
+		-- display quit message for all buffers that user has joined,
+		-- except the main buffer.
 		for _, buf in ipairs(buffers) do
-			if not buf.names[e.nick] then return end
-			prin_irc(buf, "<--", "%s has quit %s (%s)", tui.highlight(e.nick), e.dest, e.msg)
+			local ch = buf.name
+			if ch ~= MAINBUF and buf.names[e.nick] then
+				prin_irc(ch, "<--", "%s has quit (%s)", tui.highlight(e.nick), e.msg)
+				buf.names[e.nick] = false
+			end
 		end
 	end,
 	["JOIN"] = function(e)

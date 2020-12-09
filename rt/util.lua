@@ -103,7 +103,11 @@ end
 local HASH_BEG = 42
 local HASH_MOD = 512
 function util.hash(value, max)
-	assert(value)
+	assert(value ~= "",
+		format("value is an empty string"))
+	assert(type(value) == "string",
+		format("value of type %s, not string", type(value)))
+
 	local h = HASH_BEG
 	for char in value:gmatch(".") do
 		h = h + (11 * h + utf8.codepoint(char))
