@@ -144,7 +144,7 @@ function M.statusbar(bufs, cbuf)
 	assert(type(bufs) == "table",
 		format("bufs of type %s, not table", type(bufs)))
 
-	local chanlist = " "
+	local chanlist = ""
 	for buf = 1, #bufs do
 		local ch = bufs[buf].name
 		local bold = false
