@@ -1,6 +1,12 @@
 local format = string.format
 local util = {}
 
+-- sleep for x seconds. Note that this is a busy sleep.
+function util.sleep(seconds)
+	local starttime = os.time()
+	while (starttime + seconds) >= os.time() do end
+end
+
 function util.last_gmatch(s, pat)
 	local last = ""
 	for i in s:gmatch(pat) do
