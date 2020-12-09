@@ -954,11 +954,11 @@ function rt.on_complete(text, from, to)
 			end
 		end
 
-		for k, _ in pairs(buf_cur()) do
+		for k, _ in pairs(buffers[cur_buf].names) do
 			possible[#possible + 1] = format("%s:", k)
 		end
 	else
-		for k, _ in pairs(buf_cur()) do
+		for k, _ in pairs(buffers[cur_buf].names) do
 			possible[#possible + 1] = format("%s", k)
 		end
 	end
