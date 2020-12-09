@@ -165,7 +165,7 @@ main(int argc, char **argv)
 	 */
 	setvbuf(stdin, NULL, _IONBF, 0);
 	setvbuf(stdout, NULL, _IONBF, 0);
-	setvbuf(conn, NULL, _IOLBF, 0);
+	setvbuf(conn, NULL, _IONBF, 0);
 
 	time_t trespond;
 	struct timeval tv;
