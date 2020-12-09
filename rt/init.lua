@@ -76,6 +76,11 @@ function buf_cur()
 	return buffers[cur_buf].name
 end
 
+function buf_addname(bufidx, name)
+	buffers[bufidx].names[name] = true
+	buffers[buf_idx(MAINBUF)].names[name] = true
+end
+
 -- switch to a buffer and redraw the screen.
 function buf_switch(ch)
 	if buffers[ch] then
@@ -261,7 +266,7 @@ local irchand = {
 		if not bufidx then bufidx = buf_add(e.dest) end
 
 		-- add to the list of users in that channel.
-		buffers[bufidx].names[e.nick] = true
+		buf_addname(bufidx, e.nick)
 
 		-- if we are the ones joining, then switch to that buffer.
 		if e.nick == nick then buf_switch(#buffers) end
@@ -333,7 +338,7 @@ local irchand = {
 	["255"] = none, ["265"] = none,
 	["266"] = none, ["250"] = none,
 
-	-- WHOIS: <nick> has TLS cert fingerprint of sdflkjsdflksdf
+	-- WHOIS: <nick> has TLS cert fingerprint of sdflkjsdflsdf
 	["276"] = function(e)
 		prin_irc(buf_cur(), "WHOIS", "[%s] %s", tui.highlight(e.fields[3]), e.msg)
 	end,
@@ -428,7 +433,8 @@ local irchand = {
 			nicklist = format("%s%s%s ", nicklist, access, tui.highlight(_nick))
 
 			-- TODO: update access with mode changes
-			buffers[bufidx].names[_nick] = true
+			-- TODO: show access in PRIVMSGs
+			buf_addname(bufidx, _nick)
 			buffers[bufidx].access[_nick] = access
 		end
 
