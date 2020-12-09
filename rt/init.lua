@@ -864,8 +864,11 @@ function parsecmd(inp)
 		(hand.fn)(a, args, inp)
 	else
 		-- since the command doesn't exist, just send it as a message
-		local m = format(":%s PRIVMSG %s :%s", nick, buf_cur(), inp)
-		irc.send("%s", m); parseirc(m)
+		if buf_cur() == MAINBUF then
+			prin_cmd(buf_cur(), "-!-", "Stop trying to talk to lurch.")
+		else
+			send_both(":%s PRIVMSG %s :%s", nick, buf_cur(), inp)
+		end
 	end
 end
 
