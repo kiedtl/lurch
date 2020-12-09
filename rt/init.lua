@@ -945,7 +945,7 @@ function rt.on_complete(text, from, to)
 	-- Possible matches:
 	--     for start of line: "/<command>", "/#<channel>", "nick: "
 	--     for middle of line: "nick "
-	local possible = {}
+	local possible = { nick }
 	if from == 1 then
 		for k, _ in pairs(cmdhand) do possible[#possible + 1] = k end
 		for _, v in ipairs(buffers) do
