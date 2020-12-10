@@ -421,7 +421,7 @@ local irchand = {
 
 	-- invited <nick> to <chan> (response to /invite)
 	["341"] = function(e)
-		prin_irc(e.fields[4], "--", "invited %s to %s", hcol(e.fields[3]), e.fields[4])
+		prin_irc(e.msg, "--", "Invited %s to %s", hcol(e.fields[3]), e.msg)
 	end,
 
 	-- Reply to /names
