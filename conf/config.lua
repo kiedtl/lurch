@@ -45,7 +45,7 @@ M.timezone = "UTC-3:00"
 -- Attempt to prevent the ident from being received.
 -- This is done by delaying the registration of the user after connecting to the
 -- IRC server for a few seconds; by then, some servers will have their identd
--- requests time out.
+-- requests time out. Note that only a few IRCd's are susceptible to this.
 M.no_ident = false
 
 return M
