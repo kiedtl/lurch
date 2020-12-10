@@ -10,7 +10,7 @@ SRC      = main.c
 all: $(NAME)
 
 $(NAME): $(TERMBOX) $(SRC)
-	$(CC) $(SRC) -o $@ $(CFLAGS) $(LDFLAGS)
+	$(CC) $(SRC) $(TERMBOX) -o $@ $(CFLAGS) $(LDFLAGS)
 
 $(TERMBOX):
 	make -C tb CC=$(CC)
