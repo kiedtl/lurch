@@ -894,14 +894,14 @@ function rt.init()
 	buf_add(MAINBUF)
 	buf_switch(1)
 
-	lurch.bind_keyseq("\\C-n")
-	lurch.bind_keyseq("\\C-p")
-	lurch.bind_keyseq("\\C-l")
+	--lurch.bind_keyseq("\\C-n")
+	--lurch.bind_keyseq("\\C-p")
+	--lurch.bind_keyseq("\\C-l")
 
-	lurch.bind_keyseq("\x1b[1;5A")
-	lurch.bind_keyseq("\x1b[1;5B")
-	lurch.bind_keyseq("\x1b[1;5C")
-	lurch.bind_keyseq("\x1b[1;5D")
+	--lurch.bind_keyseq("\x1b[1;5A")
+	--lurch.bind_keyseq("\x1b[1;5B")
+	--lurch.bind_keyseq("\x1b[1;5C")
+	--lurch.bind_keyseq("\x1b[1;5D")
 end
 
 local keyseq_handler = {
