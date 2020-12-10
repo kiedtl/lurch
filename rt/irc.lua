@@ -103,12 +103,12 @@ function irc.parse(rawmsg)
 
 	-- If the field after the typical dest is a channel, use
 	-- it in place of the regular field. This correctly catches
-	-- MOTD and join messages.
+	-- MOTD, JOIN, and NAMES messages.
 	event.dest = event.fields[2]
 	if event.fields[3] then
 		if (event.fields[3]):find("^[*#]") then
 			event.dest = event.fields[3]
-		elseif (event.fields[3]):find("^=") then
+		elseif (event.fields[3]):find("^[@=]") then
 			event.dest = event.fields[4]
 		end
 	end

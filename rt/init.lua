@@ -193,7 +193,7 @@ local irchand = {
 	["AWAY"] = function(e)   prin_irc(MAINBUF, "--", "Away status: %s", e.msg) end,
 	["MODE"] = function(e)
 		if (e.dest):find("#") then
-			local mode = e.fields[3]
+			local mode = e.fields[3] or ""
 			for i = 4, #e.fields do
 				if not e.fields[i] then break end
 				mode = mode .. " " .. e.fields[i]
