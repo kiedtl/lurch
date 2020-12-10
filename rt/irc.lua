@@ -22,7 +22,7 @@ function irc.connect(host, port, nick, user, name, pass, caps)
 
 	-- FIXME: ...are there servers that close the connection before
 	-- 10 seconds? the ones I know close only after 10 seconds
-	if config.no_ident then util.sleep(5) end
+	if config.no_ident then util.sleep(9) end
 
 	-- send PASS before NICK/USER, as when USER+NICK is sent
 	-- the user is registered.
