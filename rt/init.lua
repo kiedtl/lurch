@@ -189,7 +189,7 @@ local function default2(e) prin_irc(MAINBUF, "--", "There are %s %s", e.fields[3
 local function default(e) prin_irc(e.dest, "--", "%s", e.msg) end
 
 local irchand = {
-	["PING"] = function(e)   irc.send("PONG :%s", e.dest or "(null)") end,
+	["PING"] = function(e)   irc.send("PONG :%s", e.dest or e.msg) end,
 	["AWAY"] = function(e)   prin_irc(MAINBUF, "--", "Away status: %s", e.msg) end,
 	["MODE"] = function(e)
 		if (e.dest):find("#") then
