@@ -875,6 +875,21 @@ function parsecmd(inp)
 	end
 end
 
+local keyseq_handler = {
+	[tb.TB_KEY_CTRL_N] = "/next",
+	[tb.TB_KEY_CTRL_P] = "/prev",
+	[tb.TB_KEY_PGUP]   = "/up",
+	[tb.TB_KEY_PGDN]   = "/down",
+	[tb.TB_KEY_CTRL_L] = "/redraw",
+	[tb.TB_KEY_CTRL_C] = "/quit",
+}
+
+function rt.on_keyseq(key)
+	if keyseq_handler[key] then
+		parsecmd(keyseq_handler[key])
+	end
+end
+
 function rt.init()
 	tui.init()
 	tui.refresh()
@@ -898,27 +913,13 @@ function rt.init()
 	buf_add(MAINBUF)
 	buf_switch(1)
 
-	tbrl.bindings[tb.TB_KEY_CTRL_N] = true
-	tbrl.bindings[tb.TB_KEY_CTRL_P] = true
-	tbrl.bindings[tb.TB_KEY_PGUP]   = true
-	tbrl.bindings[tb.TB_KEY_PGDN]   = true
-	tbrl.bindings[tb.TB_KEY_CTRL_L] = true
-	tbrl.bindings[tb.TB_KEY_CTRL_C] = true
-end
-
-local keyseq_handler = {
-	[tb.TB_KEY_CTRL_N] = "/next",
-	[tb.TB_KEY_CTRL_P] = "/prev",
-	[tb.TB_KEY_PGUP]   = "/up",
-	[tb.TB_KEY_PGDN]   = "/down",
-	[tb.TB_KEY_CTRL_L] = "/redraw",
-	[tb.TB_KEY_CTRL_C] = "/quit",
-}
-
-function rt.on_keyseq(key)
-	if keyseq_handler[key] then
-		parsecmd(keyseq_handler[key])
-	end
+	tbrl.bindings[tb.TB_KEY_CTRL_N] = rt.on_keyseq
+	tbrl.bindings[tb.TB_KEY_CTRL_P] = rt.on_keyseq
+	tbrl.bindings[tb.TB_KEY_PGUP]   = rt.on_keyseq
+	tbrl.bindings[tb.TB_KEY_PGDN]   = rt.on_keyseq
+	tbrl.bindings[tb.TB_KEY_CTRL_L] = rt.on_keyseq
+	tbrl.bindings[tb.TB_KEY_CTRL_C] = rt.on_keyseq
+	tbrl.enter_callback = parsecmd
 end
 
 local sighand = {
@@ -969,7 +970,7 @@ end
 -- every time a key is pressed, redraw the prompt, and
 -- write the input buffer.
 function rt.on_input(event)
-	tbrl.on_event(event, parsecmd, rt.on_keyseq)
+	tbrl.on_event(event)
 	tui.inputbar(buffers, cur_buf, nick, tbrl.bufin, tbrl.cursor)
 	lurch.tb_present()
 end
