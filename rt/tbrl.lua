@@ -14,30 +14,38 @@ function M.insert_at_curs(text)
 	M.cursor = M.cursor + 1
 end
 
-local function backspace()
+local function _backspace()
 	if M.cursor == 0 then return end
 	M.bufin = M.bufin:sub(1, M.cursor-1) ..
 		M.bufin:sub(M.cursor+1, #M.bufin)
 	M.cursor = M.cursor - 1
 end
+local function _home() M.cursor = 0 end
+local function _end()  M.cursor = #M.bufin end
+local function _left()
+	if M.cursor > 0 then M.cursor = M.cursor - 1 end
+end
+local function _right()
+	if M.cursor < #M.bufin then M.cursor = M.cursor + 1 end
+end
 
 M.bindings = {}
 M.bindings = {
-	[tb.TB_KEY_BACKSPACE] = backspace,
-	[tb.TB_KEY_BACKSPACE2] = backspace,
+	[tb.TB_KEY_BACKSPACE] = _backspace,
+	[tb.TB_KEY_BACKSPACE2] = _backspace,
 
 	[tb.TB_KEY_DELETE] = function(_)
 		M.bufin = M.bufin:sub(1, M.cursor) ..
 			M.bufin:sub(M.cursor+2, #M.bufin)
 	end,
 
-	[tb.TB_KEY_HOME] = function(_) M.cursor = 0 end,
-	[tb.TB_KEY_END] = function(_) M.cursor = #M.bufin-1 end,
-	[tb.TB_KEY_ARROW_LEFT] = function(_)
-		if M.cursor > 0 then M.cursor = M.cursor - 1 end
-	end,
-	[tb.TB_KEY_ARROW_RIGHT] = function(_)
-		if M.cursor < #M.bufin then M.cursor = M.cursor + 1 end
+	[tb.TB_KEY_HOME]        = _home,  [tb.TB_KEY_CTRL_A] = _home,
+	[tb.TB_KEY_END]         = _end,   [tb.TB_KEY_CTRL_E] = _end,
+	[tb.TB_KEY_ARROW_LEFT]  = _left,  [tb.TB_KEY_CTRL_B] = _left,
+	[tb.TB_KEY_ARROW_RIGHT] = _right, [tb.TB_KEY_CTRL_F] = _right,
+
+	[tb.TB_KEY_CTRL_K] = function(_)
+		M.bufin = M.bufin:sub(1, M.cursor)
 	end,
 
 	[tb.TB_KEY_SPACE] = function(_) M.insert_at_curs(" ") end,
