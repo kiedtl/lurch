@@ -536,7 +536,7 @@ api_tb_writeline(lua_State *pL)
 				if ((oldbg & TB_REVERSE) == TB_REVERSE)
 					c.bg |= TB_REVERSE;
 			break; default:
-				die("unknown lurch escape sequence: %d", *string);
+				break;
 			}
 		} else {
 			c.ch = *string;
