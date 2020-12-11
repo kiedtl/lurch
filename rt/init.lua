@@ -94,7 +94,8 @@ function buf_switch(ch)
 		buffers[ch].scroll = #buffers[ch].history
 		buffers[ch].unread = 0; buffers[ch].pings  = 0
 
-		tui.redraw(buffers, cur_buf, nick, tbrl.bufin, tbrl.cursor)
+		tui.redraw(buffers, cur_buf, nick,
+			tbrl.bufin[tbrl.hist], tbrl.cursor)
 	end
 end
 
@@ -971,7 +972,8 @@ end
 -- write the input buffer.
 function rt.on_input(event)
 	tbrl.on_event(event)
-	tui.inputbar(buffers, cur_buf, nick, tbrl.bufin, tbrl.cursor)
+	tui.inputbar(buffers, cur_buf, nick,
+		tbrl.bufin[tbrl.hist], tbrl.cursor)
 	lurch.tb_present()
 end
 
