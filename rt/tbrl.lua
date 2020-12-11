@@ -31,23 +31,28 @@ end
 
 M.bindings = {}
 M.bindings = {
+	-- backspace
 	[tb.TB_KEY_BACKSPACE] = _backspace,
 	[tb.TB_KEY_BACKSPACE2] = _backspace,
 
+	-- delete
 	[tb.TB_KEY_DELETE] = function(_)
 		M.bufin = M.bufin:sub(1, M.cursor) ..
 			M.bufin:sub(M.cursor+2, #M.bufin)
 	end,
 
+	-- cursor movement
 	[tb.TB_KEY_HOME]        = _home,  [tb.TB_KEY_CTRL_A] = _home,
 	[tb.TB_KEY_END]         = _end,   [tb.TB_KEY_CTRL_E] = _end,
 	[tb.TB_KEY_ARROW_LEFT]  = _left,  [tb.TB_KEY_CTRL_B] = _left,
 	[tb.TB_KEY_ARROW_RIGHT] = _right, [tb.TB_KEY_CTRL_F] = _right,
 
+	-- delete from cursor until end of line
 	[tb.TB_KEY_CTRL_K] = function(_)
 		M.bufin = M.bufin:sub(1, M.cursor)
 	end,
 
+	-- space, enter
 	[tb.TB_KEY_SPACE] = function(_) M.insert_at_curs(" ") end,
 	[tb.TB_KEY_ENTER] = function(_)
 		if M.enter_callback then
