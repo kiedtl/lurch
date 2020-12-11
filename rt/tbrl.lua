@@ -17,20 +17,30 @@ end
 local function backspace()
 	if M.cursor == 0 then return end
 	M.bufin = M.bufin:sub(1, M.cursor-1) ..
-		M.bufin:sub(M.cursor+2, #M.bufin)
+		M.bufin:sub(M.cursor+1, #M.bufin)
 	M.cursor = M.cursor - 1
 end
 
+M.bindings = {}
 M.bindings = {
 	[tb.TB_KEY_BACKSPACE] = backspace,
 	[tb.TB_KEY_BACKSPACE2] = backspace,
+
 	[tb.TB_KEY_DELETE] = function(_)
 		M.bufin = M.bufin:sub(1, M.cursor) ..
-			M.bufin:sub(M.cursor+1, #M.bufin)
+			M.bufin:sub(M.cursor+2, #M.bufin)
 	end,
-	[tb.TB_KEY_SPACE] = function(_)
-		M.insert_at_curs(" ")
+
+	[tb.TB_KEY_HOME] = function(_) M.cursor = 0 end,
+	[tb.TB_KEY_END] = function(_) M.cursor = #M.bufin-1 end,
+	[tb.TB_KEY_ARROW_LEFT] = function(_)
+		if M.cursor > 0 then M.cursor = M.cursor - 1 end
 	end,
+	[tb.TB_KEY_ARROW_RIGHT] = function(_)
+		if M.cursor < #M.bufin then M.cursor = M.cursor + 1 end
+	end,
+
+	[tb.TB_KEY_SPACE] = function(_) M.insert_at_curs(" ") end,
 	[tb.TB_KEY_ENTER] = function(_)
 		if M.enter_callback then
 			M.enter_callback(M.bufin)
