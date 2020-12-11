@@ -1,10 +1,10 @@
 NAME     = lurch
 TERMBOX  = tb/bin/termbox.a
 LUA      = lua5.3
-READLINE = readline
 CC       = clang
-CFLAGS   = -Og -g -D_POSIX_C_SOURCE=200112L -I/usr/include/$(LUA)/
-LDFLAGS  = -L/usr/include -lm -l$(READLINE) -l$(LUA)
+INCL     = -Itb/src/ -I/usr/include/$(LUA)
+CFLAGS   = -Og -g -D_POSIX_C_SOURCE=200112L $(INCL)
+LDFLAGS  = -L/usr/include -lm -l$(LUA)
 SRC      = main.c
 
 all: $(NAME)

@@ -7,12 +7,11 @@
 #include <lua.h>
 #include <lualib.h>
 #include <netdb.h>
-#include <readline/readline.h>
-#include <readline/history.h>
 #include <signal.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
@@ -22,23 +21,22 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "termbox.h"
+
 const size_t TIMEOUT = 4096;
 const size_t BT_BUF_SIZE = 16;
 
+lua_State *L = NULL;
 int conn_fd = 0;
 FILE *conn = NULL;
-char bufin[4096];
-lua_State *L = NULL;
+char bufsrv[4096];
+struct tb_event ev;
 
 void signal_lhand(int sig);
 void signal_fatal(int sig);
 
 void die(const char *fmt, ...);
 char *format(const char *format, ...);
-void lurch_rl_handler(char *line);
-char **lurch_rl_completer(const char *text, int start, int end);
-int  lurch_rl_getc(FILE *f);
-int  lurch_rl_keyseq(int count, int key);
 
 #if LUA_VERSION_NUM >= 502
 #define llua_rawlen(ST, NM) lua_rawlen(ST, NM)
@@ -52,19 +50,31 @@ int  lurch_rl_keyseq(int count, int key);
 #define llua_setfuncs(ST, FN) luaL_register(ST, NULL, FN);
 #endif
 
+#define SETTABLE_INT(NAME, VALUE, TABLE) \
+	do { \
+		lua_pushstring(L, NAME); \
+		lua_pushinteger(L, (lua_Integer) VALUE); \
+		lua_settable(L, TABLE); \
+	} while (0);
+
 int  llua_panic(lua_State *pL);
 void llua_sdump(lua_State *pL);
 void llua_call(lua_State *pL, const char *fnname, size_t nargs,
 		size_t nret);
 
 /* TODO: move to separate file */
-int api_rl_info(lua_State *pL);
-int api_bind_keyseq(lua_State *pL);
-int api_tty_size(lua_State *pL);
 int api_conn_init(lua_State *pL);
 int api_conn_fd(lua_State *pL);
 int api_conn_send(lua_State *pL);
-int api_conn_receive(lua_State *pL);
+int api_tb_init(lua_State *pL);
+int api_tb_shutdown(lua_State *pL);
+int api_tb_size(lua_State *pL);
+int api_tb_clear(lua_State *pL);
+int api_tb_present(lua_State *pL);
+int api_tb_writeline(lua_State *pL);
+int api_tb_clearline(lua_State *pL);
+int api_tb_hidecursor(lua_State *pL);
+int api_tb_showcursor(lua_State *pL);
 
 int
 main(int argc, char **argv)
@@ -88,13 +98,6 @@ main(int argc, char **argv)
 	sigaction(SIGUSR1,  &lhand, NULL);
 	sigaction(SIGUSR2,  &lhand, NULL);
 	sigaction(SIGWINCH, &lhand, NULL);
-
-	/* init readline */
-	rl_readline_name = "lurch";
-	rl_attempted_completion_function = lurch_rl_completer;
-	rl_getc_function = lurch_rl_getc;
-	rl_callback_handler_install(NULL, lurch_rl_handler);
-	rl_initialize();
 
 	/* init lua */
 	L = luaL_newstate();
@@ -135,13 +138,18 @@ main(int argc, char **argv)
 
 	/* setup lurch api functions */
 	static const struct luaL_Reg lurch_lib[] = {
-		{ "rl_info",       api_rl_info      },
-		{ "bind_keyseq",   api_bind_keyseq  },
-		{ "tty_size",      api_tty_size     },
-		{ "conn_init",     api_conn_init    },
-		{ "conn_fd",       api_conn_fd      },
-		{ "conn_send",     api_conn_send    },
-		{ "conn_receive",  api_conn_receive },
+		{ "conn_init",     api_conn_init      },
+		{ "conn_fd",       api_conn_fd        },
+		{ "conn_send",     api_conn_send      },
+		{ "tb_init",       api_tb_init        },
+		{ "tb_shutdown",   api_tb_shutdown    },
+		{ "tb_size",       api_tb_size        },
+		{ "tb_clear",      api_tb_clear       },
+		{ "tb_present",    api_tb_present     },
+		{ "tb_writeline",  api_tb_writeline   },
+		{ "tb_clearline",  api_tb_clearline   },
+		{ "tb_hidecursor", api_tb_hidecursor  },
+		{ "tb_showcursor", api_tb_showcursor  },
 		{ NULL, NULL },
 	};
 
@@ -195,18 +203,33 @@ main(int argc, char **argv)
 		}
 
 		if (FD_ISSET(conn_fd, &rd)) {
-			if (fgets(bufin, sizeof(bufin), conn) == NULL) {
+			if (fgets(bufsrv, sizeof(bufsrv), conn) == NULL) {
 				llua_call(L, "on_disconnect", 1, 0);
 			} else {
-				lua_pushstring(L, (const char *) &bufin);
+				lua_pushstring(L, (const char *) &bufsrv);
 				llua_call(L, "on_reply", 1, 0);
 				trespond = time(NULL);
 			}
 		}
 
 		if (FD_ISSET(0, &rd)) {
-			rl_callback_read_char();
-			llua_call(L, "on_input", 0, 0);
+			int ret = 0;
+			while ((ret = tb_peek_event(&ev, 16)) != 0) {
+				assert(ret != -1); /* termbox error */
+
+				/* don't push event.w and event.y; the Lua
+				 * code can easily get those values by running
+				 * lurch.tb_size() */
+				lua_settop(L, 0);
+				lua_newtable(L);
+				SETTABLE_INT("type",   ev.type, -3);
+				SETTABLE_INT("mod",    ev.mod,  -3);
+				SETTABLE_INT("ch",     ev.ch,   -3);
+				SETTABLE_INT("key",    ev.key,  -3);
+				SETTABLE_INT("mousex", ev.x,    -3);
+				SETTABLE_INT("mousey", ev.y,    -3);
+				llua_call(L, "on_input", 1, 0);
+			}
 		}
 	}
 	
@@ -219,9 +242,6 @@ main(int argc, char **argv)
 void
 signal_lhand(int sig)
 {
-	if (sig == SIGWINCH)
-		rl_resize_terminal();
-
 	/* run signal handler */
 	lua_pushinteger(L, (lua_Integer) sig);
 	llua_call(L, "on_signal", 1, 0);
@@ -279,86 +299,6 @@ format(const char *fmt, ...)
 }
 
 int
-lurch_rl_keyseq(int count, int key)
-{
-	lua_pushinteger(L, (lua_Integer) key);
-	llua_call(L, "on_keyseq", 1, 0);
-	return 0;
-}
-
-static char **completions = NULL;
-static char
-*dummy_generator(const char *text, int state)
-{
-	return completions[state];
-}
-
-/* TODO: note here where I stole this from */
-char **
-lurch_rl_completer(const char *text, int start, int end)
-{
-	/* if we couldn't find any matches, don't let readline
-	 * use its stupid filename completion. */
-	rl_attempted_completion_over = 1;
-
-	size_t i;
-	size_t completions_len;
-
-	lua_settop(L, 0);
-	lua_pushstring(L, rl_line_buffer);
-	lua_pushinteger(L, (lua_Integer) start + 1);
-	lua_pushinteger(L, (lua_Integer) end + 1);
-	llua_call(L, "on_complete", 3, 1);
-
-	luaL_checktype(L, -1, LUA_TTABLE);
-	completions_len = llua_rawlen(L, -1);
-	
-	if (completions_len == 0)
-		return NULL;
-
-	completions = malloc(sizeof(char *) * (completions_len + 1));
-	assert(completions);
-
-	for (i = 0; i < completions_len; ++i) {
-		size_t length;
-		const char *tmp;
-		lua_rawgeti(L, 1, i + 1);
-		tmp = luaL_checkstring(L, 2);
-		length = llua_rawlen(L, 2) + 1;
-		completions[i] = malloc(sizeof(char) * length);
-		assert(completions[i]);
-		strncpy(completions[i], tmp, length);
-		lua_remove(L, 2);
-	}
-
-	/* add sentinel NULL */
-	completions[completions_len] = NULL;
-
-	return rl_completion_matches(text, dummy_generator);
-}
-
-void
-lurch_rl_handler(char *line)
-{
-	add_history(line);
-	lua_pushstring(L, line);
-	llua_call(L, "on_rl_input", 1, 0);
-}
-
-int
-lurch_rl_getc(FILE *f)
-{
-	int c = getc(f);
-
-	if (c == '\n') {
-		rl_done = 1;
-		return 0;
-	}
-
-	return c;
-}
-
-int
 llua_panic(lua_State *pL)
 {
 	char *err = (char *) lua_tostring(pL, -1);
@@ -374,10 +314,6 @@ llua_panic(lua_State *pL)
 			/* if the call to rt.on_lerror failed, just ignore
 			 * the error message and pop it. */
 			lua_pop(pL, 1);
-
-			/* flush stdin, as rt.on_lerror probably didn't do
-			 * it for us */
-			fflush(stdin);
 		}
 	} else {
 		lua_pop(pL, 1);
@@ -431,41 +367,6 @@ llua_call(lua_State *pL, const char *fnname, size_t nargs, size_t nret)
 }
 
 // API functions
-
-int
-api_rl_info(lua_State *pL)
-{
-	lua_pushstring(L, rl_line_buffer);
-	lua_pushinteger(L, (lua_Integer) rl_point);
-	return 2;
-}
-
-int
-api_bind_keyseq(lua_State *pL)
-{
-	char *keyseq = (char *) luaL_checkstring(pL, 1);
-	int ret = rl_bind_keyseq((const char *) keyseq, lurch_rl_keyseq);
-
-	if (ret != 0) {
-		lua_pushnil(pL);
-		lua_pushstring(pL, "rl_bind_keyseq() != 0");
-		return 2;
-	}
-
-	return 0;
-}
-
-int
-api_tty_size(lua_State *pL)
-{
-	struct winsize w;
-	ioctl(STDIN_FILENO, TIOCGWINSZ, &w);
-
-	lua_pushinteger(pL, (lua_Integer) w.ws_row);
-	lua_pushinteger(pL, (lua_Integer) w.ws_col);
-
-	return 2;
-}
 
 int
 api_conn_init(lua_State *pL)
@@ -539,7 +440,123 @@ api_conn_send(lua_State *pL)
 }
 
 int
-api_conn_receive(lua_State *pL)
+api_tb_init(lua_State *pL)
 {
-	return 1;
+	char *errstrs[] = {
+		NULL,
+		"termbox: unsupported terminal",
+		"termbox: could not open terminal",
+		"termbox: pipe trap error"
+	};
+
+	char *err = errstrs[-(tb_init())];
+
+	if (err) {
+		lua_pushnil(pL); lua_pushstring(pL, err);
+		return 2;
+	} else {
+		tb_select_output_mode(TB_OUTPUT_256);
+		lua_pushboolean(pL, true);
+		return 1;
+	}
+}
+
+int
+api_tb_shutdown(lua_State *pL)
+{
+	tb_shutdown();
+	return 0;
+}
+
+int
+api_tb_size(lua_State *pL)
+{
+	lua_pushinteger(pL, (lua_Integer) tb_height());
+	lua_pushinteger(pL, (lua_Integer) tb_width());
+
+	return 2;
+}
+
+int
+api_tb_clear(lua_State *pL)
+{
+	tb_clear();
+	return 0;
+}
+
+int
+api_tb_present(lua_State *pL)
+{
+	tb_present();
+	return 0;
+}
+
+int
+api_tb_writeline(lua_State *pL)
+{
+	int line = luaL_checkinteger(pL, 1);
+	char *string = (char *) luaL_checkstring(pL, 2);
+	int col = 0;
+	struct tb_cell c;
+	c.fg = 15, c.bg = 0;
+
+	/* TODO: unicode support */
+	while (*string) {
+		if (*string == '\x1b') {
+			switch (*(++string)) {
+			break; case 'r':
+				c.fg = 15, c.bg = 0;
+				++string;
+			break; case '1':
+				c.fg |= TB_BOLD;
+				++string;
+			break; case '2':;
+				uint32_t oldfg = c.fg;
+				c.fg = *(++string);
+
+				if ((oldfg & TB_BOLD) == TB_BOLD)
+					c.fg |= TB_BOLD;
+				if ((oldfg & TB_REVERSE) == TB_REVERSE)
+					c.fg |= TB_REVERSE;
+			break; case '3':
+				c.fg |= TB_REVERSE;
+				++string;
+			break; default:
+				die("unknown lurch escape sequence");
+			}
+		} else {
+			c.ch = *string;
+			tb_put_cell(col, line, &c);
+			++col;
+		}
+		++string;
+	}
+
+	return 0;
+}
+
+int
+api_tb_clearline(lua_State *pL)
+{
+	int line = luaL_checkinteger(pL, 1);
+	int width = tb_width();
+	for (size_t i = 0; i < width; ++i)
+		tb_change_cell(i, line, ' ', 0, 0);
+	return 0;
+}
+
+int
+api_tb_hidecursor(lua_State *pL)
+{
+	tb_set_cursor(TB_HIDE_CURSOR, TB_HIDE_CURSOR);
+	return 0;
+}
+
+int
+api_tb_showcursor(lua_State *pL)
+{
+	int x = luaL_checkinteger(pL, 1);
+	int y = luaL_checkinteger(pL, 2);
+	tb_set_cursor(x, y);
+	return 0;
 }

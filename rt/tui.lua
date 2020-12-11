@@ -1,9 +1,7 @@
 local config  = require('config')
 local inspect = require('inspect')
 local util    = require('util')
-local tty     = require('tty')
 local format  = string.format
-local printf  = util.printf
 
 local M = {}
 
@@ -13,47 +11,25 @@ M.tty_height = 80
 M.tty_width  = 24
 
 function M.clean()
-	tty.line_wrap()
-	tty.clear()
-	tty.reset_scroll_area()
-	tty.main_buffer()
-	tty.curs_show()
-	io.flush(1)
+	lurch.tb_shutdown()
 end
 
 function M.refresh()
-	M.tty_height, M.tty_width = tty.dimensions()
+	M.tty_height, M.tty_width = lurch.tb_size()
+end
 
-	assert(M.tty_height)
-	assert(M.tty_width)
-
-	tty.alt_buffer()
-	tty.no_line_wrap()
-	tty.clear()
-	tty.set_scroll_area(M.tty_height - 1)
-	tty.curs_move_to_line(999)
+function M.init()
+	lurch.tb_init()
+	M.refresh()
 end
 
 function M.load_highlight_colors()
-	-- read a list of newline-separated colors from ./colors.
-	-- the colors are in RRGGBB and may or may not be prefixed
-	-- with a #
+	-- read a list of newline-separated colors from ./conf/colors.
+	-- the colors are terminal 256-bit colors.
 	local data = util.read(__LURCH_EXEDIR .. "/conf/colors")
 
-	-- iterate through each line, and parse each color into
-	-- the R, G, and B values. this allows us to easily construct
-	-- the appropriate escape codes to change text to that color
-	-- later on.
 	for line in data:gmatch("([^\n]+)\n?") do
-		-- strip off any prefixed #
-		line = line:gsub("^#", "")
-
-		local r, g, b = line:gmatch("(..)(..)(..)")()
-
-		M.colors[#M.colors + 1] = {}
-		M.colors[#M.colors].r = tonumber(r, 16)
-		M.colors[#M.colors].g = tonumber(g, 16)
-		M.colors[#M.colors].b = tonumber(b, 16)
+		M.colors[#M.colors + 1] = tonumber(line)
 	end
 end
 
@@ -74,34 +50,25 @@ function M.highlight(text, text_as, no_bold)
 	end
 
 	local color = M.colors[M.set_colors[text_as]]
-	local esc = "\x1b[1m"
+	local esc = "\x1b1m"
 	if no_bold then esc = "" end
 
 	-- if no color could be found, just use the default of black
 	if color then
-		esc = esc .. format("\x1b[38;2;%s;%s;%sm", color.r, color.g, color.b)
+		esc = esc .. format("\x1b2%s", string.char(color))
 	end
 
-	return format("%s%s\x1b[m", esc, text)
+	return format("%s%s\x1brm", esc, text)
 end
 
-function M.inputbar(bufs, cbuf, nick)
-	tty.curs_down(999)
-
+function M.inputbar(bufs, cbuf, nick, inp, cursor)
 	-- if we've scrolled up, don't draw the input.
 	if bufs[cbuf].scroll ~= #bufs[cbuf].history then
-		tty.curs_hide()
-		tty.clear_line()
-		printf("-- more --")
+		lurch.tb_clearline(M.tty_height)
+		lurch.tb_writeline(M.tty_height, "-- more --")
+		lurch.tb_hidecursor()
 		return
 	end
-
-	tty.curs_show()
-
-	local inp, cursor = lurch.rl_info()
-
-	-- strip off trailing newline
-	inp = inp:gsub("\n", "")
 
 	-- by default, the prompt is <NICK>, but if the
 	-- user is typing a command, change to prompt to an empty
@@ -113,29 +80,29 @@ function M.inputbar(bufs, cbuf, nick)
 		inp = inp:sub(5, #inp)
 		cursor = cursor - 4
 	elseif inp:find("/") == 1 then
-		prompt = "\x1b[90m/\x1b[m"
+		prompt = format("\x1b2%s/\x1brm", string.char(8))
 		inp = inp:sub(2, #inp)
 		cursor = cursor - 1
 	else
 		prompt = format("<%s> ", M.highlight(nick))
 	end
-	local rawprompt = prompt:gsub("\x1b%[.-m", "")
+	local rawprompt = prompt:gsub("\x1b..", "")
 
 	-- strip off stuff from input that can't be shown on the
 	-- screen
 	inp = inp:sub(-(M.tty_width - #rawprompt))
 
-	-- draw the input buffer and move the cursor to the appropriate
-	-- position.
-	tty.clear_line()
-	printf("%s%s", prompt, inp)
-
 	local curs_pos = cursor + #rawprompt
 	if curs_pos > 0 then
-		printf("\r\x1b[%sC", curs_pos)
+		lurch.tb_showcursor(curs_pos, M.tty_height-1)
 	else
-		printf("\r")
+		lurch.tb_showcursor(curs_pos, M.tty_height-1)
 	end
+
+	-- draw the input buffer and move the cursor to the appropriate
+	-- position.
+	lurch.tb_clearline(M.tty_height-1)
+	lurch.tb_writeline(M.tty_height-1, format("%s%s", prompt, inp))
 end
 
 function M.statusbar(bufs, cbuf)
@@ -160,7 +127,7 @@ function M.statusbar(bufs, cbuf)
 				pnch = M.highlight(format(" %d %s ", buf, ch), ch, true)
 			end
 
-			chanlist = chanlist .. "\x1b[7m" .. pnch .. "\x1b[m "
+			chanlist = chanlist .. "\x1b3m" .. pnch .. "\x1brm "
 		else
 			if bufs[buf].pings  > 0 then bold = true end
 			if bufs[buf].unread > 0 then
@@ -171,49 +138,42 @@ function M.statusbar(bufs, cbuf)
 		end
 	end
 
-	tty.curs_save()
-	tty.curs_move_to_line(0)
-
-	tty.clear_line()
-	printf("%s\x1b[m", chanlist)
-
-	tty.curs_restore()
+	lurch.tb_clearline(0)
+	lurch.tb_writeline(0, chanlist)
 
 	-- set the terminal title. This is a big help when using terminal
 	-- tabs to mimic a multi-server feature.
-	tty.title("[%s] %s", config.server, bufs[cbuf].name)
+	--tty.title("[%s] %s", config.server, bufs[cbuf].name)
 end
 
-function M.redraw(bufs, cbuf, nick)
-	M.refresh()
-
-	tty.curs_save()
-	tty.curs_hide()
-
+function M.buffer_text(bufs, cbuf)
 	-- keep one blank line in between statusbar and text.
-	tty.curs_move_to_line(3)
+	local line = 2
 
 	-- beginning at the top of the terminal, draw each line
 	-- of text from that buffer's history, then move down.
 	-- If there is nothing to draw, just clear the line and
 	-- move on.
 	if bufs[cbuf].history then
-		local start = bufs[cbuf].scroll - (M.tty_height-4)
-		for i = start, bufs[cbuf].scroll do
-			tty.clear_line()
+		local hist_start = bufs[cbuf].scroll - (M.tty_height-4)
+		for i = hist_start, bufs[cbuf].scroll do
+			lurch.tb_clearline(line)
 
 			local msg = bufs[cbuf].history[i]
-			if msg then printf("\x1b[0m%s", msg) end
+			if msg then lurch.tb_writeline(line, msg) end
 
-			tty.curs_down(1)
+			line = line + 1
+			if line == (M.tty_height-1) then break end
 		end
 	end
+end
 
-	-- redraw statusbar bar and input line.
-	M.statusbar(bufs, cbuf); M.inputbar(bufs, cbuf, nick)
+function M.redraw(bufs, cbuf, nick, inbuf, incurs)
+	M.refresh()
 
-	tty.curs_show()
-	tty.curs_restore()
+	M.buffer_text(bufs, cbuf)
+	M.inputbar(bufs, cbuf, nick, inbuf, incurs)
+	M.statusbar(bufs, cbuf)
 end
 
 function M.format_line(timestr, left, right_fmt, ...)
@@ -227,13 +187,12 @@ function M.format_line(timestr, left, right_fmt, ...)
 	local infocol_width = config.left_col_width + config.time_col_width
 	local def_width = M.tty_width - infocol_width
 	right = util.fold(right, config.right_col_width or def_width)
-	right = right:gsub("\n", format("\n%s",
-		util.strrepeat(" ", infocol_width + 4)))
+	right = right:gsub("\n", format("\n%s", (" "):rep(infocol_width + 4)))
 
 	-- Strip escape sequences from the left column so that
 	-- we can calculate how much padding to add for alignment, and
 	-- not get confused by the invisible escape sequences.
-	local raw = left:gsub("\x1b%[.-m", "")
+	local raw = left:gsub("\x1b..", "")
 
 	-- Generate a cursor right sequence based on the length of
 	-- the above "raw" word. The nick column is a fixed width
@@ -243,25 +202,8 @@ function M.format_line(timestr, left, right_fmt, ...)
 	if #raw > config.left_col_width then left_pad = 0 end
 	if #timestr > config.time_col_width then time_pad = 0 end
 
-	return format("\x1b[90m%s\x1b[m\x1b[%sC \x1b[%sC%s %s",
-		timestr, time_pad, left_pad, left, right)
-end
-
-function M.draw_line(bufs, cbuf, dest, out, nick)
-	assert(dest)
-	assert(out)
-
-	tty.curs_hide(); tty.curs_save()
-	tty.curs_down(999)
-
-	tty.clear_line()
-	printf("%s\n", out)
-	tty.clear_line()
-
-	tty.curs_restore(); tty.curs_show()
-
-	-- since we overwrote the inputbar, redraw it
-	M.inputbar(bufs, cbuf, nick)
+	return format("\x1b2%s%s\x1brm%s %s%s %s", string.char(8), timestr,
+		(" "):rep(time_pad), (" "):rep(left_pad), left, right)
 end
 
 return M

@@ -10,6 +10,8 @@ local config  = require('config')
 local mirc    = require('mirc')
 local util    = require('util')
 local tui     = require('tui')
+local tb      = require('tb')
+local tbrl    = require('tbrl')
 
 local printf  = util.printf
 local eprintf = util.eprintf
@@ -92,7 +94,7 @@ function buf_switch(ch)
 		buffers[ch].scroll = #buffers[ch].history
 		buffers[ch].unread = 0; buffers[ch].pings  = 0
 
-		tui.redraw(buffers, cur_buf, nick)
+		tui.redraw(buffers, cur_buf, nick, tbrl.bufin, tbrl.cursor)
 	end
 end
 
@@ -159,16 +161,6 @@ function prin(timestr, dest, left, right_fmt, ...)
 
 	local out = tui.format_line(timestr, left, right_fmt, ...)
 
-	-- if the buffer we're writing to is focused and is not scrolled up,
-	-- draw the text; otherwise, add to the list of unread notifications
-	local cbuf = buffers[cur_buf]
-	if dest == cbuf.name and cbuf.scroll == #cbuf.history then
-		tui.draw_line(buffers, cur_buf, dest, out, nick)
-	else
-		buffers[bufidx].unread = buffers[bufidx].unread + 1
-		redraw_statusbar = true
-	end
-
 	-- for each line of output, which can contain multiple lines, add to
 	-- the buffer's history; update the scroll offset to point to the end
 	-- of that buffer's history.
@@ -181,7 +173,18 @@ function prin(timestr, dest, left, right_fmt, ...)
 		buffers[bufidx].scroll = #buffers[bufidx].history
 	end
 
+	-- if the buffer we're writing to is focused and is not scrolled up,
+	-- draw the text; otherwise, add to the list of unread notifications
+	local cbuf = buffers[cur_buf]
+	if dest == cbuf.name and cbuf.scroll == #cbuf.history then
+		tui.buffer_text(buffers, cur_buf)
+	else
+		buffers[bufidx].unread = buffers[bufidx].unread + 1
+		redraw_statusbar = true
+	end
+
 	if redraw_statusbar then tui.statusbar(buffers, cur_buf) end
+	lurch.tb_present()
 end
 
 local function none(_) end
@@ -231,11 +234,11 @@ local irchand = {
 		-- remove extra characters from nick that won't fit.
 		if #sender > (config.left_col_width-2) then
 			sender = (sender):sub(1, config.left_col_width-3)
-			sender = sender .. "\x1b[m\x1b[37m+\x1b[m"
+			sender = sender .. format("\x1brm\x1b2%s+\x1brm", string.char(7))
 		end
 
 		if msg_pings(e.msg) then
-			sender = format("<\x1b[7m%s\x1b[m>", hcol(sender, e.nick))
+			sender = format("<\x1b3m%s\x1brm>", hcol(sender, e.nick))
 
 			-- normally, we'd wait for prin() to create the buffer,
 			-- but since we need to manipulate the number of pings we
@@ -606,20 +609,20 @@ cmdhand = {
 		help = {},
 		fn = function(_, _, _)
 			local scr = tui.tty_height - 3
-			if buffers[cur_buf].scroll >= 0 then
+			if (buffers[cur_buf].scroll - scr) >= 0 then
 				buffers[cur_buf].scroll = buffers[cur_buf].scroll - scr
 			end
-			tui.redraw(buffers, cur_buf, nick)
+			tui.redraw(buffers, cur_buf, nick, tbrl.bufin, tbrl.cursor)
 		end
 	},
 	["/down"] = {
 		help = {},
 		fn = function(_, _, _)
 			local scr = tui.tty_height - 3
-			if buffers[cur_buf].scroll <= #buffers[cur_buf].history then
+			if (buffers[cur_buf].scroll + scr) <= #buffers[cur_buf].history then
 				buffers[cur_buf].scroll = buffers[cur_buf].scroll + scr
 			end
-			tui.redraw(buffers, cur_buf, nick)
+			tui.redraw(buffers, cur_buf, nick, tbrl.bufin, tbrl.cursor)
 		end
 	},
 	["/clear"] = {
@@ -627,12 +630,12 @@ cmdhand = {
 		fn = function(_, _, _)
 			buffers[cur_buf].history = {}
 			buffers[cur_buf].scroll = 0
-			tui.redraw(buffers, cur_buf, nick)
+			tui.redraw(buffers, cur_buf, nick, tbrl.bufin, tbrl.cursor)
 		end
 	},
 	["/redraw"] = {
 		help = { "Redraw the screen. Ctrl+L may also be used." },
-		fn = function(_, _, _) tui.redraw(buffers, cur_buf, nick) end,
+		fn = function(_, _, _) tui.redraw(buffers, cur_buf, nick, tbrl.bufin, tbrl.cursor) end,
 	},
 	["/next"] = {
 		help = { "Switch to the next buffer. Ctrl+N may also be used." },
@@ -873,6 +876,7 @@ function parsecmd(inp)
 end
 
 function rt.init()
+	tui.init()
 	tui.refresh()
 
 	-- List of IRCv3 capabilities to send.
@@ -894,29 +898,21 @@ function rt.init()
 	buf_add(MAINBUF)
 	buf_switch(1)
 
-	--lurch.bind_keyseq("\\C-n")
-	--lurch.bind_keyseq("\\C-p")
-	--lurch.bind_keyseq("\\C-l")
-
-	--lurch.bind_keyseq("\x1b[1;5A")
-	--lurch.bind_keyseq("\x1b[1;5B")
-	--lurch.bind_keyseq("\x1b[1;5C")
-	--lurch.bind_keyseq("\x1b[1;5D")
+	tbrl.bindings[tb.TB_KEY_CTRL_N] = true
+	tbrl.bindings[tb.TB_KEY_CTRL_P] = true
+	tbrl.bindings[tb.TB_KEY_PGUP]   = true
+	tbrl.bindings[tb.TB_KEY_PGDN]   = true
+	tbrl.bindings[tb.TB_KEY_CTRL_L] = true
+	tbrl.bindings[tb.TB_KEY_CTRL_C] = true
 end
 
 local keyseq_handler = {
-	-- Ctrl+l
-	[12] = "/redraw",
-
-	-- Ctrl+n, Ctrl+p
-	[14] = "/next",
-	[16] = "/prev",
-
-	-- Ctrl+Left, Ctrl+Right, etc
-	[65] = "/up",
-	[66] = "/down",
-	[67] = "/next",
-	[68] = "/prev",
+	[tb.TB_KEY_CTRL_N] = "/next",
+	[tb.TB_KEY_CTRL_P] = "/prev",
+	[tb.TB_KEY_PGUP]   = "/up",
+	[tb.TB_KEY_PGDN]   = "/down",
+	[tb.TB_KEY_CTRL_L] = "/redraw",
+	[tb.TB_KEY_CTRL_C] = "/quit",
 }
 
 function rt.on_keyseq(key)
@@ -937,7 +933,9 @@ local sighand = {
 	-- SIGUSR2
 	[12] = function() end,
 	-- SIGWINCH
-	[28] = function() tui.redraw(buffers, cur_buf, nick) end,
+	[28] = function()
+		tui.redraw(buffers, cur_buf, nick, tbrl.bufin, tbrl.cursor)
+	end,
 	-- catch-all
 	[0] = function() return true end,
 }
@@ -970,12 +968,10 @@ end
 
 -- every time a key is pressed, redraw the prompt, and
 -- write the input buffer.
-function rt.on_input()
-	tui.inputbar(buffers, cur_buf, nick)
-end
-
-function rt.on_rl_input(inp)
-	parsecmd(inp)
+function rt.on_input(event)
+	tbrl.on_event(event, parsecmd, rt.on_keyseq)
+	tui.inputbar(buffers, cur_buf, nick, tbrl.bufin, tbrl.cursor)
+	lurch.tb_present()
 end
 
 function rt.on_complete(text, from, to)

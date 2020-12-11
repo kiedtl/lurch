@@ -121,14 +121,6 @@ function util.hash(value, max)
 	return h % (max or HASH_MOD)
 end
 
-function util.strrepeat(ch, count)
-	local buf = ""
-	for _ = 1, count do
-		buf = buf .. ch
-	end
-	return buf
-end
-
 -- parse an UTC timezone offset of the format UTC[+-]<offset>
 function util.parse_offset(offset_str)
 	local offset_h, offset_m = offset_str:match("UTC([+-].-):(.+)")
