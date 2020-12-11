@@ -37,22 +37,22 @@ mirc.WHITE        = 00
 
 -- tty escape sequence equivalents to mIRC colors.
 mirc.tty_eq = {}
-mirc.tty_eq[mirc.BLACK]        = { "\x1b[30m",  "\x1b[40m" }
-mirc.tty_eq[mirc.RED]          = { "\x1b[31m",  "\x1b[41m" }
-mirc.tty_eq[mirc.GREEN]        = { "\x1b[32m",  "\x1b[42m" }
-mirc.tty_eq[mirc.YELLOW]       = { "\x1b[33m",  "\x1b[43m" }
-mirc.tty_eq[mirc.BLUE]         = { "\x1b[34m",  "\x1b[44m" }
-mirc.tty_eq[mirc.MAGENTA]      = { "\x1b[35m",  "\x1b[45m" }
-mirc.tty_eq[mirc.CYAN]         = { "\x1b[36m",  "\x1b[46m" }
-mirc.tty_eq[mirc.GREY]         = { "\x1b[37m",  "\x1b[47m" }
-mirc.tty_eq[mirc.LIGHTGREY]    = { "\x1b[38m",  "\x1b[48m" }
-mirc.tty_eq[mirc.LIGHTRED]     = { "\x1b[91m", "\x1b[101m" }
-mirc.tty_eq[mirc.LIGHTGREEN]   = { "\x1b[92m", "\x1b[102m" }
-mirc.tty_eq[mirc.LIGHTYELLOW]  = { "\x1b[93m", "\x1b[103m" }
-mirc.tty_eq[mirc.LIGHTBLUE]    = { "\x1b[94m", "\x1b[104m" }
-mirc.tty_eq[mirc.LIGHTMAGENTA] = { "\x1b[95m", "\x1b[105m" }
-mirc.tty_eq[mirc.LIGHTCYAN]    = { "\x1b[96m", "\x1b[106m" }
-mirc.tty_eq[mirc.WHITE]        = { "\x1b[97m", "\x1b[107m" }
+mirc.tty_eq[mirc.BLACK]        = { "\x1b2\x00",  "\x1b7\x00" }
+mirc.tty_eq[mirc.RED]          = { "\x1b2\x01",  "\x1b7\x01" }
+mirc.tty_eq[mirc.GREEN]        = { "\x1b2\x02",  "\x1b7\x02" }
+mirc.tty_eq[mirc.YELLOW]       = { "\x1b2\x03",  "\x1b7\x03" }
+mirc.tty_eq[mirc.BLUE]         = { "\x1b2\x04",  "\x1b7\x04" }
+mirc.tty_eq[mirc.MAGENTA]      = { "\x1b2\x05",  "\x1b7\x05" }
+mirc.tty_eq[mirc.CYAN]         = { "\x1b2\x06",  "\x1b7\x06" }
+mirc.tty_eq[mirc.GREY]         = { "\x1b2\x07",  "\x1b7\x07" }
+mirc.tty_eq[mirc.LIGHTGREY]    = { "\x1b2\x08",  "\x1b7\x08" }
+mirc.tty_eq[mirc.LIGHTRED]     = { "\x1b2\x09",  "\x1b7\x09" }
+mirc.tty_eq[mirc.LIGHTGREEN]   = { "\x1b2\x0a",  "\x1b7\x0a" }
+mirc.tty_eq[mirc.LIGHTYELLOW]  = { "\x1b2\x0b",  "\x1b7\x0b" }
+mirc.tty_eq[mirc.LIGHTBLUE]    = { "\x1b2\x0c",  "\x1b7\x0c" }
+mirc.tty_eq[mirc.LIGHTMAGENTA] = { "\x1b2\x0d",  "\x1b7\x0d" }
+mirc.tty_eq[mirc.LIGHTCYAN]    = { "\x1b2\x0e",  "\x1b7\x0e" }
+mirc.tty_eq[mirc.WHITE]        = { "\x1b2\x0f",  "\x1b7\x0f" }
 
 function mirc.remove(text)
 	text = text:gsub("[\x02\x1f\x1d\x16\x06\x0f]", "")
@@ -64,12 +64,12 @@ end
 
 function mirc.to_tty_seq(text)
 	-- convert attributes using a simple search-and-replace.
-	text = text:gsub(mirc.BOLD,      "\x1b[1m")
-	text = text:gsub(mirc.UNDERLINE, "\x1b[4m")
-	text = text:gsub(mirc.ITALIC,    "\x1b[3m")
-	text = text:gsub(mirc.INVERT,    "\x1b[7m")
-	text = text:gsub(mirc.BLINK,     "\x1b[5m")
-	text = text:gsub(mirc.RESET,     "\x1b[0m")
+	text = text:gsub(mirc.BOLD,      "\x1b1m")
+	text = text:gsub(mirc.UNDERLINE, "\x1b4m")
+	text = text:gsub(mirc.ITALIC,    "\x1b5m")
+	text = text:gsub(mirc.INVERT,    "\x1b3m")
+	text = text:gsub(mirc.BLINK,     "\x1b6m")
+	text = text:gsub(mirc.RESET,     "\x1brm")
 
 	-- extract color-changing sequences, parse them, and convert
 	-- them.
@@ -93,7 +93,7 @@ function mirc.to_tty_seq(text)
 		text = text:gsub(("\x03%s"):format(fg), tty_fg)
 	end
 
-	text = text:gsub(mirc.COLOR, "\x1b[m")
+	text = text:gsub(mirc.COLOR, "\x1brm")
 	return text
 end
 

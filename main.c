@@ -524,8 +524,19 @@ api_tb_writeline(lua_State *pL)
 			break; case '4':
 				c.fg |= TB_UNDERLINE;
 				++string;
+			break; case '5': /* italic */
+			break; case '6': /* blink */
+				break;
+			break; case '7':;
+				uint32_t oldbg = c.bg;
+				c.bg = *(++string);
+
+				if ((oldbg & TB_BOLD) == TB_BOLD)
+					c.fg |= TB_BOLD;
+				if ((oldbg & TB_REVERSE) == TB_REVERSE)
+					c.bg |= TB_REVERSE;
 			break; default:
-				die("unknown lurch escape sequence");
+				die("unknown lurch escape sequence: %d", *string);
 			}
 		} else {
 			c.ch = *string;

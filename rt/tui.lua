@@ -97,7 +97,7 @@ function M.inputbar(bufs, cbuf, nick, inp, cursor)
 	-- TODO: lurch esc module
 	inp = inp:gsub(mirc.BOLD,      "\x1b3m\x1b2\8B\x1brm\x1b1m")
 	inp = inp:gsub(mirc.UNDERLINE, "\x1b3m\x1b2\8U\x1brm\x1b4m")
-	inp = inp:gsub(mirc.ITALIC,    "\x1b3m\x1b2\8I\x1brm\x1b4m")
+	inp = inp:gsub(mirc.ITALIC,    "\x1b3m\x1b2\8I\x1brm\x1b5m")
 	inp = inp:gsub(mirc.INVERT,    "\x1b3m\x1b2\8R\x1brm\x1b3m")
 	inp = inp:gsub(mirc.RESET,     "\x1b3m\x1b2\8O\x1brm\x1brm")
 
