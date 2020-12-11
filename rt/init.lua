@@ -892,8 +892,9 @@ local keyseq_func_handler = {
 	[tb.TB_KEY_CTRL_R] = function() tbrl.insert_at_curs(mirc.INVERT) end,
 	[tb.TB_KEY_CTRL_O] = function() tbrl.insert_at_curs(mirc.RESET) end,
 
-	-- zero-width non-joiner. useful for not pinging people.
-	[tb.TB_KEY_CTRL_Z] = function() tbrl.insert_at_curs(utf8.codepoint(0x200c)) end,
+	-- zero-width non-joiner. this can be inserted into nicknames
+	-- when you don't want to ping people.
+	[tb.TB_KEY_CTRL_Z] = function() tbrl.insert_at_curs(utf8.char(0x1a)) end,
 }
 
 function rt.on_keyseq(key)
