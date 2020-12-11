@@ -521,6 +521,9 @@ api_tb_writeline(lua_State *pL)
 			break; case '3':
 				c.fg |= TB_REVERSE;
 				++string;
+			break; case '4':
+				c.fg |= TB_UNDERLINE;
+				++string;
 			break; default:
 				die("unknown lurch escape sequence");
 			}

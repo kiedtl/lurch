@@ -876,7 +876,7 @@ function parsecmd(inp)
 	end
 end
 
-local keyseq_handler = {
+local keyseq_cmd_handler = {
 	[tb.TB_KEY_CTRL_N] = "/next",
 	[tb.TB_KEY_CTRL_P] = "/prev",
 	[tb.TB_KEY_PGUP]   = "/up",
@@ -885,9 +885,22 @@ local keyseq_handler = {
 	[tb.TB_KEY_CTRL_C] = "/quit",
 }
 
+local keyseq_func_handler = {
+	[tb.TB_KEY_CTRL_B] = function() tbrl.insert_at_curs(mirc.BOLD) end,
+	[tb.TB_KEY_CTRL_U] = function() tbrl.insert_at_curs(mirc.UNDERLINE) end,
+	[tb.TB_KEY_CTRL_T] = function() tbrl.insert_at_curs(mirc.ITALIC) end,
+	[tb.TB_KEY_CTRL_R] = function() tbrl.insert_at_curs(mirc.INVERT) end,
+	[tb.TB_KEY_CTRL_O] = function() tbrl.insert_at_curs(mirc.RESET) end,
+
+	-- zero-width non-joiner. useful for not pinging people.
+	[tb.TB_KEY_CTRL_Z] = function() tbrl.insert_at_curs(utf8.codepoint(0x200c)) end,
+}
+
 function rt.on_keyseq(key)
-	if keyseq_handler[key] then
-		parsecmd(keyseq_handler[key])
+	if keyseq_func_handler[key] then
+		(keyseq_func_handler[key])()
+	elseif keyseq_cmd_handler[key] then
+		parsecmd(keyseq_cmd_handler[key])
 	end
 end
 
@@ -914,13 +927,20 @@ function rt.init()
 	buf_add(MAINBUF)
 	buf_switch(1)
 
+	tbrl.enter_callback = parsecmd
 	tbrl.bindings[tb.TB_KEY_CTRL_N] = rt.on_keyseq
 	tbrl.bindings[tb.TB_KEY_CTRL_P] = rt.on_keyseq
 	tbrl.bindings[tb.TB_KEY_PGUP]   = rt.on_keyseq
 	tbrl.bindings[tb.TB_KEY_PGDN]   = rt.on_keyseq
 	tbrl.bindings[tb.TB_KEY_CTRL_L] = rt.on_keyseq
 	tbrl.bindings[tb.TB_KEY_CTRL_C] = rt.on_keyseq
-	tbrl.enter_callback = parsecmd
+
+	tbrl.bindings[tb.TB_KEY_CTRL_B] = rt.on_keyseq
+	tbrl.bindings[tb.TB_KEY_CTRL_U] = rt.on_keyseq
+	tbrl.bindings[tb.TB_KEY_CTRL_T] = rt.on_keyseq
+	tbrl.bindings[tb.TB_KEY_CTRL_R] = rt.on_keyseq
+	tbrl.bindings[tb.TB_KEY_CTRL_O] = rt.on_keyseq
+	tbrl.bindings[tb.TB_KEY_CTRL_Z] = rt.on_keyseq
 end
 
 local sighand = {

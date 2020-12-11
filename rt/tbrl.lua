@@ -11,7 +11,8 @@ M.cursor = 0
 M.enter_callback = nil
 
 function M.insert_at_curs(text)
-	M.bufin[M.hist] = (M.bufin[M.hist]):gsub(("."):rep(M.cursor), "%1" .. text, 1)
+	if not text then return end
+	M.bufin[M.hist] = (M.bufin[M.hist]):gsub(("."):rep(M.cursor), "%1"..text, 1)
 	M.cursor = M.cursor + 1
 end
 

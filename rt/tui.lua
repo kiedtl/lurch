@@ -1,5 +1,6 @@
 local config  = require('config')
 local inspect = require('inspect')
+local mirc    = require('mirc')
 local util    = require('util')
 local format  = string.format
 
@@ -91,6 +92,14 @@ function M.inputbar(bufs, cbuf, nick, inp, cursor)
 	-- strip off stuff from input that can't be shown on the
 	-- screen
 	inp = inp:sub(-(M.tty_width - #rawprompt))
+
+	-- show IRC formatting escape sequences nicely.
+	-- TODO: lurch esc module
+	inp = inp:gsub(mirc.BOLD,      "\x1b3m\x1b2\8B\x1brm\x1b1m")
+	inp = inp:gsub(mirc.UNDERLINE, "\x1b3m\x1b2\8U\x1brm\x1b4m")
+	inp = inp:gsub(mirc.ITALIC,    "\x1b3m\x1b2\8I\x1brm\x1b4m")
+	inp = inp:gsub(mirc.INVERT,    "\x1b3m\x1b2\8R\x1brm\x1b3m")
+	inp = inp:gsub(mirc.RESET,     "\x1b3m\x1b2\8O\x1brm\x1brm")
 
 	local curs_pos = cursor + #rawprompt
 	if curs_pos > 0 then
