@@ -810,6 +810,39 @@ cmdhand = {
 			prin_cmd(buf_cur(), "--", "%s", cmdlist)
 		end,
 	},
+	["/dump"] = {
+		help = { "Dump lurch's state and internal variables into a temporary file to aid with debugging." },
+		usage = "[file]",
+		fn = function(a, _, _)
+			local file = a
+			if not file then file = os.tmpname() end
+
+			local fp, err = io.open(file, "w")
+			if not fp then
+				prin_cmd(buf_cur(), "-!-", "Couldn't open tmpfile %s", err)
+				return
+			end
+
+			local state = {
+				server = server,
+				nick = nick, cur_buf = cur_buf,
+				buffers = buffers,
+
+				input_buf = tbrl.bufin,
+				input_cursor = tbrl.cursor,
+				input_hist = tbrl.hist,
+			}
+
+			local ret, err = fp:write(inspect(state))
+			if not ret then
+				prin_cmd(buf_cur(), "-!-", "Could not open tmpfile: %s", err)
+				return
+			end
+
+			prin_cmd(buf_cur(), "-!-", "Wrote information to %s", file)
+			fp:close()
+		end,
+	},
 }
 
 function parsecmd(inp)
