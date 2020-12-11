@@ -29,6 +29,10 @@ local function _right()
 	if M.cursor < #M.bufin then M.cursor = M.cursor + 1 end
 end
 
+-- TODO: Ctrl-_ undo
+-- TODO: Ctrl-d delete at right of cursor
+-- TODO:  Esc-d delete word at right of cursor
+-- TODO:  Esc-h delete word at left of cursor
 M.bindings = {}
 M.bindings = {
 	-- backspace
@@ -49,6 +53,28 @@ M.bindings = {
 
 	-- delete from cursor until end of line
 	[tb.TB_KEY_CTRL_K] = function(_)
+		M.bufin = M.bufin:sub(1, M.cursor)
+	end,
+
+	-- delete word to the left of cursor.
+	[tb.TB_KEY_CTRL_W] = function(_)
+		-- if the cursor is on a space, move left until we
+		-- encounter a non-whitespace character.
+		if M.bufin:sub(M.cursor, M.cursor) == " " then
+			while M.bufin:sub(M.cursor, M.cursor) == " " do
+				if M.cursor <= 0 then break end
+				M.cursor = M.cursor - 1
+			end
+		end
+
+		-- now that we're on a solid character, move left until
+		-- we encounter another space.
+		while M.bufin:sub(M.cursor, M.cursor) ~= " " do
+			if M.cursor <= 0 then break end
+			M.cursor = M.cursor - 1
+		end
+
+		-- delete whatever is after our cursor.
 		M.bufin = M.bufin:sub(1, M.cursor)
 	end,
 
