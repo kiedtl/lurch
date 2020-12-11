@@ -835,7 +835,7 @@ function parsecmd(inp)
 	end
 
 	-- if the command exists, then run it
-	if _cmd:find("/") == 1 then
+	if _cmd:sub(1, 1) == "/" and _cmd:sub(2, 2) ~= "/" then
 		if not cmdhand[_cmd] and not config.commands[_cmd] then
 			prin_cmd(buf_cur(), "NOTE", "%s not implemented yet", _cmd)
 			return
@@ -867,6 +867,9 @@ function parsecmd(inp)
 
 		(hand.fn)(a, args, inp)
 	else
+		-- make "//test" translate to "/test"
+		if inp:sub(1, 2) == "//" then inp = inp:sub(2, #inp) end
+
 		-- since the command doesn't exist, just send it as a message
 		if buf_cur() == MAINBUF then
 			prin_cmd(buf_cur(), "-!-", "Stop trying to talk to lurch.")
@@ -891,10 +894,6 @@ local keyseq_func_handler = {
 	[tb.TB_KEY_CTRL_T] = function() tbrl.insert_at_curs(mirc.ITALIC) end,
 	[tb.TB_KEY_CTRL_R] = function() tbrl.insert_at_curs(mirc.INVERT) end,
 	[tb.TB_KEY_CTRL_O] = function() tbrl.insert_at_curs(mirc.RESET) end,
-
-	-- zero-width non-joiner. this can be inserted into nicknames
-	-- when you don't want to ping people.
-	[tb.TB_KEY_CTRL_Z] = function() tbrl.insert_at_curs(utf8.char(0x1a)) end,
 }
 
 function rt.on_keyseq(key)

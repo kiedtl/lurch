@@ -71,22 +71,33 @@ function M.inputbar(bufs, cbuf, nick, inp, cursor)
 		return
 	end
 
-	-- by default, the prompt is <NICK>, but if the
-	-- user is typing a command, change to prompt to an empty
-	-- string; if the user has typed "/me", change the prompt
-	-- to "* "
+	-- by default, the prompt is <NICK>, but if the user is
+	-- typing a command, change to prompt to "/"; if the user
+	-- has typed "/me", change the prompt to "* <NICK>".
+	--
+	-- Also, if the input is something like "//text", then the
+	-- prompt should be "<NICK> /". In all these cases, redundant
+	-- input is trimmed off.
 	local prompt
 	if inp:find("/me ") == 1 and cursor >= 4 then
 		prompt = format("* %s ", M.highlight(nick))
 		inp = inp:sub(5, #inp)
 		cursor = cursor - 4
-	elseif inp:find("/") == 1 then
-		prompt = format("\x1b2%s/\x1brm", string.char(8))
+	elseif inp:sub(1, 1) == "/" then
+		if inp:sub(2, 2) == "/" then
+			prompt = format("<%s> \x1b2%s/\x1brm",
+				M.highlight(nick), string.char(8))
+		else
+			prompt = format("\x1b2%s/\x1brm", string.char(8))
+		end
 		inp = inp:sub(2, #inp)
 		cursor = cursor - 1
 	else
 		prompt = format("<%s> ", M.highlight(nick))
 	end
+
+	-- strip escape sequences so that we may accurately calculate
+	-- the prompt's length.
 	local rawprompt = prompt:gsub("\x1b..", "")
 
 	-- strip off stuff from input that can't be shown on the
