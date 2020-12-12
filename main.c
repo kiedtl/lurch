@@ -28,7 +28,6 @@
 const struct timeval REFRESH = { 0, 3000 };
 
 const size_t TIMEOUT = 4096;
-const size_t BT_BUF_SIZE = 16;
 
 /* keep track of termbox's state */
 const size_t TB_ACTIVE = 1;
@@ -326,18 +325,23 @@ die(const char *fmt, ...)
 		fputc('\n', stderr);
 	}
 
-	int nptrs;
-	void *buffer[BT_BUF_SIZE];
-	char **strings;
+	char *buf_sz_str = getenv("LURCH_DEBUG");
 
-	nptrs = backtrace(buffer, BT_BUF_SIZE);
-	strings = backtrace_symbols(buffer, nptrs);
-	assert(strings);
+	if (buf_sz_str == NULL) {
+		fprintf(stderr, "NOTE: set $LURCH_DEBUG >0 for backtrace\n");
+	} else {
+		size_t buf_sz = strtol(buf_sz_str, NULL, 10);
+		void *buffer[buf_sz];
 
-	fprintf(stderr, "backtrace:\n");
-	for (size_t i = 0; i < nptrs; ++i)
-		fprintf(stderr, "   %s\n", strings[i]);
-	free(strings);
+		int nptrs = backtrace(buffer, buf_sz);
+		char **strings = backtrace_symbols(buffer, nptrs);
+		assert(strings);
+
+		fprintf(stderr, "backtrace:\n");
+		for (size_t i = 0; i < nptrs; ++i)
+			fprintf(stderr, "   %s\n", strings[i]);
+		free(strings);
+	}
 
 	exit(1);
 }
@@ -382,9 +386,15 @@ llua_panic(lua_State *pL)
 
 	/* print the error, dump the lua stack, print lua traceback,
 	 * and exit. */
-	fprintf(stderr, "\r\x1b[2K\x1b[0m\rlua_call error: %s\n\n", err);
-	llua_sdump(L); luaL_traceback(pL, pL, err, 0);
-	fprintf(stderr, "\ntraceback: %s\n\n", lua_tostring(pL, -1));
+	fprintf(stderr, "lua_call error: %s\n", err);
+
+	char *debug = getenv("LURCH_DEBUG");
+	if (debug && strtol(debug, NULL, 10) != 0) {
+		fputc('\n', stderr); llua_sdump(L); fputc('\n', stderr);
+		luaL_traceback(pL, pL, err, 0);
+		fprintf(stderr, "Lua traceback: %s\n\n", lua_tostring(pL, -1));
+	}
+
 	die("unable to recover; exiting");
 
 	return 0;
