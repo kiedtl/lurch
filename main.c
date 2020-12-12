@@ -522,7 +522,7 @@ api_tb_clear(lua_State *pL)
 
 
 const size_t attribs[] = { TB_BOLD, TB_UNDERLINE, TB_REVERSE };
-static void
+static inline void
 reset_attr(uint32_t *old, uint32_t *new)
 {
 	for (size_t i = 0; i < sizeof(attribs); ++i)
