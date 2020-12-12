@@ -135,25 +135,42 @@ function M.statusbar(bufs, cbuf)
 	for buf = 1, #bufs do
 		local ch = bufs[buf].name
 		local bold = false
+		local unread_ind = ""
+
+		if bufs[buf].unreadl > 0 or bufs[buf].unreadh > 0 or bufs[buf].pings > 0 then
+			if bufs[buf].pings > 0 then
+				bold = true
+				if bufs[buf].unreadh > 0 then
+					unread_ind = format("+%d,%d", bufs[buf].pings, bufs[buf].unreadh)
+				else
+					unread_ind = format("+%d", bufs[buf].pings)
+				end
+			elseif bufs[buf].unreadh > 0 then
+				if bufs[buf].unreadl > 0 then
+					unread_ind = format("+%d (%d)", bufs[buf].unreadh, bufs[buf].unreadl)
+				else
+					unread_ind = format("+%d", bufs[buf].unreadh)
+				end
+			elseif bufs[buf].unreadl > 0 then
+				unread_ind = format("(%d)", bufs[buf].unreadl)
+			end
+		end
+
+		-- If there are no unread messages, don't display the buffer in the
+		-- statusbar (unless it's the current buffer)
+		local pnch
+		if unread_ind ~= "" then
+			pnch = M.highlight(format(" %d %s %s ", buf, ch, unread_ind),
+				ch, not bold)
+		elseif unread_ind == "" and buf == cbuf then
+			pnch = M.highlight(format(" %d %s ", buf, ch), ch, true)
+		end
 
 		if buf == cbuf then
-			local pnch
-
-			if bufs[buf].pings  > 0 then bold = true end
-			if bufs[buf].unread > 0 then
-				pnch = M.highlight(format(" %d %s %s%d ", buf, ch,
-					"+", bufs[buf].unread), ch, not bold)
-			else
-				pnch = M.highlight(format(" %d %s ", buf, ch), ch, true)
-			end
-
-			chanlist = chanlist .. "\x1b3m" .. pnch .. "\x1brm "
+			chanlist = format("%s\x1b3m%s\x1brm ", chanlist, pnch)
 		else
-			if bufs[buf].pings  > 0 then bold = true end
-			if bufs[buf].unread > 0 then
-				local nch = M.highlight(format(" %d %s %s%d ", buf, ch,
-					"+", bufs[buf].unread), ch, not bold)
-				chanlist = chanlist .. nch .. " "
+			if pnch then
+				chanlist = format("%s%s ", chanlist, pnch)
 			end
 		end
 	end

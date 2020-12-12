@@ -18,6 +18,9 @@ local eprintf = util.eprintf
 local format  = string.format
 local hcol    = tui.highlight
 
+local L_ERR   = "-!-"
+local L_NRM   = "--"
+
 local MAINBUF = "<server>"
 local server  = { caps = {} } -- Server information
 local nick    = config.nick     -- The current nickname
@@ -52,8 +55,9 @@ function buf_add(name)
 	local newbuf = {}
 	newbuf.history = {}
 	newbuf.name    = name
-	newbuf.unread  = 0
-	newbuf.pings   = 0
+	newbuf.unreadh = 0      -- high-priority unread messages
+	newbuf.unreadl = 0      -- low-priority unread messages
+	newbuf.pings   = 0      -- maximum-priority unread messages
 	newbuf.scroll  = #newbuf.history
 	newbuf.names   = {}
 	newbuf.access  = {}
@@ -91,8 +95,9 @@ function buf_switch(ch)
 		cur_buf = ch
 
 		-- reset scroll, unread notifications
-		buffers[ch].scroll = #buffers[ch].history
-		buffers[ch].unread = 0; buffers[ch].pings  = 0
+		buffers[ch].scroll  = #buffers[ch].history
+		buffers[ch].unreadl = 0; buffers[ch].unreadh = 0
+		buffers[ch].pings   = 0
 
 		tui.redraw(buffers, cur_buf, nick,
 			tbrl.bufin[tbrl.hist], tbrl.cursor)
@@ -116,7 +121,7 @@ end
 
 -- print a response to an irc message.
 local last_ircevent = nil
-function prin_irc(dest, left, right_fmt, ...)
+function prin_irc(priority, dest, left, right_fmt, ...)
 	-- get the offset defined in the configuration and parse it.
 	local offset = assert(util.parse_offset(config.timezone))
 
@@ -130,23 +135,26 @@ function prin_irc(dest, left, right_fmt, ...)
 		local utc_time   = util.time_from_iso8601(srvtime)
 		local local_time = utc_time + (offset * 60 * 60)
 
-		prin(os.date("%H:%M", local_time), dest, left, right_fmt, ...)
+		prin(priority, os.date("%H:%M", local_time), dest, left, right_fmt, ...)
 	else
 		local now = util.time_with_offset(offset)
-		prin(os.date("%H:%M", now), dest, left, right_fmt, ...)
+		prin(priority, os.date("%H:%M", now), dest, left, right_fmt, ...)
 	end
 end
 
 -- print text in response to a command.
 function prin_cmd(dest, left, right_fmt, ...)
+	local priority = 0
+	if left == L_ERR then priority = 2 end
+
 	-- get the offset defined in the configuration and parse it.
 	local offset = assert(util.parse_offset(config.timezone))
 
 	local now = util.time_with_offset(offset)
-	prin(os.date("%H:%M", now), dest, left, right_fmt, ...)
+	prin(priority, os.date("%H:%M", now), dest, left, right_fmt, ...)
 end
 
-function prin(timestr, dest, left, right_fmt, ...)
+function prin(priority, timestr, dest, left, right_fmt, ...)
 	assert(timestr)
 	assert(dest)
 	assert(left)
@@ -180,7 +188,14 @@ function prin(timestr, dest, left, right_fmt, ...)
 	if dest == cbuf.name and cbuf.scroll == #cbuf.history then
 		tui.buffer_text(buffers, cur_buf)
 	else
-		buffers[bufidx].unread = buffers[bufidx].unread + 1
+		if priority == 0 then
+			buffers[bufidx].unreadl = buffers[bufidx].unreadl + 1
+		elseif priority == 1 then
+			buffers[bufidx].unreadh = buffers[bufidx].unreadh + 1
+		elseif priority == 2 then
+			buffers[bufidx].pings = buffers[bufidx].pings + 1
+		end
+
 		redraw_statusbar = true
 	end
 
@@ -189,12 +204,12 @@ function prin(timestr, dest, left, right_fmt, ...)
 end
 
 local function none(_) end
-local function default2(e) prin_irc(MAINBUF, "--", "There are %s %s", e.fields[3], e.msg) end
-local function default(e) prin_irc(e.dest, "--", "%s", e.msg) end
+local function default2(e) prin_irc(0, MAINBUF, "--", "There are %s %s", e.fields[3], e.msg) end
+local function default(e) prin_irc(0, e.dest, "--", "%s", e.msg) end
 
 local irchand = {
 	["PING"] = function(e)   irc.send("PONG :%s", e.dest or e.msg) end,
-	["AWAY"] = function(e)   prin_irc(MAINBUF, "--", "Away status: %s", e.msg) end,
+	["AWAY"] = function(e)   prin_irc(0, MAINBUF, "--", "Away status: %s", e.msg) end,
 	["MODE"] = function(e)
 		if (e.dest):find("#") then
 			local mode = e.fields[3] or ""
@@ -203,34 +218,38 @@ local irchand = {
 				mode = mode .. " " .. e.fields[i]
 			end
 			mode = mode .. " " .. e.msg
-			prin_irc(e.dest, "--", "Mode [%s] by %s", mode, hcol(e.nick))
+			prin_irc(0, e.dest, "--", "Mode [%s] by %s", mode, hcol(e.nick))
 		else
-			prin_irc(MAINBUF, "--", "Mode %s", e.msg)
+			prin_irc(0, MAINBUF, "--", "Mode %s", e.msg)
 		end
 	end,
 	["NOTICE"] = function(e)
 		if e.host then
-			prin_irc(e.nick, "NOTE", "%s: %s", e.nick, e.msg)
+			prin_irc(1, e.nick, "NOTE", "%s: %s", e.nick, e.msg)
 		else
-			prin_irc(MAINBUF, "NOTE", "%s", e.msg)
+			prin_irc(1, MAINBUF, "NOTE", "%s", e.msg)
 		end
 	end,
 	["PART"] = function(e)
-		prin_irc(e.dest, "<--", "%s has left %s (%s)",
+		prin_irc(0, e.dest, "<--", "%s has left %s (%s)",
 			hcol(e.nick), e.dest, e.msg)
 		local idx = buf_idx(e.dest)
 		if not idx then idx = buf_add(e.dest) end
 		buffers[idx].names[e.nick] = false
 	end,
 	["KICK"] = function(e)
-		prin_irc(e.dest, "<--", "%s has kicked %s (%s)", hcol(e.nick), hcol(e.fields[3]), e.msg)
+		local p = 0
+		if e.fields == nick then p = 2 end -- if the user was kicked, ping them
+		prin_irc(p, e.dest, "<--", "%s has kicked %s (%s)", hcol(e.nick),
+			hcol(e.fields[3]), e.msg)
 	end,
 	["INVITE"] = function(e)
 		-- TODO: auto-join on invite?
-		prin_irc(MAINBUF, "--", "%s sent an invite to %s", e.nick, e.msg)
+		prin_irc(2, MAINBUF, "--", "%s sent you an invite to %s", e.nick, e.msg)
 	end,
 	["PRIVMSG"] = function(e)
 		local sender = e.nick or e.from
+		local priority = 1
 
 		-- remove extra characters from nick that won't fit.
 		if #sender > (config.left_col_width-2) then
@@ -240,13 +259,7 @@ local irchand = {
 
 		if msg_pings(e.msg) then
 			sender = format("<\x1b3m%s\x1brm>", hcol(sender, e.nick))
-
-			-- normally, we'd wait for prin() to create the buffer,
-			-- but since we need to manipulate the number of pings we
-			-- can't wait
-			if not buf_idx(e.dest) then buf_add(e.dest) end
-			local bufidx = buf_idx(e.dest)
-			buffers[bufidx].pings = buffers[bufidx].pings + 1
+			priority = 2
 		else
 			sender = format("<%s>", hcol(sender, e.nick))
 		end
@@ -258,7 +271,7 @@ local irchand = {
 			e.msg = mirc.remove(e.msg)
 		end
 
-		prin_irc(e.dest, sender, "%s", e.msg)
+		prin_irc(priority, e.dest, sender, "%s", e.msg)
 	end,
 	["QUIT"] = function(e)
 		-- display quit message for all buffers that user has joined,
@@ -266,7 +279,7 @@ local irchand = {
 		for _, buf in ipairs(buffers) do
 			local ch = buf.name
 			if ch ~= MAINBUF and buf.names[e.nick] then
-				prin_irc(ch, "<--", "%s has quit (%s)", hcol(e.nick), e.msg)
+				prin_irc(0, ch, "<--", "%s has quit (%s)", hcol(e.nick), e.msg)
 				buf.names[e.nick] = false
 			end
 		end
@@ -285,7 +298,7 @@ local irchand = {
 		-- if we are the ones joining, then switch to that buffer.
 		if e.nick == nick then buf_switch(#buffers) end
 
-		prin_irc(e.dest, "-->", "%s has joined %s", hcol(e.nick), e.dest)
+		prin_irc(0, e.dest, "-->", "%s has joined %s", hcol(e.nick), e.dest)
 	end,
 	["NICK"] = function(e)
 		-- copy across nick information (this preserves nick highlighting across
@@ -293,7 +306,7 @@ local irchand = {
 		-- have that user
 		for _, buf in ipairs(buffers) do
 			if buf.names[e.nick] or e.nick == nick then
-				prin_irc(buf.name, "--@", "%s is now known as %s",
+				prin_irc(0, buf.name, "--@", "%s is now known as %s",
 					hcol(e.nick), hcol(e.msg))
 			end
 		end
@@ -353,79 +366,79 @@ local irchand = {
 
 	-- WHOIS: <nick> has TLS cert fingerprint of sdflkjsdflsdf
 	["276"] = function(e)
-		prin_irc(buf_cur(), "WHOIS", "[%s] %s", hcol(e.fields[3]), e.msg)
+		prin_irc(0, buf_cur(), "WHOIS", "[%s] %s", hcol(e.fields[3]), e.msg)
 	end,
 
 	-- WHOIS: <nick> is a registered nick
 	["307"] = function(e)
-		prin_irc(buf_cur(), "WHOIS", "[%s] %s", hcol(e.fields[3]), e.msg)
+		prin_irc(0, buf_cur(), "WHOIS", "[%s] %s", hcol(e.fields[3]), e.msg)
 	end,
 
 	-- WHOIS: RPL_WHOISUSER (response to /whois)
 	-- <nick> <user> <host> * :realname
 	["311"] = function(e)
-		prin_irc(buf_cur(), "WHOIS", "[%s] (%s!%s@%s): %s", hcol(e.fields[3]),
+		prin_irc(0, buf_cur(), "WHOIS", "[%s] (%s!%s@%s): %s", hcol(e.fields[3]),
 			e.fields[3], e.fields[4], e.fields[5], e.msg)
 	end,
 
 	-- WHOIS: RPL_WHOISSERVER (response to /whois)
 	-- <nick> <server> :serverinfo
 	["312"] = function(e)
-		prin_irc(buf_cur(), "WHOIS", "[%s] %s (%s)", hcol(e.fields[3]), e.fields[4], e.msg)
+		prin_irc(0, buf_cur(), "WHOIS", "[%s] %s (%s)", hcol(e.fields[3]), e.fields[4], e.msg)
 	end,
 
 	-- WHOIS: <nick> has been idle for 45345 seconds, and has been online since 4534534534
 	["317"] = function(e)
-		prin_irc(buf_cur(), "WHOIS", "[%s] has been idle for %s",
+		prin_irc(0, buf_cur(), "WHOIS", "[%s] has been idle for %s",
 			hcol(e.fields[3]), util.fmt_duration(tonumber(e.fields[4])))
 
 		-- not all servers send the "has been online" bit...
 		if e.fields[5] then
-			prin_irc(buf_cur(), "WHOIS", "[%s] has been online since %s",
+			prin_irc(0, buf_cur(), "WHOIS", "[%s] has been online since %s",
 				hcol(e.fields[3]), os.date("%Y-%m-%d %H:%M", e.fields[5]))
 		end
 	end,
 
 	-- End of WHOIS
 	["318"] = function(e)
-		prin_irc(buf_cur(), "WHOIS", "[%s] End of WHOIS info.", hcol(e.fields[3]))
+		prin_irc(0, buf_cur(), "WHOIS", "[%s] End of WHOIS info.", hcol(e.fields[3]))
 	end,
 
 	-- WHOIS: <user> has joined #chan1, #chan2, #chan3
 	["319"] = function(e)
-		prin_irc(buf_cur(), "WHOIS", "[%s] has joined %s", hcol(e.fields[3]), e.msg)
+		prin_irc(0, buf_cur(), "WHOIS", "[%s] has joined %s", hcol(e.fields[3]), e.msg)
 	end,
 
 	-- URL for channel
-	["328"] = function(e) prin_irc(e.dest, "URL", "%s", e.msg) end,
+	["328"] = function(e) prin_irc(0, e.dest, "URL", "%s", e.msg) end,
 
 	-- WHOIS: <nick> is logged in as <user> (response to /whois)
 	["330"] = function(e)
-		prin_irc(buf_cur(), "WHOIS", "[%s] is logged in as %s", hcol(e.fields[3]),
+		prin_irc(0, buf_cur(), "WHOIS", "[%s] is logged in as %s", hcol(e.fields[3]),
 			hcol(e.fields[4]))
 	end,
 
 	-- No topic set
-	["331"] = function(e) prin_irc(e.dest, "-!-", "No topic set for %s", e.dest) end,
+	["331"] = function(e) prin_irc(0, e.dest, L_ERR, "No topic set for %s", e.dest) end,
 
 	-- TOPIC for channel
-	["332"] = function(e) prin_irc(e.dest, "TOPIC", "%s", e.msg) end,
+	["332"] = function(e) prin_irc(0, e.dest, "TOPIC", "%s", e.msg) end,
 
 	-- TOPIC last set by nick!user@host
 	["333"] = function(e)
 		-- sometimes, the nick is in the fields
 		local n = (e.fields[4]):gmatch("(.-)!")()
 		if n then
-			prin_irc(e.dest, "--", "Topic last set by %s (%s)", hcol(n), e.fields[4])
+			prin_irc(0, e.dest, "--", "Topic last set by %s (%s)", hcol(n), e.fields[4])
 		else
 			local datetime = os.date("%Y-%m-%d %H:%M:%S", e.msg)
-			prin_irc(e.dest, "--", "Topic last set by %s on %s", hcol(e.fields[4]), datetime)
+			prin_irc(0, e.dest, "--", "Topic last set by %s on %s", hcol(e.fields[4]), datetime)
 		end
 	end,
 
 	-- invited <nick> to <chan> (response to /invite)
 	["341"] = function(e)
-		prin_irc(e.msg, "--", "Invited %s to %s", hcol(e.fields[3]), e.msg)
+		prin_irc(0, e.msg, "--", "Invited %s to %s", hcol(e.fields[3]), e.msg)
 	end,
 
 	-- Reply to /names
@@ -451,7 +464,7 @@ local irchand = {
 			buffers[bufidx].access[_nick] = access
 		end
 
-		prin_irc(e.dest, "NAMES", "%s", nicklist)
+		prin_irc(0, e.dest, "NAMES", "%s", nicklist)
 	end,
 
 	-- End of /names
@@ -472,25 +485,25 @@ local irchand = {
 
 	-- WHOIS: <nick> is connecting from <host>
 	["378"] = function(e)
-		prin_irc(buf_cur(), "WHOIS", "[%s] %s", hcol(e.fields[3]), e.msg)
+		prin_irc(0, buf_cur(), "WHOIS", "[%s] %s", hcol(e.fields[3]), e.msg)
 	end,
 
 	-- WHOIS: <nick> is using modes +abcd
 	["379"] = function(e)
-		prin_irc(buf_cur(), "WHOIS", "[%s] %s", hcol(e.fields[3]), e.msg)
+		prin_irc(0, buf_cur(), "WHOIS", "[%s] %s", hcol(e.fields[3]), e.msg)
 	end,
 
 	-- "xyz" is now your hidden host (set by foo)
-	["396"] = function(e) prin_irc(MAINBUF, "--", "%s %s", e.fields[3], e.msg) end,
+	["396"] = function(e) prin_irc(0, MAINBUF, "--", "%s %s", e.fields[3], e.msg) end,
 
 	-- No such nick/channel
-	["401"] = function(e) prin_irc(MAINBUF, "-!-", "No such nick/channel %s", e.fields[3]) end,
+	["401"] = function(e) prin_irc(0, MAINBUF, L_ERR, "No such nick/channel %s", e.fields[3]) end,
 
 	-- Nickname is already in use
 	["433"] = function(e)
 		assert(e.fields[3] == nick)
 		local newnick = e.fields[3] .. "_" -- sprout a tail
-		prin_irc(MAINBUF, "-!-", "Nickname %s already in use; using %s",
+		prin_irc(2, MAINBUF, L_ERR, "Nickname %s already in use; using %s",
 			e.fields[3], newnick)
 		irc.send("NICK %s", newnick)
 		nick = newnick
@@ -498,42 +511,42 @@ local irchand = {
 
 	-- <nick> is already in channel (response to /invite)
 	["443"] = function(e)
-		prin_irc(e.fields[4], "-!-", "%s is already in %s", hcol(e.fields[3]),
+		prin_irc(0, e.fields[4], L_ERR, "%s is already in %s", hcol(e.fields[3]),
 			e.fields[4])
 	end,
 
 	-- cannot join channel (you are banned)
 	["474"] = function(e)
-		prin_irc(e.fields[3], "-!-", "you're banned creep")
+		prin_irc(2, e.fields[3], L_ERR, "you're banned creep")
 		local buf = buf_idx(e.fields[3])
 		if buf then buf_switch(buf) end
 	end,
 
 	-- WHOIS: <nick> is using a secure connection (response to /whois)
 	["671"] = function(e)
-		prin_irc(buf_cur(), "WHOIS", "[%s] uses a secure connection", hcol(e.fields[3]))
+		prin_irc(0, buf_cur(), "WHOIS", "[%s] uses a secure connection", hcol(e.fields[3]))
 	end,
 
 	-- You are now logged in as xyz
-	["900"] = function(e) prin_irc(MAINBUF, "--", "%s", e.msg) end,
+	["900"] = function(e) prin_irc(0, MAINBUF, "--", "%s", e.msg) end,
 
 	-- CTCP stuff.
-	["CTCP_ACTION"] = function(e) prin_irc(e.dest, "*", "%s %s", hcol(e.nick or nick), e.msg) end,
+	["CTCP_ACTION"] = function(e) prin_irc(0, e.dest, "*", "%s %s", hcol(e.nick or nick), e.msg) end,
 	["CTCP_VERSION"] = function(e)
 		if config.ctcp_version then
-			prin_irc(MAINBUF, "CTCP", "%s requested VERSION (reply: %s)", e.nick, config.ctcp_version)
+			prin_irc(1, MAINBUF, "CTCP", "%s requested VERSION (reply: %s)", e.nick, config.ctcp_version)
 			irc.send("NOTICE %s :\1VERSION %s\1", e.nick, config.ctcp_version)
 		end
 	end,
 	["CTCP_SOURCE"] = function(e)
 		if config.ctcp_source then
-			prin_irc(MAINBUF, "CTCP", "%s requested SOURCE (reply: %s)", e.nick, config.ctcp_source)
+			prin_irc(1, MAINBUF, "CTCP", "%s requested SOURCE (reply: %s)", e.nick, config.ctcp_source)
 			irc.send("NOTICE %s :\1SOURCE %s\1", e.nick, config.ctcp_source)
 		end
 	end,
 	["CTCP_PING"] = function(e)
 		if config.ctcp_ping then
-			prin_irc(MAINBUF, "CTCP", "PING from %s", e.nick)
+			prin_irc(1, MAINBUF, "CTCP", "PING from %s", e.nick)
 			irc.send("NOTICE %s :%s", e.nick, e.fields[2])
 		end
 	end,
@@ -550,20 +563,20 @@ local irchand = {
 		elseif subcmd == "ack" then
 			-- the server has a capability we requested.
 			server.caps[e.msg] = true
-			prin_irc(MAINBUF, "--", "Enabling IRCv3 capability: %s", e.msg)
+			prin_irc(0, MAINBUF, "--", "Enabling IRCv3 capability: %s", e.msg)
 		elseif subcmd == "nak" then
 			-- the server does not have a capability we requested.
 			--
 			-- since all caps are set to false/nil by default we don't really
 			-- need to do this...
-			server.caps[e.msg] = true
+			server.caps[e.msg] = false
 
-			prin_irc(MAINBUF, "--", "Disabling IRCv3 capability: %s", e.msg)
+			prin_irc(0, MAINBUF, "--", "Disabling IRCv3 capability: %s", e.msg)
 		end
 	end,
 
 	[0] = function(e)
-		prin_irc(e.dest, e.fields[1] .. " --", "%s", e.msg or e.dest)
+		prin_irc(0, e.dest, e.fields[1] .. " --", "%s", e.msg or e.dest)
 	end
 }
 
@@ -767,7 +780,7 @@ cmdhand = {
 			if not (cmd:find("/") == 1) then cmd = "/" .. cmd end
 
 			if not cmdhand[cmd] then
-				prin_cmd(buf_cur(), "-!-", "No such command '%s'", a)
+				prin_cmd(buf_cur(), L_ERR, "No such command '%s'", a)
 				return
 			end
 
@@ -819,7 +832,7 @@ cmdhand = {
 
 			local fp, err = io.open(file, "w")
 			if not fp then
-				prin_cmd(buf_cur(), "-!-", "Couldn't open tmpfile %s", err)
+				prin_cmd(buf_cur(), L_ERR, "Couldn't open tmpfile %s", err)
 				return
 			end
 
@@ -835,11 +848,11 @@ cmdhand = {
 
 			local ret, err = fp:write(inspect(state))
 			if not ret then
-				prin_cmd(buf_cur(), "-!-", "Could not open tmpfile: %s", err)
+				prin_cmd(buf_cur(), L_ERR, "Could not open tmpfile: %s", err)
 				return
 			end
 
-			prin_cmd(buf_cur(), "-!-", "Wrote information to %s", file)
+			prin_cmd(buf_cur(), L_ERR, "Wrote information to %s", file)
 			fp:close()
 		end,
 	},
@@ -877,24 +890,24 @@ function parsecmd(inp)
 		local hand = cmdhand[_cmd] or config.commands[_cmd]
 
 		if hand.REQUIRE_CHANBUF and not (buf_cur()):find("#") then
-			prin_cmd(buf_cur(), "-!-",
+			prin_cmd(buf_cur(), L_ERR,
 				"%s must be executed in a channel buffer.", _cmd)
 			return
 		end
 
 		if hand.REQUIRE_ARG and (not a or a == "") then
-			prin_cmd(buf_cur(), "-!-", "%s requires an argument.", _cmd)
+			prin_cmd(buf_cur(), L_ERR, "%s requires an argument.", _cmd)
 			return
 		end
 
 		if hand.REQUIRE_CHANBUF_OR_ARG and (not a or a == "") and not (buf_cur()):find("#") then
-			prin_cmd(buf_cur(), "-!-",
+			prin_cmd(buf_cur(), L_ERR,
 				"%s must be executed in a channel buffer or must be run with an argument.", _cmd)
 			return
 		end
 
 		if hand.REQUIRE_CHAN_OR_USERBUF and cur_buf == 1 then
-			prin_cmd(buf_cur(), "-!-",
+			prin_cmd(buf_cur(), L_ERR,
 				"%s must be executed in a channel or user buffer.", _cmd)
 		end
 
@@ -905,7 +918,7 @@ function parsecmd(inp)
 
 		-- since the command doesn't exist, just send it as a message
 		if buf_cur() == MAINBUF then
-			prin_cmd(buf_cur(), "-!-", "Stop trying to talk to lurch.")
+			prin_cmd(buf_cur(), L_ERR, "Stop trying to talk to lurch.")
 		else
 			send_both(":%s PRIVMSG %s :%s", nick, buf_cur(), inp)
 		end
