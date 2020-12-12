@@ -76,7 +76,6 @@ void llua_call(lua_State *pL, const char *fnname, size_t nargs,
 /* TODO: move to separate file */
 int api_conn_init(lua_State *pL);
 int api_cleanup(lua_State *pL);
-int api_conn_fd(lua_State *pL);
 int api_conn_send(lua_State *pL);
 int api_tb_size(lua_State *pL);
 int api_tb_clear(lua_State *pL);
@@ -161,7 +160,6 @@ main(int argc, char **argv)
 	static const struct luaL_Reg lurch_lib[] = {
 		{ "conn_init",     api_conn_init      },
 		{ "cleanup",       api_cleanup        },
-		{ "conn_fd",       api_conn_fd        },
 		{ "conn_send",     api_conn_send      },
 		{ "tb_size",       api_tb_size        },
 		{ "tb_clear",      api_tb_clear       },
@@ -480,13 +478,6 @@ api_cleanup(lua_State *pL)
 {
 	cleanup();
 	return 0;
-}
-
-int
-api_conn_fd(lua_State *pL)
-{
-	lua_pushinteger(pL, (lua_Integer) conn_fd);
-	return 1;
 }
 
 int
