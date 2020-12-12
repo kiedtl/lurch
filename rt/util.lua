@@ -151,8 +151,36 @@ function util.fmt_duration(secs)
     return dur_str
 end
 
+-- set the title of the terminal
 function util.settitle(fmt, ...)
     util.printf("\x1b]0;%s\a", fmt:format(...))
+end
+
+-- TODO: tests
+-- remove an item at idx from an array table
+-- stolen from stack overflow, of course
+function util.remove(tbl, idx)
+    local sz = #tbl
+
+    for i = 1, sz do
+        if i == idx then
+            tbl[i] = nil
+        end
+    end
+
+    local j = 0
+    for i = 1, sz do
+        if tbl[i] ~= nil then
+            j = j + 1
+            tbl[j] = tbl[i]
+        end
+    end
+
+    for i = (j + 1), sz do
+        tbl[i] = nil
+    end
+
+    return tbl
 end
 
 return util
