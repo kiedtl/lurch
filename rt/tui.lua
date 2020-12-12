@@ -56,7 +56,6 @@ end
 function M.inputbar(bufs, cbuf, nick, inp, cursor)
 	-- if we've scrolled up, don't draw the input.
 	if bufs[cbuf].scroll ~= #bufs[cbuf].history then
-		lurch.tb_clearline(M.tty_height)
 		lurch.tb_writeline(M.tty_height, "-- more --")
 		lurch.tb_hidecursor()
 		return
@@ -112,7 +111,6 @@ function M.inputbar(bufs, cbuf, nick, inp, cursor)
 
 	-- draw the input buffer and move the cursor to the appropriate
 	-- position.
-	lurch.tb_clearline(M.tty_height-1)
 	lurch.tb_writeline(M.tty_height-1, format("%s%s", prompt, inp))
 end
 
@@ -166,7 +164,6 @@ function M.statusbar(bufs, cbuf)
 		end
 	end
 
-	lurch.tb_clearline(0)
 	lurch.tb_writeline(0, chanlist)
 
 	-- set the terminal title. This is a big help when using terminal
@@ -185,7 +182,6 @@ function M.buffer_text(bufs, cbuf)
 	if bufs[cbuf].history then
 		local hist_start = bufs[cbuf].scroll - (M.tty_height-4)
 		for i = hist_start, bufs[cbuf].scroll do
-			lurch.tb_clearline(line)
 
 			local msg = bufs[cbuf].history[i]
 			if msg then lurch.tb_writeline(line, msg) end

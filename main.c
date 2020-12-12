@@ -80,7 +80,6 @@ int api_conn_send(lua_State *pL);
 int api_tb_size(lua_State *pL);
 int api_tb_clear(lua_State *pL);
 int api_tb_writeline(lua_State *pL);
-int api_tb_clearline(lua_State *pL);
 int api_tb_hidecursor(lua_State *pL);
 int api_tb_showcursor(lua_State *pL);
 
@@ -164,7 +163,6 @@ main(int argc, char **argv)
 		{ "tb_size",       api_tb_size        },
 		{ "tb_clear",      api_tb_clear       },
 		{ "tb_writeline",  api_tb_writeline   },
-		{ "tb_clearline",  api_tb_clearline   },
 		{ "tb_hidecursor", api_tb_hidecursor  },
 		{ "tb_showcursor", api_tb_showcursor  },
 		{ NULL, NULL },
@@ -580,17 +578,6 @@ api_tb_writeline(lua_State *pL)
 		}
 	}
 
-	return 0;
-}
-
-int
-api_tb_clearline(lua_State *pL)
-{
-	assert(tb_state == TB_ACTIVE);
-	int line = luaL_checkinteger(pL, 1);
-	int width = tb_width();
-	for (size_t i = 0; i < width; ++i)
-		tb_change_cell(i, line, ' ', 0, 0);
 	return 0;
 }
 
