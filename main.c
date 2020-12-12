@@ -41,6 +41,7 @@ FILE *conn = NULL;
 char bufsrv[4096];
 struct tb_event ev;
 
+void cleanup(void);
 void try_present(struct timeval *tcurrent, struct timeval *tpresent);
 void signal_lhand(int sig);
 void signal_fatal(int sig);
@@ -74,6 +75,7 @@ void llua_call(lua_State *pL, const char *fnname, size_t nargs,
 
 /* TODO: move to separate file */
 int api_conn_init(lua_State *pL);
+int api_cleanup(lua_State *pL);
 int api_conn_fd(lua_State *pL);
 int api_conn_send(lua_State *pL);
 int api_tb_size(lua_State *pL);
@@ -158,6 +160,7 @@ main(int argc, char **argv)
 	/* setup lurch api functions */
 	static const struct luaL_Reg lurch_lib[] = {
 		{ "conn_init",     api_conn_init      },
+		{ "cleanup",       api_cleanup        },
 		{ "conn_fd",       api_conn_fd        },
 		{ "conn_send",     api_conn_send      },
 		{ "tb_size",       api_tb_size        },
@@ -256,13 +259,26 @@ main(int argc, char **argv)
 		}
 	}
 
-	lua_close(L);
-	tb_state = TB_INACTIVE;
-	tb_shutdown();
+	cleanup();
 	return 0;
 }
 
 // utility functions
+
+void
+cleanup()
+{
+	if (tb_state == TB_ACTIVE) {
+		tb_shutdown();
+		tb_state = TB_INACTIVE;
+	}
+	if (conn) fclose(conn);
+
+	/* don't lua_close, as this function may
+	 * be called by lua itself. anyway, it will be
+	 * freed when lurch exits. */
+	//if (L) lua_close(L);
+}
 
 /* check if (a) REFRESH time has passed, and (b) if the termbox
  * buffer has been modified; if both those conditions are met, refresh
@@ -290,7 +306,6 @@ signal_lhand(int sig)
 void
 signal_fatal(int sig)
 {
-	llua_sdump(L);
 	die("received signal %d; aborting.", sig);
 }
 
@@ -461,6 +476,13 @@ api_conn_init(lua_State *pL)
 }
 
 int
+api_cleanup(lua_State *pL)
+{
+	cleanup();
+	return 0;
+}
+
+int
 api_conn_fd(lua_State *pL)
 {
 	lua_pushinteger(pL, (lua_Integer) conn_fd);
@@ -492,6 +514,7 @@ api_conn_send(lua_State *pL)
 int
 api_tb_size(lua_State *pL)
 {
+	assert(tb_state == TB_ACTIVE);
 	lua_pushinteger(pL, (lua_Integer) tb_height());
 	lua_pushinteger(pL, (lua_Integer) tb_width());
 
@@ -501,6 +524,7 @@ api_tb_size(lua_State *pL)
 int
 api_tb_clear(lua_State *pL)
 {
+	assert(tb_state == TB_ACTIVE);
 	tb_clear();
 	return 0;
 }
@@ -508,6 +532,7 @@ api_tb_clear(lua_State *pL)
 int
 api_tb_writeline(lua_State *pL)
 {
+	assert(tb_state == TB_ACTIVE);
 	int line = luaL_checkinteger(pL, 1);
 	char *string = (char *) luaL_checkstring(pL, 2);
 	int col = 0;
@@ -566,6 +591,7 @@ api_tb_writeline(lua_State *pL)
 int
 api_tb_clearline(lua_State *pL)
 {
+	assert(tb_state == TB_ACTIVE);
 	int line = luaL_checkinteger(pL, 1);
 	int width = tb_width();
 	for (size_t i = 0; i < width; ++i)
@@ -576,6 +602,7 @@ api_tb_clearline(lua_State *pL)
 int
 api_tb_hidecursor(lua_State *pL)
 {
+	assert(tb_state == TB_ACTIVE);
 	tb_set_cursor(TB_HIDE_CURSOR, TB_HIDE_CURSOR);
 	return 0;
 }
@@ -583,6 +610,7 @@ api_tb_hidecursor(lua_State *pL)
 int
 api_tb_showcursor(lua_State *pL)
 {
+	assert(tb_state == TB_ACTIVE);
 	int x = luaL_checkinteger(pL, 1);
 	int y = luaL_checkinteger(pL, 2);
 	tb_set_cursor(x, y);

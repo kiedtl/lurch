@@ -42,7 +42,7 @@ local parseirc
 local parsecmd
 
 function panic(fmt, ...)
-	tui.clean()
+	lurch.cleanup()
 	eprintf(fmt, ...)
 	os.exit(1)
 end
@@ -723,8 +723,8 @@ cmdhand = {
 			end
 
 			irc.send("QUIT :%s", msg)
+			lurch.cleanup()
 			eprintf("[lurch exited]\n")
-			tui.clean()
 			os.exit(0)
 		end
 	},
@@ -1010,16 +1010,16 @@ function rt.on_signal(sig)
 	local quitmsg = config.quit_msg or "*poof*"
 	local handler = sighand[sig] or sighand[0]
 	if (handler)() then
-		tui.clean()
 		irc.send("QUIT :%s", quitmsg)
+		lurch.cleanup()
 		eprintf("[lurch exited]\n")
 		os.exit(0)
 	end
 end
 
 function rt.on_lerror(_)
-	tui.clean()
 	irc.send("QUIT :%s", "*poof*")
+	lurch.cleanup()
 end
 
 function rt.on_timeout()
