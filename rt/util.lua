@@ -80,30 +80,6 @@ function util.fold(text, width)
 	return res
 end
 
-function util.contains(src, value)
-	assert(src)
-
-	local has = false
-	for i = 1, #src do
-		if src[i] == value then
-			has = true
-			break
-		end
-	end
-	return has
-end
-
-function util.indexof(src, value)
-	local idx = nil
-	for i = 1, #src do
-		if src[i] == value then
-			idx = i
-			break
-		end
-	end
-	return idx
-end
-
 -- This hash function was stolen from the QBE project.
 -- git://c9x.me/qbe.git, ./minic/minic.y:104
 local HASH_BEG = 42
@@ -173,6 +149,10 @@ function util.fmt_duration(secs)
 
 	if dur_str == "" then dur_str = format("%s%ss", dur_str, secs) end
 	return dur_str
+end
+
+function util.settitle(fmt, ...)
+	util.printf("\x1b]0;%s\a", fmt:format(...))
 end
 
 return util
