@@ -526,9 +526,12 @@ api_tb_writeline(lua_State *pL)
 	assert(tb_state == TB_ACTIVE);
 	int line = luaL_checkinteger(pL, 1);
 	char *string = (char *) luaL_checkstring(pL, 2);
+	int width = tb_width();
 	int col = 0;
-	struct tb_cell c;
-	c.fg = 15, c.bg = 0;
+	struct tb_cell c = { ' ', 0, 0 };
+
+	do tb_put_cell(col, line, &c); while (++col < width);
+	col = 0;
 
 	/* TODO: unicode support */
 	while (*string) {
@@ -568,12 +571,12 @@ api_tb_writeline(lua_State *pL)
 			break; default:
 				break;
 			}
+			++string;
 		} else {
-			c.ch = *string;
+			string += utf8_char_to_unicode(&c.ch, string);
 			tb_put_cell(col, line, &c);
 			++col;
 		}
-		++string;
 	}
 
 	return 0;
