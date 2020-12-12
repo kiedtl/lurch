@@ -530,7 +530,23 @@ local irchand = {
     ["900"] = function(e) prin_irc(0, MAINBUF, "--", "%s", e.msg) end,
 
     -- CTCP stuff.
-    ["CTCP_ACTION"] = function(e) prin_irc(0, e.dest, "*", "%s %s", hcol(e.nick or nick), e.msg) end,
+    ["CTCP_ACTION"] = function(e)
+        local sender_fmt = hcol(e.nick or nick)
+        local prio = 1
+
+        if msg_pings(e.msg) then
+            prio = 2
+            sender_fmt = format("\x1b3m%s\x1brm", sender_fmt)
+        end
+
+        if config.show_mirc_colors then
+            e.msg = mirc.to_tty_seq(e.msg)
+        else
+            e.msg = mirc.remove(e.msg)
+        end
+
+        prin_irc(prio, e.dest, "*", "%s %s", sender_fmt, e.msg)
+    end,
     ["CTCP_VERSION"] = function(e)
         if config.ctcp_version then
             prin_irc(1, MAINBUF, "CTCP", "%s requested VERSION (reply: %s)", e.nick, config.ctcp_version)
