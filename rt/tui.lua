@@ -198,6 +198,7 @@ end
 
 function M.redraw(bufs, cbuf, nick, inbuf, incurs)
 	M.refresh()
+	lurch.tb_clear()
 
 	M.buffer_text(bufs, cbuf)
 	M.inputbar(bufs, cbuf, nick, inbuf, incurs)
