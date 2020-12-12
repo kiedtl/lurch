@@ -8,7 +8,10 @@ CFLAGS   = -Og -g $(DEF) $(INCL)
 LDFLAGS  = -L/usr/include -lm -l$(LUA)
 SRC      = main.c
 
-all: $(NAME)
+all: $(NAME) run
+
+run: $(NAME)
+	./$(NAME)
 
 $(NAME): $(TERMBOX) $(SRC)
 	$(CC) $(SRC) $(TERMBOX) -o $@ $(CFLAGS) $(LDFLAGS)
