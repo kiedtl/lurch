@@ -244,7 +244,8 @@ local irchand = {
     end,
     ["INVITE"] = function(e)
         -- TODO: auto-join on invite?
-        prin_irc(2, MAINBUF, "--", "%s sent you an invite to %s", e.nick, e.msg)
+        prin_irc(2, MAINBUF, "--", "%s invited you to %s",
+            e.nick, e.fields[3] or e.msg)
     end,
     ["PRIVMSG"] = function(e)
         local sender = e.nick or e.from
