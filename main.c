@@ -520,6 +520,16 @@ api_tb_clear(lua_State *pL)
 	return 0;
 }
 
+
+const size_t attribs[] = { TB_BOLD, TB_UNDERLINE, TB_REVERSE };
+static void
+reset_attr(uint32_t *old, uint32_t *new)
+{
+	for (size_t i = 0; i < sizeof(attribs); ++i)
+		if ((*old & attribs[i]) == attribs[i])
+			*new |= attribs[i];
+}
+
 int
 api_tb_writeline(lua_State *pL)
 {
@@ -528,7 +538,8 @@ api_tb_writeline(lua_State *pL)
 	char *string = (char *) luaL_checkstring(pL, 2);
 	int width = tb_width();
 	int col = 0;
-	struct tb_cell c = { ' ', 0, 0 };
+	struct tb_cell c = { ' ', 15, 0 };
+	uint32_t oldfg, oldbg;
 
 	do tb_put_cell(col, line, &c); while (++col < width);
 	col = 0;
@@ -543,14 +554,9 @@ api_tb_writeline(lua_State *pL)
 			break; case '1':
 				c.fg |= TB_BOLD;
 				++string;
-			break; case '2':;
-				uint32_t oldfg = c.fg;
-				c.fg = *(++string);
-
-				if ((oldfg & TB_BOLD) == TB_BOLD)
-					c.fg |= TB_BOLD;
-				if ((oldfg & TB_REVERSE) == TB_REVERSE)
-					c.fg |= TB_REVERSE;
+			break; case '2':
+				oldfg = c.fg, c.fg = *(++string);
+				reset_attr(&oldfg, &c.fg);
 			break; case '3':
 				c.fg |= TB_REVERSE;
 				++string;
@@ -559,16 +565,11 @@ api_tb_writeline(lua_State *pL)
 				++string;
 			break; case '5': /* italic */
 			break; case '6': /* blink */
-				break;
-			break; case '7':;
-				uint32_t oldbg = c.bg;
-				c.bg = *(++string);
-
-				if ((oldbg & TB_BOLD) == TB_BOLD)
-					c.fg |= TB_BOLD;
-				if ((oldbg & TB_REVERSE) == TB_REVERSE)
-					c.bg |= TB_REVERSE;
+			break; case '7':
+				oldbg = c.bg, c.bg = *(++string);
+				reset_attr(&oldbg, &c.bg);
 			break; default:
+				++string;
 				break;
 			}
 			++string;
