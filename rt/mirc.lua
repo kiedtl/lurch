@@ -55,46 +55,46 @@ mirc.tty_eq[mirc.LIGHTCYAN]    = { "\x1b2\x0e",  "\x1b7\x0e" }
 mirc.tty_eq[mirc.WHITE]        = { "\x1b2\x0f",  "\x1b7\x0f" }
 
 function mirc.remove(text)
-	text = text:gsub("[\x02\x1f\x1d\x16\x06\x0f]", "")
-	text = text:gsub("\x03[0-9][0-9]?,[0-9][0-9]?", "")
-	text = text:gsub("\x03[0-9][0-9]?", "")
-	text = text:gsub("\x03", "")
-	return text
+    text = text:gsub("[\x02\x1f\x1d\x16\x06\x0f]", "")
+    text = text:gsub("\x03[0-9][0-9]?,[0-9][0-9]?", "")
+    text = text:gsub("\x03[0-9][0-9]?", "")
+    text = text:gsub("\x03", "")
+    return text
 end
 
 function mirc.to_tty_seq(text)
-	-- convert attributes using a simple search-and-replace.
-	text = text:gsub(mirc.BOLD,      "\x1b1m")
-	text = text:gsub(mirc.UNDERLINE, "\x1b4m")
-	text = text:gsub(mirc.ITALIC,    "\x1b5m")
-	text = text:gsub(mirc.INVERT,    "\x1b3m")
-	text = text:gsub(mirc.BLINK,     "\x1b6m")
-	text = text:gsub(mirc.RESET,     "\x1brm")
+    -- convert attributes using a simple search-and-replace.
+    text = text:gsub(mirc.BOLD,      "\x1b1m")
+    text = text:gsub(mirc.UNDERLINE, "\x1b4m")
+    text = text:gsub(mirc.ITALIC,    "\x1b5m")
+    text = text:gsub(mirc.INVERT,    "\x1b3m")
+    text = text:gsub(mirc.BLINK,     "\x1b6m")
+    text = text:gsub(mirc.RESET,     "\x1brm")
 
-	-- extract color-changing sequences, parse them, and convert
-	-- them.
-	for fg, bg in text:gmatch("\x03([0-9][0-9]?),([0-9][0-9]?)") do
-		local nfg = tonumber(fg)
-		local nbg = tonumber(bg)
+    -- extract color-changing sequences, parse them, and convert
+    -- them.
+    for fg, bg in text:gmatch("\x03([0-9][0-9]?),([0-9][0-9]?)") do
+        local nfg = tonumber(fg)
+        local nbg = tonumber(bg)
 
-		local tty_fg, tty_bg = "", ""
-		if mirc.tty_eq[nfg] then tty_fg = mirc.tty_eq[nfg][1] end
-		if mirc.tty_eq[nbg] then tty_bg = mirc.tty_eq[nbg][2] end
+        local tty_fg, tty_bg = "", ""
+        if mirc.tty_eq[nfg] then tty_fg = mirc.tty_eq[nfg][1] end
+        if mirc.tty_eq[nbg] then tty_bg = mirc.tty_eq[nbg][2] end
 
-		text = text:gsub(("\x03%s,%s"):format(fg, bg), tty_fg .. tty_bg)
-	end
+        text = text:gsub(("\x03%s,%s"):format(fg, bg), tty_fg .. tty_bg)
+    end
 
-	for fg in text:gmatch("\x03([0-9][0-9]?)") do
-		local nfg = tonumber(fg)
+    for fg in text:gmatch("\x03([0-9][0-9]?)") do
+        local nfg = tonumber(fg)
 
-		local tty_fg = ""
-		if mirc.tty_eq[nfg] then tty_fg = mirc.tty_eq[nfg][1] end
+        local tty_fg = ""
+        if mirc.tty_eq[nfg] then tty_fg = mirc.tty_eq[nfg][1] end
 
-		text = text:gsub(("\x03%s"):format(fg), tty_fg)
-	end
+        text = text:gsub(("\x03%s"):format(fg), tty_fg)
+    end
 
-	text = text:gsub(mirc.COLOR, "\x1brm")
-	return text
+    text = text:gsub(mirc.COLOR, "\x1brm")
+    return text
 end
 
 return mirc
