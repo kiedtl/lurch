@@ -871,6 +871,15 @@ cmdhand = {
             fp:close()
         end,
     },
+    ["/panic"] = {
+        help = { "Summon a Lua panic to aid with debugging." },
+        usage = "[errmsg]",
+        fn = function(a, args, _)
+            local msg = "/panic was run"
+            if a then msg = format("%s %s", a, args or "") end
+            error(msg)
+        end,
+    },
 }
 
 function parsecmd(inp)
