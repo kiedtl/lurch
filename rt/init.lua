@@ -635,6 +635,38 @@ end
 
 local cmdhand
 cmdhand = {
+    ["/close"] = {
+        REQUIRE_CHANBUF_OR_ARG = true,
+        help = { "Close a buffer. The buffers after the one being closed are shifted left." },
+        usage = "[buffer]",
+        fn = function(a, _, _)
+            local buf = a or cur_buf
+            if not tonumber(buf) then
+                if not buf_idx(buf) then
+                    prin_cmd(buf_cur(), L_ERR, "%s is not an open buffer.", a)
+                    return
+                else
+                    buf = buf_idx(buf)
+                end
+            else
+                buf = tonumber(buf)
+            end
+
+            if buf == 1 then
+                prin_cmd(buf_cur(), L_ERR, "Cannot close main buffer.")
+                return
+            end
+
+            buffers = util.remove(buffers, buf)
+            while not buffers[cur_buf] do
+                cur_buf = cur_buf - 1
+            end
+
+            -- redraw, as the current buffer may have changed,
+            -- and the statusbar needs to be redrawn anyway.
+            tui.redraw(buffers, cur_buf, nick, tbrl.bufin, tbrl.cursor)
+        end,
+    },
     ["/up"] = {
         help = {},
         fn = function(_, _, _)
