@@ -17,14 +17,23 @@
 #include <sys/ioctl.h>
 #include <sys/select.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
 
 #include "termbox.h"
 
+/* maximum rate at which the screen is refreshed */
+const struct timeval REFRESH = { 0, 3000 };
+
 const size_t TIMEOUT = 4096;
 const size_t BT_BUF_SIZE = 16;
+
+/* keep track of termbox's state */
+const size_t TB_ACTIVE = 1;
+const size_t TB_INACTIVE = 2;
+size_t tb_state = 0;
 
 lua_State *L = NULL;
 int conn_fd = 0;
@@ -32,6 +41,7 @@ FILE *conn = NULL;
 char bufsrv[4096];
 struct tb_event ev;
 
+void try_present(struct timeval *tcurrent, struct timeval *tpresent);
 void signal_lhand(int sig);
 void signal_fatal(int sig);
 
@@ -66,11 +76,8 @@ void llua_call(lua_State *pL, const char *fnname, size_t nargs,
 int api_conn_init(lua_State *pL);
 int api_conn_fd(lua_State *pL);
 int api_conn_send(lua_State *pL);
-int api_tb_init(lua_State *pL);
-int api_tb_shutdown(lua_State *pL);
 int api_tb_size(lua_State *pL);
 int api_tb_clear(lua_State *pL);
-int api_tb_present(lua_State *pL);
 int api_tb_writeline(lua_State *pL);
 int api_tb_clearline(lua_State *pL);
 int api_tb_hidecursor(lua_State *pL);
@@ -98,6 +105,18 @@ main(int argc, char **argv)
 	sigaction(SIGUSR1,  &lhand, NULL);
 	sigaction(SIGUSR2,  &lhand, NULL);
 	sigaction(SIGWINCH, &lhand, NULL);
+
+	/* init termbox */
+	char *errstrs[] = {
+		NULL,
+		"termbox: unsupported terminal",
+		"termbox: could not open terminal",
+		"termbox: pipe trap error"
+	};
+	char *err = errstrs[-(tb_init())];
+	if (err) die(err);
+	tb_state = TB_ACTIVE;
+	tb_select_output_mode(TB_OUTPUT_256);
 
 	/* init lua */
 	L = luaL_newstate();
@@ -141,11 +160,8 @@ main(int argc, char **argv)
 		{ "conn_init",     api_conn_init      },
 		{ "conn_fd",       api_conn_fd        },
 		{ "conn_send",     api_conn_send      },
-		{ "tb_init",       api_tb_init        },
-		{ "tb_shutdown",   api_tb_shutdown    },
 		{ "tb_size",       api_tb_size        },
 		{ "tb_clear",      api_tb_clear       },
-		{ "tb_present",    api_tb_present     },
 		{ "tb_writeline",  api_tb_writeline   },
 		{ "tb_clearline",  api_tb_clearline   },
 		{ "tb_hidecursor", api_tb_hidecursor  },
@@ -175,10 +191,16 @@ main(int argc, char **argv)
 	setvbuf(stdout, NULL, _IONBF, 0);
 	setvbuf(conn, NULL, _IONBF, 0);
 
+	/*
+	 * trespond: last time we got something from the server.
+	 * ttimeout: how long select(2) should wait for activity.
+	 * tpresent: last time tb_present() was called.
+	 * tcurrent: buffer for gettimeofday(2).
+	 */
 	time_t trespond;
-	struct timeval tv;
-	tv.tv_sec  = 120;
-	tv.tv_usec =   0;
+	struct timeval ttimeout = { 120, 0 };
+	struct timeval tpresent = {   0, 0 };
+	struct timeval tcurrent = {   0, 0 };
 
 	int n;
 	fd_set rd;
@@ -189,7 +211,8 @@ main(int argc, char **argv)
 		FD_SET(conn_fd, &rd);
 		FD_SET(0, &rd);
 
-		n = select(conn_fd + 1, &rd, 0, 0, &tv);
+		try_present(&tcurrent, &tpresent);
+		n = select(conn_fd + 1, &rd, 0, 0, &ttimeout);
 
 		if (n < 0) {
 			if (errno == EINTR)
@@ -232,12 +255,29 @@ main(int argc, char **argv)
 			}
 		}
 	}
-	
+
 	lua_close(L);
+	tb_state = TB_INACTIVE;
+	tb_shutdown();
 	return 0;
 }
 
 // utility functions
+
+/* check if (a) REFRESH time has passed, and (b) if the termbox
+ * buffer has been modified; if both those conditions are met, refresh
+ * the screen. */
+void
+try_present(struct timeval *tcurrent, struct timeval *tpresent)
+{
+	assert(gettimeofday(tcurrent, NULL) == 0);
+	struct timeval diff;
+	timersub(tcurrent, tpresent, &diff);
+	if (diff.tv_sec >= REFRESH.tv_sec && diff.tv_usec >= REFRESH.tv_usec) {
+		assert(gettimeofday(tpresent, NULL) == 0);
+		tb_present();
+	}
+}
 
 void
 signal_lhand(int sig)
@@ -257,6 +297,11 @@ signal_fatal(int sig)
 void
 die(const char *fmt, ...)
 {
+	if (tb_state == TB_ACTIVE) {
+		tb_shutdown();
+		tb_state = TB_INACTIVE;
+	}
+
 	fprintf(stderr, "fatal: ");
 
 	va_list ap;
@@ -301,6 +346,11 @@ format(const char *fmt, ...)
 int
 llua_panic(lua_State *pL)
 {
+	if (tb_state == TB_ACTIVE) {
+		tb_shutdown();
+		tb_state = TB_INACTIVE;
+	}
+
 	char *err = (char *) lua_tostring(pL, -1);
 
 	/* run error handler */
@@ -440,35 +490,6 @@ api_conn_send(lua_State *pL)
 }
 
 int
-api_tb_init(lua_State *pL)
-{
-	char *errstrs[] = {
-		NULL,
-		"termbox: unsupported terminal",
-		"termbox: could not open terminal",
-		"termbox: pipe trap error"
-	};
-
-	char *err = errstrs[-(tb_init())];
-
-	if (err) {
-		lua_pushnil(pL); lua_pushstring(pL, err);
-		return 2;
-	} else {
-		tb_select_output_mode(TB_OUTPUT_256);
-		lua_pushboolean(pL, true);
-		return 1;
-	}
-}
-
-int
-api_tb_shutdown(lua_State *pL)
-{
-	tb_shutdown();
-	return 0;
-}
-
-int
 api_tb_size(lua_State *pL)
 {
 	lua_pushinteger(pL, (lua_Integer) tb_height());
@@ -481,13 +502,6 @@ int
 api_tb_clear(lua_State *pL)
 {
 	tb_clear();
-	return 0;
-}
-
-int
-api_tb_present(lua_State *pL)
-{
-	tb_present();
 	return 0;
 }
 

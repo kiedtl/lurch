@@ -12,10 +12,10 @@ M.server_password = nil
 M.user = nil
 
 -- your "real name". if nil, defaults to the nickname.
-M.name = "hii im drunk"
+M.name = "o hai"
 
 -- channels to join by on startup.
-M.channels = { }
+M.channels = { "#chaos" }
 
 -- default quit/part message. default to ""
 M.quit_msg = "*thud*"

@@ -12,16 +12,10 @@ M.tty_height = 80
 M.tty_width  = 24
 
 function M.clean()
-	lurch.tb_shutdown()
 end
 
 function M.refresh()
 	M.tty_height, M.tty_width = lurch.tb_size()
-end
-
-function M.init()
-	lurch.tb_init()
-	M.refresh()
 end
 
 function M.load_highlight_colors()

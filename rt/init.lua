@@ -200,7 +200,6 @@ function prin(priority, timestr, dest, left, right_fmt, ...)
 	end
 
 	if redraw_statusbar then tui.statusbar(buffers, cur_buf) end
-	lurch.tb_present()
 end
 
 local function none(_) end
@@ -951,7 +950,6 @@ function rt.on_keyseq(key)
 end
 
 function rt.init()
-	tui.init()
 	tui.refresh()
 
 	-- List of IRCv3 capabilities to send.
@@ -1040,7 +1038,6 @@ function rt.on_input(event)
 	tbrl.on_event(event)
 	tui.inputbar(buffers, cur_buf, nick,
 		tbrl.bufin[tbrl.hist], tbrl.cursor)
-	lurch.tb_present()
 end
 
 function rt.on_complete(text, from, to)
