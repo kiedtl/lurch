@@ -223,10 +223,16 @@ local irchand = {
         end
     end,
     ["NOTICE"] = function(e)
-        if e.host then
-            prin_irc(1, e.nick, "NOTE", "%s: %s", e.nick, e.msg)
+        local prio = 1
+        if msg_pings(e.msg) then prio = 2 end
+
+        local dest = e.dest
+        if dest == "*" or not dest then dest = MAINBUF end
+
+        if e.nick then
+            prin_irc(1, dest, "NOTE", "%s: %s", hcol(e.nick), e.msg)
         else
-            prin_irc(1, MAINBUF, "NOTE", "%s", e.msg)
+            prin_irc(1, dest, "NOTE", "%s", e.msg)
         end
     end,
     ["PART"] = function(e)
