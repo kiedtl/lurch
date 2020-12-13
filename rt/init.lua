@@ -235,6 +235,9 @@ local irchand = {
             prin_irc(1, dest, "NOTE", "%s", e.msg)
         end
     end,
+    ["TOPIC"] = function(e)
+        prin_irc(0, e.dest, "TOPIC", "%s changed the topic to \"%s\"", hcol(e.nick), e.msg)
+    end,
     ["PART"] = function(e)
         prin_irc(0, e.dest, "<--", "%s has left %s (%s)",
             hcol(e.nick), e.dest, e.msg)
