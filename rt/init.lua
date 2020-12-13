@@ -680,7 +680,7 @@ cmdhand = {
             if (buffers[cur_buf].scroll - scr) >= 0 then
                 buffers[cur_buf].scroll = buffers[cur_buf].scroll - scr
             end
-            tui.redraw(buffers, cur_buf, nick, tbrl.bufin, tbrl.cursor)
+            tui.redraw(buffers, cur_buf, nick, tbrl.bufin[tbrl.hist], tbrl.cursor)
         end
     },
     ["/down"] = {
@@ -690,7 +690,7 @@ cmdhand = {
             if (buffers[cur_buf].scroll + scr) <= #buffers[cur_buf].history then
                 buffers[cur_buf].scroll = buffers[cur_buf].scroll + scr
             end
-            tui.redraw(buffers, cur_buf, nick, tbrl.bufin, tbrl.cursor)
+            tui.redraw(buffers, cur_buf, nick, tbrl.bufin[tbrl.hist], tbrl.cursor)
         end
     },
     ["/clear"] = {
