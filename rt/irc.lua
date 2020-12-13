@@ -84,7 +84,7 @@ function irc.parse(rawmsg)
             event.user = (event.from):gmatch(".-!(.-)@.+")()
             event.host = (event.from):gmatch(".-!.-@(.+)")()
         else
-            event.nick = event.from
+            event.host = event.from
         end
 
         -- strip out what was already processed.
