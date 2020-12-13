@@ -213,6 +213,9 @@ local irchand = {
 
         -- away notify is enabled, and the server is giving us the
         -- status of a user in a channel.
+        --
+        -- TODO: keep track of how long users are away, and when they
+        -- come back, set the message to "<nick> is back (gone <time>)"
         local msg
         if not e.msg or e.msg == "" then
             msg = format("%s is back", hcol(e.nick))
