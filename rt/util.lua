@@ -98,15 +98,32 @@ function util.hash(value, max)
 end
 
 -- parse an UTC timezone offset of the format UTC[+-]<offset>
-function util.parse_offset(offset_str)
-    local offset_h, offset_m = offset_str:match("UTC([+-].-):(.+)")
-    if not offset_h or not offset_m then return nil end
+function util.parse_offset(str)
+    local sign, offset_h, offset_m = str:match("UTC([+-])(.-):(.+)")
 
-    -- can't divide by zero...
-    if tonumber(offset_m) == 0 then
-        return tonumber(offset_h)
+    if not sign or not offset_h or not offset_m then
+        return nil
+    end
+
+    if not tonumber(offset_h) or not tonumber(offset_m) then
+        return nil
+    end
+
+    offset_h = tonumber(offset_h)
+    offset_m = tonumber(offset_m)
+
+    local offset
+    if offset_m == 0 then
+        offset = offset_h
     else
-        return tonumber(offset_h) + (60 / offset_m)
+        offset_m = (10 / (60 / offset_m))
+        offset = offset_h + (offset_m / 10)
+    end
+
+    if sign == "+" then
+        return offset
+    elseif sign == "-" then
+        return -offset
     end
 end
 
@@ -143,12 +160,12 @@ function util.fmt_duration(secs)
     local hours = math.floor(secs / 60 / 60 % 24)
     local mins  = math.floor(secs / 60 % 60)
 
-    if days > 0 then dur_str = format("%s%sd", dur_str, days) end
-    if hours > 0 then dur_str = format("%s%sh", dur_str, hours) end
-    if mins > 0 then dur_str = format("%s%sm", dur_str, mins) end
+    if days > 0 then dur_str = format("%s%sd ", dur_str, days) end
+    if hours > 0 then dur_str = format("%s%sh ", dur_str, hours) end
+    if mins > 0 then dur_str = format("%s%sm ", dur_str, mins) end
 
     if dur_str == "" then dur_str = format("%s%ss", dur_str, secs) end
-    return dur_str
+    return dur_str:gsub("%s$", "")
 end
 
 -- set the title of the terminal
@@ -156,7 +173,6 @@ function util.settitle(fmt, ...)
     util.printf("\x1b]0;%s\a", fmt:format(...))
 end
 
--- TODO: tests
 -- remove an item at idx from an array table
 -- stolen from stack overflow, of course
 function util.remove(tbl, idx)
@@ -181,6 +197,27 @@ function util.remove(tbl, idx)
     end
 
     return tbl
+end
+
+function util.table_eq(a, b)
+    if #a ~= #b then return false end
+
+    for k, v in pairs(a) do
+        if type(a[k]) ~= type(b[k]) then
+            return false
+        end
+
+        if type(a[k]) ~= "table" then
+            if a[k] ~= b[k] then
+                return false
+            end
+        else
+            if not util.table_eq(a[k], b[k]) then
+                return false
+            end
+        end
+    end
+    return true
 end
 
 return util

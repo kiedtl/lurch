@@ -8,4 +8,5 @@ package.path = ("%s/?.lua;"):format(dir) .. package.path
 local lunatest = require("lunatest")
 
 lunatest.suite("irc_test")
+lunatest.suite("util_test")
 lunatest.run()
