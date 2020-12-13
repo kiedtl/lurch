@@ -230,7 +230,7 @@ local irchand = {
         if dest == "*" or not dest then dest = MAINBUF end
 
         if e.nick then
-            prin_irc(1, dest, "NOTE", "%s: %s", hcol(e.nick), e.msg)
+            prin_irc(1, dest, "NOTE", "<%s> %s", hcol(e.nick), e.msg)
         else
             prin_irc(1, dest, "NOTE", "%s", e.msg)
         end
