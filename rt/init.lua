@@ -208,7 +208,24 @@ local function default(e) prin_irc(0, e.dest, "--", "%s", e.msg) end
 
 local irchand = {
     ["PING"] = function(e)   irc.send("PONG :%s", e.dest or e.msg) end,
-    ["AWAY"] = function(e)   prin_irc(0, MAINBUF, "--", "Away status: %s", e.msg) end,
+    ["AWAY"] = function(e)
+        assert(server.caps["away-notify"])
+
+        -- away notify is enabled, and the server is giving us the
+        -- status of a user in a channel.
+        local msg
+        if not e.msg or e.msg == "" then
+            msg = format("%s is back", hcol(e.nick))
+        else
+            msg = format("%s is away: %s", hcol(e.nick), e.msg)
+        end
+
+        for _, buf in ipairs(buffers) do
+            if buf.name ~= MAINBUF and buf.names[e.nick] then
+                prin_irc(0, buf.name, "--", "(Away) %s", msg)
+            end
+        end
+    end,
     ["MODE"] = function(e)
         if (e.dest):find("#") then
             local mode = e.fields[3] or ""
@@ -1022,9 +1039,9 @@ function rt.init()
     -- List of IRCv3 capabilities to send.
     --
     -- server-time: enables adding the "time" IRCv3 tag to messages
-    -- TODO: echo-message, invite-notify, SASL, account-notify, away-notify
+    -- TODO: echo-message, invite-notify, SASL, account-notify
     --
-    local caps  = { "server-time" }
+    local caps  = { "server-time", "away-notify" }
     local _nick = config.nick or os.getenv("IRCNICK") or os.getenv("USER")
     local user  = config.user or os.getenv("IRCUSER") or os.getenv("USER")
     local name  = config.name or _nick
