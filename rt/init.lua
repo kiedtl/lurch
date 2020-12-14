@@ -651,8 +651,9 @@ local irchand = {
 }
 
 function parseirc(reply)
-    -- DEBUG (TODO)
-    util.append("logs", reply .. "\n")
+    if os.getenv("LURCH_DEBUG") then
+        util.append("/tmp/lurch_recieved", reply)
+    end
 
     local event = irc.parse(reply)
     if not event then return end
