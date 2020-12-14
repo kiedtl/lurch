@@ -2,7 +2,7 @@ NAME     = lurch
 TERMBOX  = tb/bin/termbox.a
 LUA      = lua5.3
 CC       = clang
-DEF      = -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200112L
+DEF      = -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200112L -D_XOPEN_SOURCE
 INCL     = -Itb/src/ -I/usr/include/$(LUA)
 CFLAGS   = -Og -g $(DEF) $(INCL)
 LDFLAGS  = -L/usr/include -lm -l$(LUA)
