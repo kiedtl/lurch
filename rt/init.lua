@@ -140,6 +140,18 @@ function msg_pings(msg)
 end
 
 function writelog(time, dest, left, right_fmt, ...)
+    local function _conv_seqs(text)
+        text = text:gsub("\x1brm", "\x1b[0m")
+        text = text:gsub("\x1b1m", "\x1b[1m")
+        text = text:gsub("\x1b2(...)m", "\x1b[38;5;%1m")
+        text = text:gsub("\x1b3m", "\x1b[7m")
+        text = text:gsub("\x1b4m", "\x1b[4m")
+        text = text:gsub("\x1b5m", "\x1b[3m")
+        text = text:gsub("\x1b6m", "\x1b[5m")
+        text = text:gsub("\x1b7(...)m", "\x1b[48;5;%1m")
+        return text
+    end
+
     local logdir  = format("%s/logs/%s", __LURCH_EXEDIR, dest)
     local logfile = format("%s/%s.txt", logdir, os.date("%Y-%m-%d", time))
 
@@ -148,17 +160,7 @@ function writelog(time, dest, left, right_fmt, ...)
     local logentry = format("%s\t%s\t\t%s\n",
         os.date("%Y-%m-%dT%H:%M:%SZ", time), left, right_fmt:format(...))
 
-    -- convert lurch escape sequences
-    logentry = logentry:gsub("\x1brm", "\x1b[0m")
-    logentry = logentry:gsub("\x1b1m", "\x1b[1m")
-    logentry = logentry:gsub("\x1b2(...)m", "\x1b[38;5;%1m")
-    logentry = logentry:gsub("\x1b3m", "\x1b[7m")
-    logentry = logentry:gsub("\x1b4m", "\x1b[4m")
-    logentry = logentry:gsub("\x1b5m", "\x1b[3m")
-    logentry = logentry:gsub("\x1b6m", "\x1b[5m")
-    logentry = logentry:gsub("\x1b7(...)m", "\x1b[48;5;%1m")
-
-    util.append(logfile, logentry)
+    util.append(logfile, _conv_seqs(logentry))
 end
 
 -- print a response to an irc message.
