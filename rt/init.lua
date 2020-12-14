@@ -94,7 +94,7 @@ end
 
 function buf_with_nick(name, fn, mainbuf)
     for i, buf in ipairs(buffers) do
-        if buf.names[e.nick] then
+        if buf.names[nick] then
             if not mainbuf and buf.name == MAINBUF then
             else
                 fn(i, buf)
@@ -233,14 +233,15 @@ local irchand = {
         -- account-notify is enabled, and the server is notifying
         -- us that one user has logged in/out of an account
         local msg
-        if not e.fields[2] then
+        local account = e.fields[2] or e.msg
+        if not account then
             msg = format("%s unidentified", hcol(e.nick))
         else
-            msg = format("%s has identified as %s", hcol(e.nick), e.fields[2])
+            msg = format("%s has identified as %s", hcol(e.nick), account)
         end
 
         buf_with_nick(e.nick, function(_, buf)
-            prin_irc(0, buf, "--", "(Account) %s", msg)
+            prin_irc(0, buf.name, "--", "(Account) %s", msg)
         end)
     end,
     ["AWAY"] = function(e)
@@ -259,7 +260,7 @@ local irchand = {
         end
 
         buf_with_nick(e.nick, function(_, buf)
-            prin_irc(0, buf, "--", "(Away) %s", msg)
+            prin_irc(0, buf.name, "--", "(Away) %s", msg)
         end)
     end,
     ["MODE"] = function(e)
@@ -338,7 +339,7 @@ local irchand = {
         -- display quit message for all buffers that user has joined,
         -- except the main buffer.
         buf_with_nick(e.nick, function(i, buf)
-            prin_irc(0, buf, "<--", "%s has quit (%s)", hcol(e.nick), e.msg)
+            prin_irc(0, buf.name, "<--", "%s has quit (%s)", hcol(e.nick), e.msg)
             buffers[i].names[e.nick] = false
         end)
     end,
