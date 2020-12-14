@@ -191,7 +191,10 @@ function prin_irc(prio, dest, left, right_fmt, ...)
         prin(prio, os.date("%H:%M", time), dest, left, right_fmt, ...)
     end
 
-    writelog(time, dest, left, right_fmt, ...)
+    -- don't log batch messages.
+    if not last_ircevent or (last_ircevent and not last_ircevent.tags.time) then
+        writelog(time, dest, left, right_fmt, ...)
+    end
 end
 
 -- print text in response to a command.
