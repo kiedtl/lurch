@@ -102,11 +102,7 @@ function M.inputbar(bufs, cbuf, nick, inp, cursor)
     inp = inp:gsub(mirc.RESET,     "\x1b3m\x1b2008mO\x1brm\x1brm")
 
     local curs_pos = cursor + #rawprompt
-    if curs_pos > 0 then
-        lurch.tb_showcursor(curs_pos, M.tty_height-1)
-    else
-        lurch.tb_showcursor(curs_pos, M.tty_height-1)
-    end
+    lurch.tb_showcursor(curs_pos, M.tty_height-1)
 
     -- draw the input buffer and move the cursor to the appropriate
     -- position.
