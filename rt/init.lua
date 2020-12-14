@@ -125,7 +125,12 @@ function buf_switch(ch)
 end
 
 -- check if a message will ping a user.
-function msg_pings(msg)
+function msg_pings(sender, msg)
+    -- can't ping yourself.
+    if sender and sender == nick then
+        return false
+    end
+
     local rawmsg = mirc.remove(msg)
     local pingwords = config.pingwords
     pingwords[#pingwords + 1] = nick
@@ -306,7 +311,7 @@ local irchand = {
     end,
     ["NOTICE"] = function(e)
         local prio = 1
-        if msg_pings(e.msg) then prio = 2 end
+        if msg_pings(e.nick, e.msg) then prio = 2 end
 
         local dest = e.dest
         if dest == "*" or not dest then dest = MAINBUF end
@@ -338,7 +343,8 @@ local irchand = {
             e.nick, e.fields[3] or e.msg)
     end,
     ["PRIVMSG"] = function(e)
-        local sender = e.nick or e.from
+        local rsender = e.nick or e.from
+        local sender = rsender
         local priority = 1
 
         -- remove extra characters from nick that won't fit.
@@ -347,11 +353,11 @@ local irchand = {
             sender = sender .. format("\x1brm\x1b2007m+\x1brm")
         end
 
-        if msg_pings(e.msg) then
-            sender = format("<\x1b3m%s\x1brm>", hcol(sender, e.nick))
+        if msg_pings(rsender, e.msg) then
+            sender = format("<\x1b3m%s\x1brm>", hcol(sender, rsender))
             priority = 2
         else
-            sender = format("<%s>", hcol(sender, e.nick))
+            sender = format("<%s>", hcol(sender, rsender))
         end
 
         -- convert or remove mIRC IRC colors.
@@ -617,7 +623,7 @@ local irchand = {
         local sender_fmt = hcol(e.nick or nick)
         local prio = 1
 
-        if msg_pings(e.msg) then
+        if msg_pings(e.nick or nick, e.msg) then
             prio = 2
             sender_fmt = format("\x1b3m%s\x1brm", sender_fmt)
         end
