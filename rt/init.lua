@@ -208,6 +208,24 @@ local function default(e) prin_irc(0, e.dest, "--", "%s", e.msg) end
 
 local irchand = {
     ["PING"] = function(e)   irc.send("PONG :%s", e.dest or e.msg) end,
+    ["ACCOUNT"] = function(e)
+        assert(server.caps["account-notify"])
+
+        -- account-notify is enabled, and the server is notifying
+        -- us that one user has logged in/out of an account
+        local msg
+        if not e.fields[2] then
+            msg = format("%s unidentified", hcol(e.nick))
+        else
+            msg = format("%s has identified as %s", hcol(e.nick), e.fields[2])
+        end
+
+        for _, buf in ipairs(buffers) do
+            if buf.name ~= MAINBUF and buf.names[e.nick] then
+                prin_irc(0, buf.name, "--", "(Account) %s", msg)
+            end
+        end
+    end,
     ["AWAY"] = function(e)
         assert(server.caps["away-notify"])
 
@@ -1044,7 +1062,7 @@ function rt.init()
     -- server-time: enables adding the "time" IRCv3 tag to messages
     -- TODO: echo-message, invite-notify, SASL, account-notify
     --
-    local caps  = { "server-time", "away-notify" }
+    local caps  = { "server-time", "away-notify", "account-notify"}
     local _nick = config.nick or os.getenv("IRCNICK") or os.getenv("USER")
     local user  = config.user or os.getenv("IRCUSER") or os.getenv("USER")
     local name  = config.name or _nick
