@@ -31,7 +31,7 @@ M.show_mirc_colors = true
 
 M.time_col_width = 5
 M.right_col_width = nil -- defaults to $(terminal_width - left_col_width - time_col_width)
-M.left_col_width = 10
+M.left_col_width = 12
 
 -- words that will generate a notification if they appear in a message
 M.pingwords = { "kiedtl" }
