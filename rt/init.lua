@@ -390,7 +390,7 @@ local irchand = {
         -- have that user
         for _, buf in ipairs(buffers) do
             if buf.names[e.nick] or e.nick == nick then
-                prin_irc(0, buf_name, "--@", "%s is now known as %s",
+                prin_irc(0, buf.name, "--@", "%s is now known as %s",
                     hcol(e.nick), hcol(e.msg))
                 buf.names[e.nick] = nil; buf.names[e.msg] = true
             end
