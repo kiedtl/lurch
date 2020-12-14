@@ -52,8 +52,11 @@ function util.exists(file)
     return f ~= nil
 end
 
--- Fold text to width, adding newlines between words. This is basically a /bin/fold
--- implementation in Lua.
+-- Fold text to width, adding newlines between words. This is basically
+-- a /bin/fold implementation in Lua.
+--
+-- FIXME: not all unicode characters are just one display width...
+-- FIXME: this may occasionally split unicode characters
 function util.fold(text, width)
     local _raw_len = function(data)
         data = data:gsub("\x1b.-m", "")
@@ -61,21 +64,27 @@ function util.fold(text, width)
     end
 
     local res = ""
-    for w in string.gmatch(text, "([^ ]+%s?)") do -- iterate over each word
-        -- get the last line of the message.
-        local last_line = util.last_gmatch(res..w.."\n", "(.-)\n")
 
-        -- only append a newline if the line's width is greater than
-        -- zero. This is to prevent situations where a long word (say,
-        -- a URL) is put on its own line with nothing on the line
-        -- above.
-        if _raw_len(last_line or res..w) >= width then
-            if _raw_len(res) > 0 then
-                res = res .. "\n"
-            end
+    -- iterate over each word
+    for w in string.gmatch(text, "([^%s]+%s?)") do
+        -- get the last line of the message.
+        local last_line = util.last_gmatch(res..w, "([^\n]+)\n?")
+        if not last_line then last_line = res..w end
+
+        -- break up long words.
+        w = w:gsub(("."):rep(width - 1), "%1\n", 1)
+
+        -- only append a newline if the word's width is greater
+        -- than zero. This is to prevent situations where a
+        -- long word (say, a URL) is put on its own line with
+        -- nothing on the line above.
+        if _raw_len(last_line) >= width and _raw_len(res) > 0 then
+            res = res .. "\n"
         end
+
         res = res .. w
     end
+
     return res
 end
 
