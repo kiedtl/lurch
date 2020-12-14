@@ -31,6 +31,7 @@ local buffers = {}             -- List of all opened buffers
 local buf_add
 local buf_idx
 local buf_cur
+local buf_idx_or_add
 local buf_addname
 local panic
 local msg_pings
@@ -82,6 +83,12 @@ end
 
 function buf_cur()
     return buffers[cur_buf].name
+end
+
+function buf_idx_or_add(name)
+    local idx = buf_idx(name)
+    if not idx then idx = buf_add(name) end
+    return idx
 end
 
 function buf_addname(bufidx, name)
@@ -164,7 +171,7 @@ function prin(priority, timestr, dest, left, right_fmt, ...)
 
     local bufidx = buf_idx(dest)
     if not bufidx then
-        buf_add(dest); bufidx = buf_idx(dest)
+        bufidx = buf_add(dest)
         redraw_statusbar = true
     end
 
@@ -279,8 +286,7 @@ local irchand = {
     ["PART"] = function(e)
         prin_irc(0, e.dest, "<--", "%s has left %s (%s)",
             hcol(e.nick), e.dest, e.msg)
-        local idx = buf_idx(e.dest)
-        if not idx then idx = buf_add(e.dest) end
+        local idx = buf_idx_or_add(e.dest)
         buffers[idx].names[e.nick] = false
     end,
     ["KICK"] = function(e)
@@ -336,8 +342,7 @@ local irchand = {
         if not e.dest or e.dest == "" then e.dest = e.msg end
 
         -- if the buffer isn't open yet, create it.
-        local bufidx = buf_idx(e.dest)
-        if not bufidx then bufidx = buf_add(e.dest) end
+        local bufidx = buf_idx_or_add(e.dest)
 
         -- add to the list of users in that channel.
         buf_addname(bufidx, e.nick)
@@ -488,8 +493,7 @@ local irchand = {
     -- Reply to /names
     ["353"] = function(e)
         -- if the buffer isn't open yet, create it.
-        local bufidx = buf_idx(e.dest)
-        if not bufidx then bufidx = buf_add(e.dest) end
+        local bufidx = buf_idx_or_add(e.dest)
 
         local nicklist = ""
 
@@ -786,8 +790,7 @@ cmdhand = {
         fn = function(a, _, _)
             irc.send(":%s JOIN %s", nick, a)
 
-            local bufidx = buf_idx(a)
-            if not bufidx then bufidx = buf_add(a) end
+            local bufidx = buf_idx_or_add(a)
 
             -- draw the new buffer
             tui.statusbar(buffers, cur_buf)
