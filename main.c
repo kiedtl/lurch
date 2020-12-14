@@ -21,6 +21,7 @@
 #include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
+#include <wchar.h>
 
 #include "termbox.h"
 
@@ -531,11 +532,17 @@ api_tb_clear(lua_State *pL)
 
 const size_t attribs[] = { TB_BOLD, TB_UNDERLINE, TB_REVERSE };
 static inline void
-reset_attr(uint32_t *old, uint32_t *new)
+set_color(uint32_t *old, uint32_t *new, char **string)
 {
+	char color[3];
+	strncpy((char *) &color, *string, 3);
+	*old = *new, *new = strtol(color, NULL, 10);
+
 	for (size_t i = 0; i < sizeof(attribs); ++i)
 		if ((*old & attribs[i]) == attribs[i])
 			*new |= attribs[i];
+
+	*string += 3;
 }
 
 int
@@ -544,10 +551,13 @@ api_tb_writeline(lua_State *pL)
 	assert(tb_state == TB_ACTIVE);
 	int line = luaL_checkinteger(pL, 1);
 	char *string = (char *) luaL_checkstring(pL, 2);
+
+	int col   = 0;
 	int width = tb_width();
-	int col = 0;
-	struct tb_cell c = { ' ', 15, 0 };
+	struct tb_cell c = { '\0', 0, 0 };
 	uint32_t oldfg, oldbg;
+
+	char color[3];
 
 	do tb_put_cell(col, line, &c); while (++col < width);
 	col = 0;
@@ -563,28 +573,34 @@ api_tb_writeline(lua_State *pL)
 				c.fg |= TB_BOLD;
 				++string;
 			break; case '2':
-				oldfg = c.fg, c.fg = *(++string);
-				reset_attr(&oldfg, &c.fg);
+				++string;
+				set_color(&oldfg, &c.fg, &string);
 			break; case '3':
 				c.fg |= TB_REVERSE;
 				++string;
 			break; case '4':
 				c.fg |= TB_UNDERLINE;
 				++string;
-			break; case '5': /* italic */
-			break; case '6': /* blink */
+			break; case '5':
+			break; case '6':
 			break; case '7':
-				oldbg = c.bg, c.bg = *(++string);
-				reset_attr(&oldbg, &c.bg);
+				++string;
+				set_color(&oldbg, &c.bg, &string);
 			break; default:
 				++string;
 				break;
 			}
+
 			++string;
-		} else {
-			string += utf8_char_to_unicode(&c.ch, string);
+			continue;
+		}
+
+		string += utf8_char_to_unicode(&c.ch, string);
+		int width = wcwidth(c.ch);
+
+		if (width > 0) {
 			tb_put_cell(col, line, &c);
-			++col;
+			col += width;
 		}
 	}
 

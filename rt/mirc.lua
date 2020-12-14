@@ -37,22 +37,22 @@ mirc.WHITE        = 00
 
 -- tty escape sequence equivalents to mIRC colors.
 mirc.tty_eq = {}
-mirc.tty_eq[mirc.BLACK]        = { "\x1b2\x00",  "\x1b7\x00" }
-mirc.tty_eq[mirc.RED]          = { "\x1b2\x01",  "\x1b7\x01" }
-mirc.tty_eq[mirc.GREEN]        = { "\x1b2\x02",  "\x1b7\x02" }
-mirc.tty_eq[mirc.YELLOW]       = { "\x1b2\x03",  "\x1b7\x03" }
-mirc.tty_eq[mirc.BLUE]         = { "\x1b2\x04",  "\x1b7\x04" }
-mirc.tty_eq[mirc.MAGENTA]      = { "\x1b2\x05",  "\x1b7\x05" }
-mirc.tty_eq[mirc.CYAN]         = { "\x1b2\x06",  "\x1b7\x06" }
-mirc.tty_eq[mirc.GREY]         = { "\x1b2\x07",  "\x1b7\x07" }
-mirc.tty_eq[mirc.LIGHTGREY]    = { "\x1b2\x08",  "\x1b7\x08" }
-mirc.tty_eq[mirc.LIGHTRED]     = { "\x1b2\x09",  "\x1b7\x09" }
-mirc.tty_eq[mirc.LIGHTGREEN]   = { "\x1b2\x0a",  "\x1b7\x0a" }
-mirc.tty_eq[mirc.LIGHTYELLOW]  = { "\x1b2\x0b",  "\x1b7\x0b" }
-mirc.tty_eq[mirc.LIGHTBLUE]    = { "\x1b2\x0c",  "\x1b7\x0c" }
-mirc.tty_eq[mirc.LIGHTMAGENTA] = { "\x1b2\x0d",  "\x1b7\x0d" }
-mirc.tty_eq[mirc.LIGHTCYAN]    = { "\x1b2\x0e",  "\x1b7\x0e" }
-mirc.tty_eq[mirc.WHITE]        = { "\x1b2\x0f",  "\x1b7\x0f" }
+mirc.tty_eq[mirc.BLACK]        = { "\x1b2000m",  "\x1b7000m" }
+mirc.tty_eq[mirc.RED]          = { "\x1b2001m",  "\x1b7001m" }
+mirc.tty_eq[mirc.GREEN]        = { "\x1b2002m",  "\x1b7002m" }
+mirc.tty_eq[mirc.YELLOW]       = { "\x1b2003m",  "\x1b7003m" }
+mirc.tty_eq[mirc.BLUE]         = { "\x1b2004m",  "\x1b7004m" }
+mirc.tty_eq[mirc.MAGENTA]      = { "\x1b2005m",  "\x1b7005m" }
+mirc.tty_eq[mirc.CYAN]         = { "\x1b2006m",  "\x1b7006m" }
+mirc.tty_eq[mirc.GREY]         = { "\x1b2007m",  "\x1b7007m" }
+mirc.tty_eq[mirc.LIGHTGREY]    = { "\x1b2008m",  "\x1b7008m" }
+mirc.tty_eq[mirc.LIGHTRED]     = { "\x1b2009m",  "\x1b7009m" }
+mirc.tty_eq[mirc.LIGHTGREEN]   = { "\x1b2010m",  "\x1b7010m" }
+mirc.tty_eq[mirc.LIGHTYELLOW]  = { "\x1b2011m",  "\x1b7011m" }
+mirc.tty_eq[mirc.LIGHTBLUE]    = { "\x1b2012m",  "\x1b7012m" }
+mirc.tty_eq[mirc.LIGHTMAGENTA] = { "\x1b2013m",  "\x1b7013m" }
+mirc.tty_eq[mirc.LIGHTCYAN]    = { "\x1b2014m",  "\x1b7014m" }
+mirc.tty_eq[mirc.WHITE]        = { "\x1b2015m",  "\x1b7015m" }
 
 function mirc.remove(text)
     text = text:gsub("[\x02\x1f\x1d\x16\x06\x0f]", "")

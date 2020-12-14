@@ -47,7 +47,7 @@ function M.highlight(text, text_as, no_bold)
 
     -- if no color could be found, just use the default of black
     if color then
-        esc = esc .. format("\x1b2%s", string.char(color))
+        esc = esc .. format("\x1b2%03dm", color)
     end
 
     return format("%s%s\x1brm", esc, text)
@@ -75,10 +75,9 @@ function M.inputbar(bufs, cbuf, nick, inp, cursor)
         cursor = cursor - 4
     elseif inp:sub(1, 1) == "/" then
         if inp:sub(2, 2) == "/" then
-            prompt = format("<%s> \x1b2%s/\x1brm",
-                M.highlight(nick), string.char(8))
+            prompt = format("<%s> \x1b2008m/\x1brm", M.highlight(nick))
         else
-            prompt = format("\x1b2%s/\x1brm", string.char(8))
+            prompt = format("\x1b2008m/\x1brm")
         end
         inp = inp:sub(2, #inp)
         cursor = cursor - 1
@@ -88,7 +87,7 @@ function M.inputbar(bufs, cbuf, nick, inp, cursor)
 
     -- strip escape sequences so that we may accurately calculate
     -- the prompt's length.
-    local rawprompt = prompt:gsub("\x1b..", "")
+    local rawprompt = prompt:gsub("\x1b.-m", "")
 
     -- strip off stuff from input that can't be shown on the
     -- screen
@@ -96,11 +95,11 @@ function M.inputbar(bufs, cbuf, nick, inp, cursor)
 
     -- show IRC formatting escape sequences nicely.
     -- TODO: lurch esc module
-    inp = inp:gsub(mirc.BOLD,      "\x1b3m\x1b2\8B\x1brm\x1b1m")
-    inp = inp:gsub(mirc.UNDERLINE, "\x1b3m\x1b2\8U\x1brm\x1b4m")
-    inp = inp:gsub(mirc.ITALIC,    "\x1b3m\x1b2\8I\x1brm\x1b5m")
-    inp = inp:gsub(mirc.INVERT,    "\x1b3m\x1b2\8R\x1brm\x1b3m")
-    inp = inp:gsub(mirc.RESET,     "\x1b3m\x1b2\8O\x1brm\x1brm")
+    inp = inp:gsub(mirc.BOLD,      "\x1b3m\x1b2008mB\x1brm\x1b1m")
+    inp = inp:gsub(mirc.UNDERLINE, "\x1b3m\x1b2008mU\x1brm\x1b4m")
+    inp = inp:gsub(mirc.ITALIC,    "\x1b3m\x1b2008mI\x1brm\x1b5m")
+    inp = inp:gsub(mirc.INVERT,    "\x1b3m\x1b2008mR\x1brm\x1b3m")
+    inp = inp:gsub(mirc.RESET,     "\x1b3m\x1b2008mO\x1brm\x1brm")
 
     local curs_pos = cursor + #rawprompt
     if curs_pos > 0 then
@@ -217,7 +216,7 @@ function M.format_line(timestr, left, right_fmt, ...)
     -- Strip escape sequences from the left column so that
     -- we can calculate how much padding to add for alignment, and
     -- not get confused by the invisible escape sequences.
-    local raw = left:gsub("\x1b..", "")
+    local raw = left:gsub("\x1b.-m", "")
 
     -- Generate a cursor right sequence based on the length of
     -- the above "raw" word. The nick column is a fixed width
@@ -227,7 +226,7 @@ function M.format_line(timestr, left, right_fmt, ...)
     if #raw > config.left_col_width then left_pad = 0 end
     if #timestr > config.time_col_width then time_pad = 0 end
 
-    return format("\x1b2%s%s\x1brm%s %s%s %s", string.char(8), timestr,
+    return format("\x1b2008m%s\x1brm%s %s%s %s", timestr,
         (" "):rep(time_pad), (" "):rep(left_pad), left, right)
 end
 

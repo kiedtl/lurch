@@ -316,7 +316,7 @@ local irchand = {
         -- remove extra characters from nick that won't fit.
         if #sender > (config.left_col_width-2) then
             sender = (sender):sub(1, config.left_col_width-3)
-            sender = sender .. format("\x1brm\x1b2%s+\x1brm", string.char(7))
+            sender = sender .. format("\x1brm\x1b2007m+\x1brm")
         end
 
         if msg_pings(e.msg) then

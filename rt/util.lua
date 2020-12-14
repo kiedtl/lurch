@@ -56,7 +56,7 @@ end
 -- implementation in Lua.
 function util.fold(text, width)
     local _raw_len = function(data)
-        data = data:gsub("\x1b..", "")
+        data = data:gsub("\x1b.-m", "")
         return #data
     end
 
