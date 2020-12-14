@@ -32,6 +32,7 @@ local buf_add
 local buf_idx
 local buf_cur
 local buf_idx_or_add
+local buf_with_nick
 local buf_addname
 local panic
 local msg_pings
@@ -89,6 +90,17 @@ function buf_idx_or_add(name)
     local idx = buf_idx(name)
     if not idx then idx = buf_add(name) end
     return idx
+end
+
+function buf_with_nick(name, fn, mainbuf)
+    for i, buf in ipairs(buffers) do
+        if buf.names[e.nick] then
+            if not mainbuf and buf.name == MAINBUF then
+            else
+                fn(i, buf)
+            end
+        end
+    end
 end
 
 function buf_addname(bufidx, name)
@@ -227,11 +239,9 @@ local irchand = {
             msg = format("%s has identified as %s", hcol(e.nick), e.fields[2])
         end
 
-        for _, buf in ipairs(buffers) do
-            if buf.name ~= MAINBUF and buf.names[e.nick] then
-                prin_irc(0, buf.name, "--", "(Account) %s", msg)
-            end
-        end
+        buf_with_nick(e.nick, function(_, buf)
+            prin_irc(0, buf, "--", "(Account) %s", msg)
+        end)
     end,
     ["AWAY"] = function(e)
         assert(server.caps["away-notify"])
@@ -248,11 +258,9 @@ local irchand = {
             msg = format("%s is away: %s", hcol(e.nick), e.msg)
         end
 
-        for _, buf in ipairs(buffers) do
-            if buf.name ~= MAINBUF and buf.names[e.nick] then
-                prin_irc(0, buf.name, "--", "(Away) %s", msg)
-            end
-        end
+        buf_with_nick(e.nick, function(_, buf)
+            prin_irc(0, buf, "--", "(Away) %s", msg)
+        end)
     end,
     ["MODE"] = function(e)
         if (e.dest):find("#") then
@@ -329,13 +337,10 @@ local irchand = {
     ["QUIT"] = function(e)
         -- display quit message for all buffers that user has joined,
         -- except the main buffer.
-        for _, buf in ipairs(buffers) do
-            local ch = buf.name
-            if ch ~= MAINBUF and buf.names[e.nick] then
-                prin_irc(0, ch, "<--", "%s has quit (%s)", hcol(e.nick), e.msg)
-                buf.names[e.nick] = false
-            end
-        end
+        buf_with_nick(e.nick, function(i, buf)
+            prin_irc(0, buf, "<--", "%s has quit (%s)", hcol(e.nick), e.msg)
+            buffers[i].names[e.nick] = false
+        end)
     end,
     ["JOIN"] = function(e)
         -- sometimes the channel joined is contained in the message.
