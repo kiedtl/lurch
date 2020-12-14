@@ -140,9 +140,10 @@ end
 
 -- print a response to an irc message.
 local last_ircevent = nil
-function prin_irc(priority, dest, left, right_fmt, ...)
+function prin_irc(prio, dest, left, right_fmt, ...)
     -- get the offset defined in the configuration and parse it.
     local offset = assert(util.parse_offset(config.timezone))
+    local time
 
     -- if server-time is available, use that time instead of the
     -- local time.
@@ -152,12 +153,12 @@ function prin_irc(priority, dest, left, right_fmt, ...)
         -- convert it to the timezone the user wants.
         local srvtime = last_ircevent.tags.time
         local utc_time   = util.time_from_iso8601(srvtime)
-        local local_time = utc_time + (offset * 60 * 60)
+        time = utc_time + (offset * 60 * 60)
 
-        prin(priority, os.date("%H:%M", local_time), dest, left, right_fmt, ...)
+        prin(prio, os.date("%H:%M", time), dest, left, right_fmt, ...)
     else
-        local now = util.time_with_offset(offset)
-        prin(priority, os.date("%H:%M", now), dest, left, right_fmt, ...)
+        time = util.time_with_offset(offset)
+        prin(prio, os.date("%H:%M", time), dest, left, right_fmt, ...)
     end
 end
 
@@ -364,7 +365,7 @@ local irchand = {
         -- have that user
         for _, buf in ipairs(buffers) do
             if buf.names[e.nick] or e.nick == nick then
-                prin_irc(0, buf.name, "--@", "%s is now known as %s",
+                prin_irc(0, buf_name, "--@", "%s is now known as %s",
                     hcol(e.nick), hcol(e.msg))
                 buf.names[e.nick] = nil; buf.names[e.msg] = true
             end
