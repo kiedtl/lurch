@@ -355,14 +355,11 @@ local irchand = {
             if buf.names[e.nick] or e.nick == nick then
                 prin_irc(0, buf.name, "--@", "%s is now known as %s",
                     hcol(e.nick), hcol(e.msg))
+                buf.names[e.nick] = nil; buf.names[e.msg] = true
             end
         end
         tui.set_colors[e.msg]  = tui.set_colors[e.nick]
         tui.set_colors[e.nick] = nil
-        for _, buf in ipairs(buffers) do
-            if not buf.names[e.nick] then return end
-            buf.names[e.nick] = nil; buf.names[e.msg]  = true
-        end
 
         -- if the user changed the nickname, update the current nick.
         if e.nick == nick then nick = e.msg end
