@@ -17,6 +17,7 @@
 #include <sys/ioctl.h>
 #include <sys/select.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <time.h>
@@ -82,6 +83,7 @@ int api_tb_clear(lua_State *pL);
 int api_tb_writeline(lua_State *pL);
 int api_tb_hidecursor(lua_State *pL);
 int api_tb_showcursor(lua_State *pL);
+int api_mkdir_p(lua_State *pL);
 
 int
 main(int argc, char **argv)
@@ -165,6 +167,7 @@ main(int argc, char **argv)
 		{ "tb_writeline",  api_tb_writeline   },
 		{ "tb_hidecursor", api_tb_hidecursor  },
 		{ "tb_showcursor", api_tb_showcursor  },
+		{ "mkdirp",        api_mkdir_p        },
 		{ NULL, NULL },
 	};
 
@@ -545,6 +548,13 @@ set_color(uint32_t *old, uint32_t *new, char **string)
 	*string += 3;
 }
 
+/* last colors used.  This is used to cache and re-apply
+ * attributes (e.g. bold) when changing colors,  as well
+ * as to store the last colors used,  so that attributes
+ * or colors that weren't reset when the line ended will
+ * will carry over to the next lines as expected. */
+static uint32_t oldfg = 0, oldbg = 0;
+
 int
 api_tb_writeline(lua_State *pL)
 {
@@ -555,12 +565,14 @@ api_tb_writeline(lua_State *pL)
 	int col   = 0;
 	int width = tb_width();
 	struct tb_cell c = { '\0', 0, 0 };
-	uint32_t oldfg, oldbg;
 
 	char color[3];
 
 	do tb_put_cell(col, line, &c); while (++col < width);
 	col = 0;
+
+	/* restore colors of previous line. */
+	c.fg = oldfg, c.bg = oldbg;
 
 	/* TODO: unicode support */
 	while (*string) {
@@ -604,6 +616,8 @@ api_tb_writeline(lua_State *pL)
 		}
 	}
 
+	oldfg = c.fg, oldbg = c.bg;
+
 	return 0;
 }
 
@@ -623,4 +637,52 @@ api_tb_showcursor(lua_State *pL)
 	int y = luaL_checkinteger(pL, 2);
 	tb_set_cursor(x, y);
 	return 0;
+}
+
+/* impl of mkdir -p */
+int
+api_mkdir_p(lua_State *pL)
+{
+	char *path   = (char *) luaL_checkstring(pL, 1);
+
+	mode_t mask  = umask(0);
+	mode_t pmode = 0777 & (~mask | 0300);
+	mode_t mode  = 0777 & ~mask;
+
+	char tmp[4096], *p;
+	struct stat st;
+	size_t created = 0;
+
+	if (stat(path, &st) == 0) {
+		if (S_ISDIR(st.st_mode))
+			return 0; /* path exists */
+		lua_pushnil(pL);
+		lua_pushstring(pL, "Path exists and is not directory");
+		return 2;
+	}
+
+	strncpy((char *) &tmp, path, sizeof(tmp));
+	for (p = tmp + (tmp[0] == '/'); *p; ++p) {
+		if (*p != '/')
+			continue;
+
+		*p = '\0';
+		if (mkdir(tmp, pmode) < 0 && errno != EEXIST) {
+			lua_pushnil(pL);
+			lua_pushstring(pL, strerror(errno));
+			return 2;
+		}
+
+		*p = '/';
+		++created;
+	}
+
+	if (mkdir(tmp, mode) < 0 && errno != EEXIST) {
+		lua_pushnil(pL);
+		lua_pushstring(pL, strerror(errno));
+		return 2;
+	}
+
+	lua_pushinteger(pL, (lua_Integer) ++created);
+	return 1;
 }

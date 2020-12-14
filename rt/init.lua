@@ -36,6 +36,7 @@ local buf_with_nick
 local buf_addname
 local panic
 local msg_pings
+local writelog
 local buf_switch
 local prin_irc
 local prin_cmd
@@ -138,6 +139,28 @@ function msg_pings(msg)
     return false
 end
 
+function writelog(time, dest, left, right_fmt, ...)
+    local logdir  = format("%s/logs/%s", __LURCH_EXEDIR, dest)
+    local logfile = format("%s/%s.txt", logdir, os.date("%Y-%m-%d", time))
+
+    lurch.mkdirp(logdir)
+
+    local logentry = format("%s\t%s\t\t%s\n",
+        os.date("%Y-%m-%dT%H:%M:%SZ", time), left, right_fmt:format(...))
+
+    -- convert lurch escape sequences
+    logentry = logentry:gsub("\x1brm", "\x1b[0m")
+    logentry = logentry:gsub("\x1b1m", "\x1b[1m")
+    logentry = logentry:gsub("\x1b2(...)m", "\x1b[38;5;%1m")
+    logentry = logentry:gsub("\x1b3m", "\x1b[7m")
+    logentry = logentry:gsub("\x1b4m", "\x1b[4m")
+    logentry = logentry:gsub("\x1b5m", "\x1b[3m")
+    logentry = logentry:gsub("\x1b6m", "\x1b[5m")
+    logentry = logentry:gsub("\x1b7(...)m", "\x1b[48;5;%1m")
+
+    util.append(logfile, logentry)
+end
+
 -- print a response to an irc message.
 local last_ircevent = nil
 function prin_irc(prio, dest, left, right_fmt, ...)
@@ -160,6 +183,8 @@ function prin_irc(prio, dest, left, right_fmt, ...)
         time = util.time_with_offset(offset)
         prin(prio, os.date("%H:%M", time), dest, left, right_fmt, ...)
     end
+
+    writelog(time, dest, left, right_fmt, ...)
 end
 
 -- print text in response to a command.
