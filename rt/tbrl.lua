@@ -10,24 +10,45 @@ M.cursor = 0
 
 M.enter_callback = nil
 
+local _ulen = function(s)
+    assert(s)
+
+    return utf8.len(s) or #s
+end
+local _usub = function(s, i, j)
+    assert(s)
+    assert(i)
+    assert(j)
+
+    i = utf8.offset(s, i)
+    j = utf8.offset(s, j + 1) - 1
+    return string.sub(s, i, j)
+end
+
 function M.insert_at_curs(text)
     if not text then return end
-    M.bufin[M.hist] = (M.bufin[M.hist]):gsub(("."):rep(M.cursor), "%1"..text, 1)
+    --M.bufin[M.hist] = (M.bufin[M.hist]):gsub(("."):rep(M.cursor), "%1"..text, 1)
+    M.bufin[M.hist] = lurch.utf8_insert(M.bufin[M.hist], M.cursor, text)
     M.cursor = M.cursor + 1
 end
 
 local function _backspace()
     if M.cursor == 0 then return end
-    M.bufin[M.hist] = (M.bufin[M.hist]):sub(1, M.cursor-1) ..
-        (M.bufin[M.hist]):sub(M.cursor+1, #M.bufin[M.hist])
+    M.bufin[M.hist] = _usub(M.bufin[M.hist], 1, M.cursor-1) ..
+        _usub(M.bufin[M.hist], M.cursor+1, _ulen(M.bufin[M.hist]))
     M.cursor = M.cursor - 1
 end
-local function _home() M.cursor = 0              end
-local function _end()  M.cursor = #M.bufin[M.hist] end
-local function _right() if M.cursor < #M.bufin[M.hist] then M.cursor = M.cursor + 1 end end
-local function _left()  if M.cursor > 0                then M.cursor = M.cursor - 1 end end
-local function _up()    if M.hist > 1        then M.hist = M.hist - 1; M.cursor = 0 end end
-local function _down()  if M.hist < #M.bufin then M.hist = M.hist + 1; M.cursor = 0 end end
+
+local function _home() M.cursor = 0 end
+local function _end() M.cursor = _ulen(M.bufin[M.hist]) end
+local function _right()
+    if M.cursor < _ulen(M.bufin[M.hist]) then M.cursor = M.cursor + 1 end
+end
+local function _left() if M.cursor > 0 then M.cursor = M.cursor - 1 end end
+local function _up() if M.hist > 1 then M.hist = M.hist - 1; M.cursor = 0 end end
+local function _down()
+    if M.hist < #M.bufin then M.hist = M.hist + 1; M.cursor = 0 end
+end
 
 -- TODO: Ctrl-_ undo
 -- TODO: Ctrl-d delete at right of cursor
@@ -41,8 +62,8 @@ M.bindings = {
 
     -- delete
     [tb.TB_KEY_DELETE] = function(_)
-        M.bufin[M.hist] = M.bufin[M.hist]:sub(1, M.cursor) ..
-            M.bufin[M.hist]:sub(M.cursor+2, #M.bufin[M.hist])
+        M.bufin[M.hist] = _usub(M.bufin[M.hist], 1, M.cursor) ..
+            _usub(M.bufin[M.hist], M.cursor+2, _ulen(M.bufin[M.hist]))
     end,
 
     -- cursor movement, history movement
@@ -55,15 +76,15 @@ M.bindings = {
 
     -- delete from cursor until end of line
     [tb.TB_KEY_CTRL_K] = function(_)
-        M.bufin[M.hist] = (M.bufin[M.hist]):sub(1, M.cursor)
+        M.bufin[M.hist] = _usub(M.bufin[M.hist], 1, M.cursor)
     end,
 
     -- delete word to the left of cursor.
     [tb.TB_KEY_CTRL_W] = function(_)
         -- if the cursor is on a space, move left until we
         -- encounter a non-whitespace character.
-        if M.bufin[M.hist]:sub(M.cursor, M.cursor) == " " then
-            while M.bufin[M.hist]:sub(M.cursor, M.cursor) == " " do
+        if _usub(M.bufin[M.hist], M.cursor, M.cursor) == " " then
+            while _usub(M.bufin[M.hist], M.cursor, M.cursor) == " " do
                 if M.cursor <= 0 then break end
                 M.cursor = M.cursor - 1
             end
@@ -71,13 +92,13 @@ M.bindings = {
 
         -- now that we're on a solid character, move left until
         -- we encounter another space.
-        while M.bufin[M.hist]:sub(M.cursor, M.cursor) ~= " " do
+        while _usub(M.bufin[M.hist], M.cursor, M.cursor) ~= " " do
             if M.cursor <= 0 then break end
             M.cursor = M.cursor - 1
         end
 
         -- delete whatever is after our cursor.
-        M.bufin[M.hist] = M.bufin[M.hist]:sub(1, M.cursor)
+        M.bufin[M.hist] = _usub(M.bufin[M.hist], 1, M.cursor)
     end,
 
     -- space, enter

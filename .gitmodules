@@ -1,3 +1,0 @@
-[submodule "tb"]
-	path = tb
-	url = https://github.com/nullgemm/termbox_next

@@ -84,6 +84,7 @@ int api_tb_writeline(lua_State *pL);
 int api_tb_hidecursor(lua_State *pL);
 int api_tb_showcursor(lua_State *pL);
 int api_mkdir_p(lua_State *pL);
+int api_utf8_insert(lua_State *pL);
 
 int
 main(int argc, char **argv)
@@ -168,6 +169,7 @@ main(int argc, char **argv)
 		{ "tb_hidecursor", api_tb_hidecursor  },
 		{ "tb_showcursor", api_tb_showcursor  },
 		{ "mkdirp",        api_mkdir_p        },
+		{ "utf8_insert",   api_utf8_insert    },
 		{ NULL, NULL },
 	};
 
@@ -608,11 +610,18 @@ api_tb_writeline(lua_State *pL)
 		}
 
 		string += utf8_char_to_unicode(&c.ch, string);
-		int width = wcwidth(c.ch);
+
+		wchar_t chbuf[1];
+		swprintf((wchar_t *) &chbuf, sizeof(chbuf), L"%d", c.ch);
+		int width = wcwidth(chbuf[0]);
 
 		if (width > 0) {
 			tb_put_cell(col, line, &c);
 			col += width;
+		} else if (width < 0) {
+			c.ch = '?';
+			tb_put_cell(col, line, &c);
+			++col;
 		}
 	}
 
@@ -684,5 +693,27 @@ api_mkdir_p(lua_State *pL)
 	}
 
 	lua_pushinteger(pL, (lua_Integer) ++created);
+	return 1;
+}
+
+/* insert some text after <x> utf8 characters */
+int
+api_utf8_insert(lua_State *pL)
+{
+	char *str = (char *) luaL_checkstring(pL, 1);
+	int   loc = luaL_checkinteger(pL, 2);
+	char *txt = (char *) luaL_checkstring(pL, 3);
+
+	size_t i = 0, len = strlen(str) + strlen(txt);
+	char buf[len + 1];
+	memset((void *) buf, 0x0, len);
+
+	for (i = 0; i < loc; i += utf8_char_length(str[i]));
+
+	strncpy((char *) buf, str, i);
+	strcat((char *)  buf, txt);
+	strncat((char *) buf, str + i, strlen(str) - i);
+
+	lua_pushstring(pL, (char *) buf);
 	return 1;
 }
