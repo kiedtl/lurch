@@ -539,6 +539,15 @@ api_tb_clear(lua_State *pL)
 }
 
 
+static inline void
+toggle_attr(uint32_t *color, uint32_t attr)
+{
+	if ((*color & attr) == attr)
+		*color &= 0xFF;
+	else
+		*color |= attr;
+}
+
 const size_t attribs[] = { TB_BOLD, TB_UNDERLINE, TB_REVERSE };
 static inline void
 set_color(uint32_t *old, uint32_t *new, char *color)
@@ -593,13 +602,13 @@ api_tb_writeline(lua_State *pL)
 			c.fg = 15, c.bg = 0;
 		break; case MIRC_BOLD:
 			++string;
-			c.fg |= TB_BOLD;
+			toggle_attr(&c.fg, TB_BOLD);
 		break; case MIRC_UNDERLINE:
 			++string;
-			c.fg |= TB_UNDERLINE;
+			toggle_attr(&c.fg, TB_UNDERLINE);
 		break; case MIRC_INVERT:
 			++string;
-			c.fg |= TB_REVERSE;
+			toggle_attr(&c.fg, TB_REVERSE);
 		break; case MIRC_ITALIC:
 		break; case MIRC_BLINK:
 			++string;
