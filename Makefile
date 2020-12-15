@@ -47,5 +47,5 @@ tool/gendwidth: $(UTF8PROC)
 
 .PHONY: clean
 clean:
-	rm -f $(NAME) $(OBJ) $(TERMBOX)
+	rm -f $(NAME) $(OBJ) $(TERMBOX) tool/gendwidth tool/dwidth.c
 

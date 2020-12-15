@@ -9,6 +9,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 #include "dwidth.h"
 #include "luaa.h"
@@ -32,8 +33,7 @@ const struct luaL_Reg lurch_lib[] = {
 	{ "tb_size",       api_tb_size        },
 	{ "tb_clear",      api_tb_clear       },
 	{ "tb_writeline",  api_tb_writeline   },
-	{ "tb_hidecursor", api_tb_hidecursor  },
-	{ "tb_showcursor", api_tb_showcursor  },
+	{ "tb_setcursor",  api_tb_setcursor   },
 	{ "mkdirp",        api_mkdir_p        },
 	{ "utf8_insert",   api_utf8_insert    },
 	{ NULL, NULL },
@@ -96,7 +96,7 @@ api_conn_send(lua_State *pL)
 
 	if (sent == -1) {
 		LLUA_ERR(pL, format("cannot send: %s", strerror(errno)));
-	} else if (sent < (strlen(data) + 2)) {
+	} else if ((size_t) sent < (strlen(data) + 2)) {
 		LLUA_ERR(pL, format("sent != len(data): %s", strerror(errno)));
 	}
 
@@ -258,15 +258,7 @@ api_tb_writeline(lua_State *pL)
 }
 
 int
-api_tb_hidecursor(lua_State *pL)
-{
-	assert(tb_state == TB_ACTIVE);
-	tb_set_cursor(TB_HIDE_CURSOR, TB_HIDE_CURSOR);
-	return 0;
-}
-
-int
-api_tb_showcursor(lua_State *pL)
+api_tb_setcursor(lua_State *pL)
 {
 	assert(tb_state == TB_ACTIVE);
 	int x = luaL_checkinteger(pL, 1);
@@ -322,7 +314,7 @@ int
 api_utf8_insert(lua_State *pL)
 {
 	char *str = (char *) luaL_checkstring(pL, 1);
-	int   loc = luaL_checkinteger(pL, 2);
+	size_t loc = (size_t) luaL_checkinteger(pL, 2);
 	char *txt = (char *) luaL_checkstring(pL, 3);
 
 	size_t i = 0, len = strlen(str) + strlen(txt);

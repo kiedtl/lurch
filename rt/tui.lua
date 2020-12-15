@@ -56,7 +56,7 @@ function M.inputbar(bufs, cbuf, nick, inp, cursor)
     -- if we've scrolled up, don't draw the input.
     if bufs[cbuf].scroll ~= #bufs[cbuf].history then
         lurch.tb_writeline(M.tty_height, "-- more --")
-        lurch.tb_hidecursor()
+        lurch.tb_setcursor(tb.TB_HIDE_CURSOR, tb.TB_HIDE_CURSOR)
         return
     end
 
@@ -102,7 +102,7 @@ function M.inputbar(bufs, cbuf, nick, inp, cursor)
 
     -- utf8.offset returns 1 even if cursor is 0.
     local pos = cursor + #rawprompt
-    lurch.tb_showcursor(pos, M.tty_height-1)
+    lurch.tb_setcursor(pos, M.tty_height-1)
 
     -- draw the input buffer and move the cursor to the appropriate
     -- position.
