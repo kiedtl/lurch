@@ -288,6 +288,7 @@ local irchand = {
         end)
     end,
     ["MODE"] = function(e)
+        if not e.dest then e.dest = e.msg end
         if (e.dest):find("#") then
             local mode = e.fields[3] or ""
             for i = 4, #e.fields do
@@ -509,7 +510,7 @@ local irchand = {
         if n then
             prin_irc(0, e.dest, "--", "Topic last set by %s (%s)", hcol(n), e.fields[4])
         else
-            local datetime = os.date("%Y-%m-%d %H:%M:%S", e.msg)
+            local datetime = os.date("%Y-%m-%d %H:%M:%S", tonumber(e.msg))
             prin_irc(0, e.dest, "--", "Topic last set by %s on %s", hcol(e.fields[4]), datetime)
         end
     end,
