@@ -46,7 +46,7 @@ function M.highlight(text, text_as, no_bold)
     if no_bold then esc = "" end
 
     if color then
-        esc = esc .. format("\x04%03d", color)
+        esc = esc .. format("\x04%003d", color)
     end
 
     return format("%s%s\x0f", esc, text)
@@ -76,7 +76,7 @@ function M.inputbar(bufs, cbuf, nick, inp, cursor)
         if inp:sub(2, 2) == "/" then
             prompt = format("<%s> \x0314/\x0f", M.highlight(nick))
         else
-            prompt = format("\x0314m/\x0f")
+            prompt = format("\x0314/\x0f")
         end
         inp = inp:sub(2, #inp)
         cursor = cursor - 1
@@ -222,7 +222,7 @@ function M.format_line(timestr, left, right_fmt, ...)
     if #raw > config.left_col_width then left_pad = 0 end
     if #timestr > config.time_col_width then time_pad = 0 end
 
-    return format("\x0f\x0314,01%s\x0f%s %s%s %s", timestr,
+    return format("\x0f\x0314%s\x0f%s %s%s %s", timestr,
         (" "):rep(time_pad), (" "):rep(left_pad), left, right)
 end
 
