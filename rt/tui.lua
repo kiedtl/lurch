@@ -164,7 +164,7 @@ function M.statusbar(bufs, cbuf)
 
     -- set the terminal title. This is a big help when using terminal
     -- tabs to mimic a multi-server feature.
-    util.settitle("[%s] %s", config.server, bufs[cbuf].name)
+    util.settitle("[%s] %s", config.host, bufs[cbuf].name)
 end
 
 function M.buffer_text(bufs, cbuf)

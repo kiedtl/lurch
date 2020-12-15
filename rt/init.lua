@@ -160,7 +160,7 @@ end
 local last_ircevent = nil
 function prin_irc(prio, dest, left, right_fmt, ...)
     -- get the offset defined in the configuration and parse it.
-    local offset = assert(util.parse_offset(config.timezone))
+    local offset = assert(util.parse_offset(config.tz))
     local time
 
     -- if server-time is available, use that time instead of the
@@ -191,7 +191,7 @@ function prin_cmd(dest, left, right_fmt, ...)
     if left == L_ERR then priority = 2 end
 
     -- get the offset defined in the configuration and parse it.
-    local offset = assert(util.parse_offset(config.timezone))
+    local offset = assert(util.parse_offset(config.tz))
 
     local now = util.time_with_offset(offset)
     prin(priority, os.date("%H:%M", now), dest, left, right_fmt, ...)
@@ -352,7 +352,7 @@ local irchand = {
         end
 
         -- convert or remove mIRC IRC colors.
-        if not config.show_mirc_colors then
+        if not config.mirc then
             e.msg = mirc.remove(e.msg)
         end
 
@@ -555,8 +555,8 @@ local irchand = {
 
     -- End of MOTD
     ["376"] = function(_, _, _, _)
-        for c = 1, #config.channels do
-            irc.send(":%s JOIN %s", nick, config.channels[c])
+        for c = 1, #config.join do
+            irc.send(":%s JOIN %s", nick, config.join[c])
         end
     end,
 
@@ -617,7 +617,7 @@ local irchand = {
             sender_fmt = format("\x16%s\x0f", sender_fmt)
         end
 
-        if not config.show_mirc_colors then
+        if not config.mirc then
             e.msg = mirc.remove(e.msg)
         end
 
@@ -1082,21 +1082,43 @@ function rt.on_keyseq(key)
     end
 end
 
-function rt.init()
+function rt.init(args)
     tui.refresh()
+
+    --
+    -- for each option, if it begins with a "-", toggle
+    -- the corresponding configuration value if it has no
+    -- argument. If it does have an argument, set the
+    -- configuration value to the argument.
+    --
+    -- For example: the following argument string:
+    --    ./lurch -host irc.snoonet.org -port 6666 -mirc
+    -- Will set config.host to irc.snoonet.org, config.port
+    -- to 6666, and will toggle config.mirc.
+    --
+    local lastarg
+    for i, arg in ipairs(args) do
+        if arg:sub(1, 1) == "-" then
+            arg = arg:sub(2, #arg)
+            config[arg] = not config[arg]
+        elseif lastarg then
+            config[lastarg] = arg
+        end
+        lastarg = arg
+    end
 
     -- List of IRCv3 capabilities to send.
     --
     -- server-time: enables adding the "time" IRCv3 tag to messages
-    -- TODO: echo-message, invite-notify, SASL, account-notify
+    -- TODO: echo-message, SASL
     --
     local caps  = { "server-time", "away-notify", "account-notify"}
     local _nick = config.nick or os.getenv("IRCNICK") or os.getenv("USER")
     local user  = config.user or os.getenv("IRCUSER") or os.getenv("USER")
     local name  = config.name or _nick
 
-    local r, e = irc.connect(config.server, config.port,
-        _nick, user, name, config.server_password, caps)
+    local r, e = irc.connect(config.host, config.port, _nick, user, name,
+        config.pass, caps)
     if not r then panic("error: %s\n", e) end
 
     tui.load_highlight_colors()

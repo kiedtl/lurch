@@ -1,12 +1,12 @@
 local M = {}
 
-M.server = "localhost"
+M.host = "localhost"
 M.port = 6667
 
 M.nick = "inebriate|lurch"
 
 -- server password. This is distinct from SASL or Nickserv IDENTIFY.
-M.server_password = nil
+M.pass = nil
 
 -- If this is nil, it defaults to M.nick
 M.user = nil
@@ -15,7 +15,7 @@ M.user = nil
 M.name = "o hai"
 
 -- channels to join by on startup.
-M.channels = { "#chaos" }
+M.join = { "#chaos" }
 
 -- default quit/part message. default to ""
 M.quit_msg = "*thud*"
@@ -27,7 +27,7 @@ M.ctcp_source  = "https://github.com/lptstr/lurch"
 M.ctcp_ping    = true
 
 -- if set to false, will simply filter out mirc colors.
-M.show_mirc_colors = true
+M.mirc = true
 
 M.time_col_width = 5
 M.right_col_width = nil -- defaults to $(terminal_width - left_col_width - time_col_width)
@@ -40,7 +40,7 @@ M.pingwords = { "kiedtl" }
 M.commands = { }
 
 -- what timezone to display times in. (format: "UTC[+-]<offset>")
-M.timezone = "UTC-3:00"
+M.tz = "UTC-3:00"
 
 -- Attempt to prevent the ident from being received.
 -- This is done by delaying the registration of the user after connecting to the

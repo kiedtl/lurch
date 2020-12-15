@@ -58,7 +58,7 @@ void signal_lhand(int sig);
 void signal_fatal(int sig);
 
 int
-main(void)
+main(int argc, char **argv)
 {
 	/* register signal handlers */
 	/* signals to whine and die on: */
@@ -138,7 +138,14 @@ main(void)
 	lua_setglobal(L, "rt");
 
 	/* run init function */
-	llua_call(L, "init", 0, 0);
+	lua_settop(L, 0);
+	lua_newtable(L);
+	for (size_t i = 1; i < (size_t) argc; ++i) {
+		lua_pushinteger(L, i);
+		lua_pushstring(L, argv[i]);
+		lua_settable(L, -3);
+	}
+	llua_call(L, "init", 1, 0);
 
 	/*
 	 * no buffering for server,stdin,stdout. buffering causes
