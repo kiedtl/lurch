@@ -8,7 +8,7 @@ main(void)
 {
 	size_t cols = 0;
 
-	printf("unsigned int dwidth[] = {\n\t");
+	printf("static const size_t dwidth[] = {\n\t");
 	for (size_t i = 0; i < UTF8_MAX; ++i) {
 		int w = utf8proc_charwidth((utf8proc_int32_t) i);
 		cols += printf("%i, ", w);

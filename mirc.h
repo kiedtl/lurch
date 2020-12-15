@@ -37,7 +37,7 @@
 #define MIRC_LIGHTCYAN     11
 #define MIRC_WHITE          0
 
-uint32_t mirc_colors[16] = {
+const static uint32_t mirc_colors[16] = {
 	[MIRC_BLACK]        =  0,
 	[MIRC_RED]          =  1,
 	[MIRC_GREEN]        =  2,
