@@ -72,6 +72,13 @@ char *format(const char *format, ...);
 		lua_settable(L, TABLE); \
 	} while (0);
 
+#define LLUA_ERR(LUA, ERR) \
+	do { \
+		lua_pushnil(LUA); \
+		lua_pushstring(LUA, ERR); \
+		return 2; \
+	} while (0);
+
 int  llua_panic(lua_State *pL);
 void llua_sdump(lua_State *pL);
 void llua_call(lua_State *pL, const char *fnname, size_t nargs,
@@ -462,9 +469,7 @@ api_conn_init(lua_State *pL)
 	hints.ai_socktype = SOCK_STREAM;
 
 	if(getaddrinfo(host, port, &hints, &res) != 0) {
-		lua_pushnil(pL);
-		lua_pushstring(pL, format("cannot resolve hostname: %s", strerror(errno)));
-		return 2;
+		LLUA_ERR(pL, format("cannot resolve hostname: %s", strerror(errno)));
 	}
 
 	for(r = res; r != NULL; r = r->ai_next) {
@@ -478,9 +483,7 @@ api_conn_init(lua_State *pL)
 	freeaddrinfo(res);
 
 	if (r == NULL || ((conn = fdopen(conn_fd, "r+")) == NULL)) {
-		lua_pushnil(pL);
-		lua_pushstring(pL, format("cannot connect to host: %s", strerror(errno)));
-		return 2;
+		LLUA_ERR(pL, format("cannot connect to host: %s", strerror(errno)));
 	}
 
 	// push some random integer to provide a distinction between calls to this
@@ -507,13 +510,9 @@ api_conn_send(lua_State *pL)
 	ssize_t sent = send(conn_fd, fmtd, strlen(fmtd), 0);
 
 	if (sent == -1) {
-		lua_pushnil(pL);
-		lua_pushstring(pL, format("cannot send: %s", strerror(errno)));
-		return 2;
+		LLUA_ERR(pL, format("cannot send: %s", strerror(errno)));
 	} else if (sent < (strlen(data) + 2)) {
-		lua_pushnil(pL);
-		lua_pushstring(pL, format("sent != len(data): %s", strerror(errno)));
-		return 2;
+		LLUA_ERR(pL, format("sent != len(data): %s", strerror(errno)));
 	}
 
 	return 0;
@@ -613,8 +612,6 @@ api_tb_writeline(lua_State *pL)
 			continue;
 		}
 
-		//string += utf8_char_to_unicode(&c.ch, string);
-
 		int32_t charbuf = 0;
 		ssize_t runelen = utf8proc_iterate((const unsigned char *) string,
 			-1, (utf8proc_int32_t *) &charbuf);
@@ -680,9 +677,7 @@ api_mkdir_p(lua_State *pL)
 	if (stat(path, &st) == 0) {
 		if (S_ISDIR(st.st_mode))
 			return 0; /* path exists */
-		lua_pushnil(pL);
-		lua_pushstring(pL, "Path exists and is not directory");
-		return 2;
+		LLUA_ERR(pL, "Path exists and is not directory");
 	}
 
 	strncpy((char *) &tmp, path, sizeof(tmp));
@@ -692,9 +687,7 @@ api_mkdir_p(lua_State *pL)
 
 		*p = '\0';
 		if (mkdir(tmp, pmode) < 0 && errno != EEXIST) {
-			lua_pushnil(pL);
-			lua_pushstring(pL, strerror(errno));
-			return 2;
+			LLUA_ERR(pL, strerror(errno));
 		}
 
 		*p = '/';
@@ -702,9 +695,7 @@ api_mkdir_p(lua_State *pL)
 	}
 
 	if (mkdir(tmp, mode) < 0 && errno != EEXIST) {
-		lua_pushnil(pL);
-		lua_pushstring(pL, strerror(errno));
-		return 2;
+		LLUA_ERR(pL, strerror(errno));
 	}
 
 	lua_pushinteger(pL, (lua_Integer) ++created);
