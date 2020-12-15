@@ -25,6 +25,7 @@
 #include <wchar.h>
 
 #include "termbox.h"
+#include "dwidth.h"
 
 /* maximum rate at which the screen is refreshed */
 const struct timeval REFRESH = { 0, 3000 };
@@ -569,6 +570,7 @@ api_tb_writeline(lua_State *pL)
 	struct tb_cell c = { '\0', 0, 0 };
 
 	char color[3];
+	size_t chwidth;
 
 	do tb_put_cell(col, line, &c); while (++col < width);
 	col = 0;
@@ -611,17 +613,13 @@ api_tb_writeline(lua_State *pL)
 
 		string += utf8_char_to_unicode(&c.ch, string);
 
-		wchar_t chbuf[1];
-		swprintf((wchar_t *) &chbuf, sizeof(chbuf), L"%d", c.ch);
-		int width = wcwidth(chbuf[0]);
+		chwidth = 0;
+		if (c.ch < sizeof(dwidth))
+			chwidth = dwidth[c.ch];
 
-		if (width > 0) {
+		if (chwidth > 0) {
 			tb_put_cell(col, line, &c);
-			col += width;
-		} else if (width < 0) {
-			c.ch = '?';
-			tb_put_cell(col, line, &c);
-			++col;
+			col += chwidth;
 		}
 	}
 
