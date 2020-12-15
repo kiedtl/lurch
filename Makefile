@@ -2,7 +2,7 @@ CMD      = @
 
 VERSION  = 0.1.0
 NAME     = lurch
-SRC      = main.c luau.c luaa.c util.c tool/dwidth.c
+SRC      = main.c luau.c luaa.c util.c tool/dwidth.c mirc.c
 OBJ      = $(SRC:.c=.o)
 
 TERMBOX  = tb/bin/termbox.a
@@ -23,7 +23,7 @@ LDFLAGS  = -L/usr/include -lm -l$(LUA)
 all: $(NAME)
 
 run: $(NAME)
-	./$(NAME)
+	$(CMD)./$(NAME)
 
 .c.o: $(HDR)
 	@printf "    %-8s%s\n" "CC" $@

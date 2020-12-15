@@ -39,12 +39,13 @@ const struct timeval REFRESH = { 0, 3000 };
 #define TIMEOUT 4096
 
 /*
- * keep track of termbox's state
- * TODO: Use a _Bool moron
+ * keep track of termbox's state, so
+ * that we know if tb_shutdown() is safe to call.
+ *
+ * calling tb_shutdown twice, or before tb_init,
+ * results in a call to abort().
  */
-const size_t TB_ACTIVE = 1;
-const size_t TB_INACTIVE = 2;
-size_t tb_state = 0;
+_Bool tb_active = false;
 
 lua_State *L = NULL;
 int conn_fd = 0;
@@ -87,7 +88,7 @@ main(void)
 	};
 	char *err = errstrs[-(tb_init())];
 	if (err) die(err);
-	tb_state = TB_ACTIVE;
+	tb_active = true;
 	tb_select_output_mode(TB_OUTPUT_256);
 
 	/* init lua */

@@ -1,6 +1,7 @@
 #include <lauxlib.h>
 #include <lua.h>
 #include <lualib.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -8,16 +9,14 @@
 #include "termbox.h"
 #include "util.h"
 
-extern size_t TB_ACTIVE;
-extern size_t TB_INACTIVE;
-extern size_t tb_state;
+extern _Bool tb_active;
 
 int
 llua_panic(lua_State *pL)
 {
-	if (tb_state == TB_ACTIVE) {
+	if (tb_active) {
 		tb_shutdown();
-		tb_state = TB_INACTIVE;
+		tb_active = false;
 	}
 
 	char *err = (char *) lua_tostring(pL, -1);

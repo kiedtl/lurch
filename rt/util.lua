@@ -1,4 +1,5 @@
 local format = string.format
+local mirc   = require('mirc')
 local util = {}
 
 -- sleep for x seconds. Note that this is a busy sleep.
@@ -59,8 +60,7 @@ end
 -- FIXME: this may occasionally split unicode characters
 function util.fold(text, width)
     local _raw_len = function(data)
-        data = data:gsub("\x1b.-m", "")
-        return #data
+        return #mirc.remove(data)
     end
 
     local res = ""

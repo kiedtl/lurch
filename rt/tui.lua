@@ -1,6 +1,7 @@
 local config  = require('config')
 local inspect = require('inspect')
 local mirc    = require('mirc')
+local tb      = require('tb')
 local util    = require('util')
 local format  = string.format
 

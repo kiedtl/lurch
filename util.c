@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <execinfo.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,16 +9,14 @@
 #include "util.h"
 
 extern FILE *conn;
-extern size_t TB_ACTIVE;
-extern size_t TB_INACTIVE;
-extern size_t tb_state;
+extern _Bool tb_active;
 
 void
 die(const char *fmt, ...)
 {
-	if (tb_state == TB_ACTIVE) {
+	if (tb_active) {
 		tb_shutdown();
-		tb_state = TB_INACTIVE;
+		tb_active = false;
 	}
 
 	fprintf(stderr, "fatal: ");
@@ -69,9 +68,9 @@ format(const char *fmt, ...)
 void
 cleanup(void)
 {
-	if (tb_state == TB_ACTIVE) {
+	if (tb_active) {
 		tb_shutdown();
-		tb_state = TB_INACTIVE;
+		tb_active = false;
 	}
 
 	if (conn) fclose(conn);

@@ -4,6 +4,7 @@
 #include <lua.h>
 #include <lualib.h>
 #include <netdb.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
@@ -22,9 +23,7 @@
 extern FILE *conn;
 extern int conn_fd;
 extern lua_State *L;
-extern size_t TB_ACTIVE;
-extern size_t TB_INACTIVE;
-extern size_t tb_state;
+extern _Bool tb_active;
 
 const struct luaL_Reg lurch_lib[] = {
 	{ "conn_init",     api_conn_init      },
@@ -106,7 +105,7 @@ api_conn_send(lua_State *pL)
 int
 api_tb_size(lua_State *pL)
 {
-	assert(tb_state == TB_ACTIVE);
+	assert(tb_active);
 	lua_pushinteger(pL, (lua_Integer) tb_height());
 	lua_pushinteger(pL, (lua_Integer) tb_width());
 
@@ -117,7 +116,7 @@ int
 api_tb_clear(lua_State *pL)
 {
 	UNUSED(pL);
-	assert(tb_state == TB_ACTIVE);
+	assert(tb_active);
 
 	tb_clear();
 	return 0;
@@ -160,7 +159,7 @@ static uint32_t oldfg = 0, oldbg = 0;
 int
 api_tb_writeline(lua_State *pL)
 {
-	assert(tb_state == TB_ACTIVE);
+	assert(tb_active);
 	int line = luaL_checkinteger(pL, 1);
 	char *string = (char *) luaL_checkstring(pL, 2);
 
@@ -260,7 +259,7 @@ api_tb_writeline(lua_State *pL)
 int
 api_tb_setcursor(lua_State *pL)
 {
-	assert(tb_state == TB_ACTIVE);
+	assert(tb_active);
 	int x = luaL_checkinteger(pL, 1);
 	int y = luaL_checkinteger(pL, 2);
 	tb_set_cursor(x, y);
