@@ -11,15 +11,9 @@ M.cursor = 0
 M.enter_callback = nil
 
 local _ulen = function(s)
-    assert(s)
-
-    return utf8.len(s) or #s
+    return assert(utf8.len(s))
 end
 local _usub = function(s, i, j)
-    assert(s)
-    assert(i)
-    assert(j)
-
     i = utf8.offset(s, i)
     j = utf8.offset(s, j + 1) - 1
     return string.sub(s, i, j)
@@ -27,7 +21,6 @@ end
 
 function M.insert_at_curs(text)
     if not text then return end
-    --M.bufin[M.hist] = (M.bufin[M.hist]):gsub(("."):rep(M.cursor), "%1"..text, 1)
     M.bufin[M.hist] = lurch.utf8_insert(M.bufin[M.hist], M.cursor, text)
     M.cursor = M.cursor + 1
 end
