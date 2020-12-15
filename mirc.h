@@ -7,6 +7,8 @@
 #ifndef MIRC_H
 #define MIRC_H
 
+#include <stdint.h>
+
 #define MIRC_BOLD       '\x02'
 #define MIRC_UNDERLINE  '\x1f'
 #define MIRC_ITALIC     '\x1d'
@@ -35,7 +37,7 @@
 #define MIRC_LIGHTCYAN     11
 #define MIRC_WHITE          0
 
-size_t mirc_colors[16] = {
+uint32_t mirc_colors[16] = {
 	[MIRC_BLACK]        =  0,
 	[MIRC_RED]          =  1,
 	[MIRC_GREEN]        =  2,

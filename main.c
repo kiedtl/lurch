@@ -544,7 +544,12 @@ static inline void
 set_color(uint32_t *old, uint32_t *new, char *color)
 {
 	uint32_t col = strtol(color, NULL, 10);
-	*old = *new, *new = mirc_colors[col];
+
+	*old = *new;
+	if (col < sizeof(mirc_colors))
+		*new = mirc_colors[col];
+	else
+		*new = col;
 
 	for (size_t i = 0; i < sizeof(attribs); ++i)
 		if ((*old & attribs[i]) == attribs[i])
@@ -569,7 +574,8 @@ api_tb_writeline(lua_State *pL)
 	int width = tb_width();
 	struct tb_cell c = { '\0', 0, 0 };
 
-	char colorbuf[3];
+	char colorbuf[4];
+	colorbuf[3] = '\0';
 	size_t chwidth;
 	int32_t charbuf = 0;
 	ssize_t runelen = 0;
