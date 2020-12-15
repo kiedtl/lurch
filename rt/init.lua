@@ -706,8 +706,13 @@ end
 local function send_both(fmt, ...)
     -- this is a simple function to send the input to the
     -- terminal and to the server at the same time.
+    --
+    -- don't send to the terminal if echo-message is enabled.
     irc.send(fmt, ...)
-    parseirc(format(fmt, ...))
+
+    if not server.caps["echo-message"] then
+        parseirc(format(fmt, ...))
+    end
 end
 
 local cmdhand
@@ -1111,9 +1116,9 @@ function rt.init(args)
     -- List of IRCv3 capabilities to send.
     --
     -- server-time: enables adding the "time" IRCv3 tag to messages
-    -- TODO: echo-message, SASL
+    -- TODO: SASL
     --
-    local caps  = { "server-time", "away-notify", "account-notify"}
+    local caps  = { "server-time", "away-notify", "account-notify", "echo-message" }
     local _nick = config.nick or os.getenv("IRCNICK") or os.getenv("USER")
     local user  = config.user or os.getenv("IRCUSER") or os.getenv("USER")
     local name  = config.name or _nick
