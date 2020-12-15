@@ -1,0 +1,22 @@
+#define UTF8_MAX 0x10FFFF
+
+#include <stdio.h>
+#include <utf8proc.h>
+
+int
+main(void)
+{
+	size_t cols = 0;
+
+	printf("unsigned int dwidth[] = {\n\t");
+	for (size_t i = 0; i < UTF8_MAX; ++i) {
+		int w = utf8proc_charwidth((utf8proc_int32_t) i);
+		cols += printf("%i, ", w);
+
+		if ((cols + 7) >= 80) {
+			printf("\n\t");
+			cols = 0;
+		}
+	}
+	printf("\n};\n");
+}
