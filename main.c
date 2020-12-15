@@ -26,8 +26,9 @@
 
 #include <utf8proc.h>
 
-#include "termbox.h"
 #include "dwidth.h"
+#include "mirc.h"
+#include "termbox.h"
 
 /* maximum rate at which the screen is refreshed */
 const struct timeval REFRESH = { 0, 3000 };
@@ -65,6 +66,7 @@ char *format(const char *format, ...);
 #define llua_setfuncs(ST, FN) luaL_register(ST, NULL, FN);
 #endif
 
+#define IS_STRINT(STR) ((STR) <= '9' && (STR) >= '0')
 #define SETTABLE_INT(NAME, VALUE, TABLE) \
 	do { \
 		lua_pushstring(L, NAME); \
@@ -539,17 +541,14 @@ api_tb_clear(lua_State *pL)
 
 const size_t attribs[] = { TB_BOLD, TB_UNDERLINE, TB_REVERSE };
 static inline void
-set_color(uint32_t *old, uint32_t *new, char **string)
+set_color(uint32_t *old, uint32_t *new, char *color)
 {
-	char color[3];
-	strncpy((char *) &color, *string, 3);
-	*old = *new, *new = strtol(color, NULL, 10);
+	uint32_t col = strtol(color, NULL, 10);
+	*old = *new, *new = mirc_colors[col];
 
 	for (size_t i = 0; i < sizeof(attribs); ++i)
 		if ((*old & attribs[i]) == attribs[i])
 			*new |= attribs[i];
-
-	*string += 3;
 }
 
 /* last colors used.  This is used to cache and re-apply
@@ -570,8 +569,10 @@ api_tb_writeline(lua_State *pL)
 	int width = tb_width();
 	struct tb_cell c = { '\0', 0, 0 };
 
-	char color[3];
+	char colorbuf[3];
 	size_t chwidth;
+	int32_t charbuf = 0;
+	ssize_t runelen = 0;
 
 	do tb_put_cell(col, line, &c); while (++col < width);
 	col = 0;
@@ -579,61 +580,75 @@ api_tb_writeline(lua_State *pL)
 	/* restore colors of previous line. */
 	c.fg = oldfg, c.bg = oldbg;
 
-	/* TODO: unicode support */
 	while (*string) {
-		if (*string == '\x1b') {
-			switch (*(++string)) {
-			break; case 'r':
+		switch (*string) {
+		break; case MIRC_RESET:
+			++string;
+			c.fg = 15, c.bg = 0;
+		break; case MIRC_BOLD:
+			++string;
+			c.fg |= TB_BOLD;
+		break; case MIRC_UNDERLINE:
+			++string;
+			c.fg |= TB_UNDERLINE;
+		break; case MIRC_INVERT:
+			++string;
+			c.fg |= TB_REVERSE;
+		break; case MIRC_ITALIC:
+		break; case MIRC_BLINK:
+			++string;
+			break;
+		break; case MIRC_COLOR:
+			++string;
+			colorbuf[0] = colorbuf[1] = colorbuf[2] = '\0';
+
+			if (*string > '9' || *string < '0') {
 				c.fg = 15, c.bg = 0;
-				++string;
-			break; case '1':
-				c.fg |= TB_BOLD;
-				++string;
-			break; case '2':
-				++string;
-				set_color(&oldfg, &c.fg, &string);
-			break; case '3':
-				c.fg |= TB_REVERSE;
-				++string;
-			break; case '4':
-				c.fg |= TB_UNDERLINE;
-				++string;
-			break; case '5':
-			break; case '6':
-			break; case '7':
-				++string;
-				set_color(&oldbg, &c.bg, &string);
-			break; default:
-				++string;
 				break;
 			}
 
-			++string;
-			continue;
-		}
+			colorbuf[0] = *string;
+			if (IS_STRINT(string[1])) colorbuf[1] = *(++string);
+			set_color(&oldfg, &c.fg, (char *) &colorbuf);
 
-		int32_t charbuf = 0;
-		ssize_t runelen = utf8proc_iterate((const unsigned char *) string,
-			-1, (utf8proc_int32_t *) &charbuf);
-
-		if (runelen < 0) {
-			/* invalid UTF8 codepoint, let's just
-			 * move forward and hope for the best */
 			++string;
-			continue;
-		} else {
+			if (*string != ',' || !IS_STRINT(string[1]))
+				break;
+
+			colorbuf[0] = *(++string);
+			if (IS_STRINT(string[1])) colorbuf[1] = *(++string);
+			set_color(&oldbg, &c.bg, (char *) &colorbuf);
+
+			string += 2;
+		break; case MIRC_256COLOR:
+			++string;
+			colorbuf[0] = colorbuf[1] = colorbuf[2] = '\0';
+			strncpy((char *) &colorbuf, string, 3);
+			set_color(&oldfg, &c.fg, (char *) &colorbuf);
+			string += 3;
+		break; default:
+			charbuf = 0;
+			runelen = utf8proc_iterate((const unsigned char *) string,
+				-1, (utf8proc_int32_t *) &charbuf);
+	
+			if (runelen < 0) {
+				/* invalid UTF8 codepoint, let's just
+				 * move forward and hope for the best */
+				++string;
+				continue;
+			}
+	
 			assert(charbuf >= 0);
 			c.ch = (uint32_t) charbuf;
 			string += runelen;
-		}
-
-		chwidth = 0;
-		if (c.ch < sizeof(dwidth))
-			chwidth = dwidth[c.ch];
-
-		if (chwidth > 0) {
-			tb_put_cell(col, line, &c);
-			col += chwidth;
+	
+			chwidth = 0;
+			if (c.ch < sizeof(dwidth)) chwidth = dwidth[c.ch];
+	
+			if (chwidth > 0) {
+				tb_put_cell(col, line, &c);
+				col += chwidth;
+			}
 		}
 	}
 

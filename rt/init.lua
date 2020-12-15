@@ -145,18 +145,6 @@ function msg_pings(sender, msg)
 end
 
 function writelog(time, dest, left, right_fmt, ...)
-    local function _conv_seqs(text)
-        text = text:gsub("\x1brm", "\x1b[0m")
-        text = text:gsub("\x1b1m", "\x1b[1m")
-        text = text:gsub("\x1b2(...)m", "\x1b[38;5;%1m")
-        text = text:gsub("\x1b3m", "\x1b[7m")
-        text = text:gsub("\x1b4m", "\x1b[4m")
-        text = text:gsub("\x1b5m", "\x1b[3m")
-        text = text:gsub("\x1b6m", "\x1b[5m")
-        text = text:gsub("\x1b7(...)m", "\x1b[48;5;%1m")
-        return text
-    end
-
     local logdir  = format("%s/logs/%s", __LURCH_EXEDIR, dest)
     local logfile = format("%s/%s.txt", logdir, os.date("%Y-%m-%d", time))
 
@@ -165,7 +153,7 @@ function writelog(time, dest, left, right_fmt, ...)
     local logentry = format("%s\t%s\t\t%s\n",
         os.date("%Y-%m-%dT%H:%M:%SZ", time), left, right_fmt:format(...))
 
-    util.append(logfile, _conv_seqs(logentry))
+    util.append(logfile, mirc.remove(logentry))
 end
 
 -- print a response to an irc message.
@@ -353,20 +341,18 @@ local irchand = {
         -- remove extra characters from nick that won't fit.
         if #sender > (config.left_col_width-2) then
             sender = (sender):sub(1, config.left_col_width-3)
-            sender = sender .. format("\x1brm\x1b2007m+\x1brm")
+            sender = sender .. format("\x0f\x0314+\x0f")
         end
 
         if msg_pings(rsender, e.msg) then
-            sender = format("<\x1b3m%s\x1brm>", hcol(sender, rsender))
+            sender = format("<\x16%s\x0f>", hcol(sender, rsender))
             priority = 2
         else
             sender = format("<%s>", hcol(sender, rsender))
         end
 
         -- convert or remove mIRC IRC colors.
-        if config.show_mirc_colors then
-            e.msg = mirc.to_tty_seq(e.msg)
-        else
+        if not config.show_mirc_colors then
             e.msg = mirc.remove(e.msg)
         end
 
@@ -628,12 +614,10 @@ local irchand = {
 
         if msg_pings(e.nick or nick, e.msg) then
             prio = 2
-            sender_fmt = format("\x1b3m%s\x1brm", sender_fmt)
+            sender_fmt = format("\x16%s\x0f", sender_fmt)
         end
 
-        if config.show_mirc_colors then
-            e.msg = mirc.to_tty_seq(e.msg)
-        else
+        if not config.show_mirc_colors then
             e.msg = mirc.remove(e.msg)
         end
 
