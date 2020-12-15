@@ -24,6 +24,8 @@
 #include <unistd.h>
 #include <wchar.h>
 
+#include <utf8proc.h>
+
 #include "termbox.h"
 #include "dwidth.h"
 
@@ -611,7 +613,22 @@ api_tb_writeline(lua_State *pL)
 			continue;
 		}
 
-		string += utf8_char_to_unicode(&c.ch, string);
+		//string += utf8_char_to_unicode(&c.ch, string);
+
+		int32_t charbuf = 0;
+		ssize_t runelen = utf8proc_iterate((const unsigned char *) string,
+			-1, (utf8proc_int32_t *) &charbuf);
+
+		if (runelen < 0) {
+			/* invalid UTF8 codepoint, let's just
+			 * move forward and hope for the best */
+			++string;
+			continue;
+		} else {
+			assert(charbuf >= 0);
+			c.ch = (uint32_t) charbuf;
+			string += runelen;
+		}
 
 		chwidth = 0;
 		if (c.ch < sizeof(dwidth))
