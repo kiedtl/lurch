@@ -206,8 +206,8 @@ function M.format_line(timestr, left, right_fmt, ...)
 
     -- fold message to width (see /bin/fold)
     local infocol_width = config.left_col_width + config.time_col_width
-    local def_width = M.tty_width - infocol_width
-    right = util.fold(right, config.right_col_width or def_width)
+    local width = (config.right_col_width or M.tty_width - infocol_width)
+    right = util.fold(right, width - 4)
     right = right:gsub("\n", format("\n%s", (" "):rep(infocol_width + 4)))
 
     -- Strip escape sequences from the left column so that
