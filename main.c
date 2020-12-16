@@ -2,28 +2,18 @@
 
 #include <assert.h>
 #include <errno.h>
-#include <execinfo.h>
 #include <lauxlib.h>
 #include <lua.h>
 #include <lualib.h>
-#include <netdb.h>
 #include <signal.h>
-#include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/ioctl.h>
-#include <sys/select.h>
-#include <sys/socket.h>
-#include <sys/stat.h>
 #include <sys/time.h>
-#include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
-#include <wchar.h>
-
 #include <utf8proc.h>
 
 #include "dwidth.h"
