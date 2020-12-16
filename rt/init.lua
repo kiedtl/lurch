@@ -1101,10 +1101,11 @@ function rt.init(args)
         if arg:sub(1, 1) == "-" then
             arg = arg:sub(2, #arg)
             config[arg] = not config[arg]
+            lastarg = arg
         elseif lastarg then
             config[lastarg] = arg
+            lastarg = nil
         end
-        lastarg = arg
     end
 
     -- List of IRCv3 capabilities to send.
