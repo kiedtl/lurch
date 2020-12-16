@@ -56,7 +56,7 @@ end
 function M.inputbar(bufs, cbuf, nick, inp, cursor)
     -- if we've scrolled up, don't draw the input.
     if bufs[cbuf].scroll ~= #bufs[cbuf].history then
-        lurch.tb_writeline(M.tty_height, "-- more --")
+        lurch.tb_writeline(M.tty_height - 1, "\x16\x02 -- more -- \x0f")
         lurch.tb_setcursor(tb.TB_HIDE_CURSOR, tb.TB_HIDE_CURSOR)
         return
     end
@@ -65,20 +65,24 @@ function M.inputbar(bufs, cbuf, nick, inp, cursor)
     -- typing a command, change to prompt to "/"; if the user
     -- has typed "/me", change the prompt to "* <NICK>".
     --
-    -- Also, if the input is something like "//text", then the
-    -- prompt should be "<NICK> /". In all these cases, redundant
-    -- input is trimmed off.
+    -- In all these cases, redundant input is trimmed off (unless
+    -- the cursor is on the redundant text, in which case the
+    -- input is shown as-is).
     local prompt
     if inp:find("/me ") == 1 and cursor >= 4 then
         prompt = format("* %s ", M.highlight(nick))
         inp = inp:sub(5, #inp)
         cursor = cursor - 4
     elseif inp:sub(1, 1) == "/" then
+        -- if there are two slashes at the beginning of the input,
+        -- indicate that it will be treated as a message instead
+        -- of a command.
         if inp:sub(2, 2) == "/" then
             prompt = format("<%s> \x0314/\x0f", M.highlight(nick))
         else
             prompt = format("\x0314/\x0f")
         end
+
         inp = inp:sub(2, #inp)
         cursor = cursor - 1
     else
@@ -95,8 +99,6 @@ function M.inputbar(bufs, cbuf, nick, inp, cursor)
     inp = inp:gsub(mirc.ITALIC,    "\x16\x0314I\x0f%1")
     inp = inp:gsub(mirc.INVERT,    "\x16\x0314R\x0f%1")
     inp = inp:gsub(mirc.RESET,     "\x16\x0314O\x0f%1")
-
-    local inputstr = format("%s%s", prompt, inp)
 
     -- strip off stuff from input that can't be shown on the
     -- screen
