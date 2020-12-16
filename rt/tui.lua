@@ -89,25 +89,23 @@ function M.inputbar(bufs, cbuf, nick, inp, cursor)
     -- the prompt's length.
     local rawprompt = mirc.remove(prompt)
 
-    -- strip off stuff from input that can't be shown on the
-    -- screen
-    inp = inp:sub(-(M.tty_width - #rawprompt))
-
     -- show IRC formatting escape sequences nicely.
-    -- TODO: lurch esc module
     inp = inp:gsub(mirc.BOLD,      "\x16\x0314B\x0f%1")
     inp = inp:gsub(mirc.UNDERLINE, "\x16\x0314U\x0f%1")
     inp = inp:gsub(mirc.ITALIC,    "\x16\x0314I\x0f%1")
     inp = inp:gsub(mirc.INVERT,    "\x16\x0314R\x0f%1")
     inp = inp:gsub(mirc.RESET,     "\x16\x0314O\x0f%1")
 
-    -- utf8.offset returns 1 even if cursor is 0.
-    local pos = cursor + #rawprompt
-    lurch.tb_setcursor(pos, M.tty_height-1)
+    local inputstr = format("%s%s", prompt, inp)
+
+    -- strip off stuff from input that can't be shown on the
+    -- screen
+    inp = inp:sub(-((M.tty_width - 1) - #rawprompt))
 
     -- draw the input buffer and move the cursor to the appropriate
     -- position.
     lurch.tb_writeline(M.tty_height-1, format("%s%s", prompt, inp))
+    lurch.tb_setcursor(cursor + #rawprompt, M.tty_height-1)
 end
 
 function M.statusbar(bufs, cbuf)
