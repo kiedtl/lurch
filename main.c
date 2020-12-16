@@ -189,22 +189,6 @@ main(int argc, char **argv)
 		}
 
 		if (FD_ISSET(conn_fd, &rd)) {
-			/* if (tls_active) { */
-			/* 	ssize_t recvd = tls_read(client, &bufsrv[0], sizeof(bufsrv)); */
-			/* 	if (recvd == TLS_WANT_POLLIN || recvd == TLS_WANT_POLLOUT) { */
-			/* 		continue; */
-			/* 	} else if (recvd == 0) { */
-			/* 		lua_pushstring(L, tls_error(client)); */
-			/* 		llua_call(L, "on_disconnect", 1, 0); */
-			/* 		continue; */
-			/* 	} else if (recvd < 0) continue; */
-			/* } else { */
-			/* 	if (fgets((char *) &bufsrv, sizeof(bufsrv), conn) == NULL) { */
-			/* 		llua_call(L, "on_disconnect", 0, 0); */
-			/* 		continue; */
-			/* 	} */
-			/* } */
-
 			ssize_t r = -1;
 			size_t max = sizeof(bufsrv) - 1 - rc;
 
