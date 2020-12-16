@@ -1085,6 +1085,10 @@ end
 function rt.init(args)
     tui.refresh()
 
+    if tui.tty_width < 40 or tui.tty_height < 8 then
+        panic("screen width too small (min 40x8)\n")
+    end
+
     --
     -- for each option, if it begins with a "-", toggle
     -- the corresponding configuration value if it has no
