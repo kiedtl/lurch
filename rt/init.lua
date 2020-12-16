@@ -1052,7 +1052,13 @@ function parsecmd(inp)
         if buf_cur() == MAINBUF then
             prin_cmd(buf_cur(), L_ERR, "Stop trying to talk to lurch.")
         else
-            send_both(":%s PRIVMSG %s :%s", nick, buf_cur(), inp)
+            -- split long messages, as servers don't like IRC messages
+            -- that are longer than about 512 characters (but that limit
+            -- includes the trailing \r\n, the "PRIVMSG <channel>" bit,
+            -- and the sender, so split by 256 chars just to stay safe).
+            for line in (util.fold(inp, 256)):gmatch("([^\n]+)\n?") do
+                send_both(":%s PRIVMSG %s :%s", nick, buf_cur(), line)
+            end
         end
     end
 end
