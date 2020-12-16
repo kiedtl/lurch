@@ -1,6 +1,7 @@
+#include <stdint.h>
 #include "mirc.h"
 
-const uint32_t mirc_colors[16] = {
+const uint8_t mirc_colors[16] = {
 	[MIRC_BLACK]        =  0,
 	[MIRC_RED]          =  1,
 	[MIRC_GREEN]        =  2,
