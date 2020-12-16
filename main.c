@@ -13,6 +13,7 @@
 #include <string.h>
 #include <sys/time.h>
 #include <time.h>
+#include <tls.h>
 #include <unistd.h>
 #include <utf8proc.h>
 
@@ -42,6 +43,9 @@ int conn_fd = 0;
 FILE *conn = NULL;
 char bufsrv[4096];
 struct tb_event ev;
+
+_Bool tls_active = false;
+struct tls *client = NULL;
 
 void try_present(struct timeval *tcurrent, struct timeval *tpresent);
 void signal_lhand(int sig);
@@ -146,7 +150,7 @@ main(int argc, char **argv)
 	 */
 	setvbuf(stdin, NULL, _IONBF, 0);
 	setvbuf(stdout, NULL, _IONBF, 0);
-	setvbuf(conn, NULL, _IONBF, 0);
+	if (!tls_active) setvbuf(conn, NULL, _IONBF, 0);
 
 	/*
 	 * trespond: last time we got something from the server.
@@ -154,13 +158,15 @@ main(int argc, char **argv)
 	 * tpresent: last time tb_present() was called.
 	 * tcurrent: buffer for gettimeofday(2).
 	 */
-	time_t trespond;
+	time_t trespond = 0;
 	struct timeval ttimeout = { 120, 0 };
 	struct timeval tpresent = {   0, 0 };
 	struct timeval tcurrent = {   0, 0 };
 
 	int n;
 	fd_set rd;
+
+	size_t rc =  0;
 
 	while ("pigs fly") {
 		/* TODO: use poll(2) */
@@ -183,13 +189,59 @@ main(int argc, char **argv)
 		}
 
 		if (FD_ISSET(conn_fd, &rd)) {
-			if (fgets(bufsrv, sizeof(bufsrv), conn) == NULL) {
+			/* if (tls_active) { */
+			/* 	ssize_t recvd = tls_read(client, &bufsrv[0], sizeof(bufsrv)); */
+			/* 	if (recvd == TLS_WANT_POLLIN || recvd == TLS_WANT_POLLOUT) { */
+			/* 		continue; */
+			/* 	} else if (recvd == 0) { */
+			/* 		lua_pushstring(L, tls_error(client)); */
+			/* 		llua_call(L, "on_disconnect", 1, 0); */
+			/* 		continue; */
+			/* 	} else if (recvd < 0) continue; */
+			/* } else { */
+			/* 	if (fgets((char *) &bufsrv, sizeof(bufsrv), conn) == NULL) { */
+			/* 		llua_call(L, "on_disconnect", 0, 0); */
+			/* 		continue; */
+			/* 	} */
+			/* } */
+
+			ssize_t r = -1;
+			size_t max = sizeof(bufsrv) - 1 - rc;
+
+			if (tls_active)
+				r = tls_read(client, &bufsrv[rc], max);
+			else
+				r = read(conn_fd, &bufsrv[rc], max);
+
+			if (tb_active && (r == TLS_WANT_POLLIN || r == TLS_WANT_POLLOUT)) {
+				continue;
+			} else if (r < 0) {
+				if (errno == EINTR)
+					continue;
+				die("error on read():");
+			} else if (r == 0) {
+				lua_pushstring(L, (const char *) NETWRK_ERR());
 				llua_call(L, "on_disconnect", 1, 0);
-			} else {
-				lua_pushstring(L, (const char *) &bufsrv);
-				llua_call(L, "on_reply", 1, 0);
-				trespond = time(NULL);
+				continue;
 			}
+
+			rc += r;
+			bufsrv[rc] = '\0';
+
+			char *end = NULL;
+			char *ptr = (char *) &bufsrv;
+			while ((end = memmem(ptr, &bufsrv[rc] - ptr, "\r\n", 2))) {
+				*end = '\0';
+
+				lua_pushstring(L, (const char *) ptr);
+				llua_call(L, "on_reply", 1, 0);
+
+				ptr = end + 2;
+			}
+
+			rc -= ptr - bufsrv;
+			memmove(&bufsrv, ptr, rc);
+			trespond = time(NULL);
 		}
 
 		if (FD_ISSET(0, &rd)) {

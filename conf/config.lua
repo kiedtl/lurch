@@ -1,7 +1,8 @@
 local M = {}
 
-M.host = "localhost"
-M.port = 6667
+M.tls  = true
+M.host = "irc.tilde.chat"
+M.port = 6697
 
 M.nick = "inebriate|lurch"
 

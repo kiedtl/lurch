@@ -14,11 +14,12 @@ WARNING  = -Wall -Wpedantic -Wextra -Wold-style-definition \
 	   -Wredundant-decls -Wendif-labels -Wstrict-aliasing=2 -Woverflow \
 	   -Wformat=2 -Wmissing-include-dirs -Wtrigraphs -Wno-format-nonliteral \
 	   -Wincompatible-pointer-types -Wunused-parameter
-CC       = clang
-DEF      = -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200112L -D_XOPEN_SOURCE
+DEF      = -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200112L -D_XOPEN_SOURCE -D_GNU_SOURCE
 INCL     = -Itb/src/ -I/usr/include/$(LUA) -I ~/local/include -Itool/
-CFLAGS   = -Og -g $(DEF) $(INCL) $(WARNING)
-LDFLAGS  = -L/usr/include -lm -l$(LUA)
+CC       = clang
+CFLAGS   = -Og -ggdb $(DEF) $(INCL) $(WARNING)
+LD       = bfd
+LDFLAGS  = -fuse-ld=$(LD) -L/usr/include -lm -ltls -l$(LUA)
 
 all: $(NAME)
 
@@ -27,11 +28,11 @@ run: $(NAME)
 
 .c.o: $(HDR)
 	@printf "    %-8s%s\n" "CC" $@
-	$(CMD)$(CC) $(CFLAGS) -c $< -o $(<:.c=.o)
+	$(CMD)$(CC) -c $< -o $(<:.c=.o) $(CFLAGS)
 
 $(NAME): $(UTF8PROC) $(TERMBOX) $(OBJ)
 	@printf "    %-8s%s\n" "CCLD" $@
-	$(CMD)$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(OBJ) $(UTF8PROC) $(TERMBOX)
+	$(CMD)$(CC) -o $@ $(OBJ) $(UTF8PROC) $(TERMBOX) $(CFLAGS) $(LDFLAGS) 
 
 $(TERMBOX):
 	@printf "    %-8s%s\n" "MAKE" $@

@@ -3,11 +3,12 @@ local config = require('config')
 local irc = {}
 
 function irc.send(fmt, ...)
-    return lurch.conn_send(fmt:format(...))
+    local r, e = lurch.conn_send(fmt:format(...))
+    if not r then util.panic("%s", e) end
 end
 
-function irc.connect(host, port, nick, user, name, pass, caps)
-    local r, e = lurch.conn_init(host, port)
+function irc.connect(host, port, tls, nick, user, name, pass, caps)
+    local r, e = lurch.conn_init(host, port, tls)
     if not r then return false, e end
 
     -- list and request IRCv3 capabilities. The responses are ignored
@@ -26,9 +27,9 @@ function irc.connect(host, port, nick, user, name, pass, caps)
 
     -- send PASS before NICK/USER, as when USER+NICK is sent
     -- the user is registered.
-    if pass then irc.send("PASS %s", pass) end
+    if pass then irc.send("PASS :%s", pass) end
     irc.send("USER %s localhost * :%s", user, name)
-    irc.send("NICK %s", nick)
+    irc.send("NICK :%s", nick)
 
     return true
 end

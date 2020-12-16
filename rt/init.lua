@@ -15,6 +15,7 @@ local tbrl    = require('tbrl')
 
 local printf  = util.printf
 local eprintf = util.eprintf
+local panic   = util.panic
 local format  = string.format
 local hcol    = tui.highlight
 
@@ -34,7 +35,6 @@ local buf_cur
 local buf_idx_or_add
 local buf_with_nick
 local buf_addname
-local panic
 local msg_pings
 local writelog
 local buf_switch
@@ -43,12 +43,6 @@ local prin_cmd
 local prin
 local parseirc
 local parsecmd
-
-function panic(fmt, ...)
-    lurch.cleanup()
-    eprintf(fmt, ...)
-    os.exit(1)
-end
 
 -- add a new buffer. statusbar() should be run after this
 -- to add the new buffer to the statusline.
@@ -1123,8 +1117,8 @@ function rt.init(args)
     local user  = config.user or os.getenv("IRCUSER") or os.getenv("USER")
     local name  = config.name or _nick
 
-    local r, e = irc.connect(config.host, config.port, _nick, user, name,
-        config.pass, caps)
+    local r, e = irc.connect(config.host, config.port, config.tls,
+        _nick, user, name, config.pass, caps)
     if not r then panic("error: %s\n", e) end
 
     tui.load_highlight_colors()
@@ -1167,6 +1161,11 @@ local sighand = {
     [0] = function() return true end,
 }
 
+function rt.on_disconnect(err)
+    if not err then err = "server closed connection" end
+    panic("disconnected: %s\n", err)
+end
+
 function rt.on_signal(sig)
     local quitmsg = config.quit_msg or "*poof*"
     local handler = sighand[sig] or sighand[0]
@@ -1188,9 +1187,7 @@ function rt.on_timeout()
 end
 
 function rt.on_reply(reply)
-    for line in reply:gmatch("(.-\r\n)") do
-        parseirc(line)
-    end
+    parseirc(reply)
 end
 
 -- every time a key is pressed, redraw the prompt, and

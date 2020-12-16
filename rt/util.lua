@@ -24,6 +24,12 @@ function util.eprintf(fmt, ...)
     io.stderr:write(string.format(fmt, ...))
 end
 
+function util.panic(fmt, ...)
+    lurch.cleanup()
+    util.eprintf(fmt, ...)
+    os.exit(1)
+end
+
 function util.read(file)
     local f = assert(io.open(file, 'rb'))
     local out = assert(f:read('*all'))
@@ -153,7 +159,7 @@ function util.time_from_iso8601(str)
         isdst = false,
         year = tonumber(Y), month = tonumber(M),
         day  = tonumber(D), hour  = tonumber(h),
-        min  = tonumber(m), sec   = math.floor(tonumber(s)),
+        min  = tonumber(m), sec   = math.floor(tonumber(s) or 0),
     }
 
     return os.time(utc_time_struct)

@@ -10,6 +10,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <tls.h>
 #include <unistd.h>
 
 #include "dwidth.h"
@@ -24,6 +25,8 @@ extern FILE *conn;
 extern int conn_fd;
 extern lua_State *L;
 extern _Bool tb_active;
+extern struct tls *client;
+extern _Bool tls_active;
 
 const struct luaL_Reg lurch_lib[] = {
 	{ "conn_init",     api_conn_init      },
@@ -43,13 +46,14 @@ api_conn_init(lua_State *pL)
 {
 	char *host = (char *) luaL_checkstring(pL, 1);
 	char *port = (char *) luaL_checkstring(pL, 2);
+	_Bool  tls = lua_toboolean(pL, 3);
 
-	struct addrinfo hints;
+	struct addrinfo hints = {
+		.ai_protocol = IPPROTO_TCP,
+		.ai_socktype = SOCK_STREAM,
+		.ai_family = AF_UNSPEC,
+	};
 	struct addrinfo *res, *r;
-
-	memset(&hints, 0, sizeof hints);
-	hints.ai_family = AF_UNSPEC;
-	hints.ai_socktype = SOCK_STREAM;
 
 	if(getaddrinfo(host, port, &hints, &res) != 0) {
 		LLUA_ERR(pL, format("cannot resolve hostname: %s", strerror(errno)));
@@ -65,14 +69,33 @@ api_conn_init(lua_State *pL)
 
 	freeaddrinfo(res);
 
-	if (r == NULL || ((conn = fdopen(conn_fd, "r+")) == NULL)) {
-		LLUA_ERR(pL, format("cannot connect to host: %s", strerror(errno)));
+	tls_active = tls;
+	if (tls_active) {
+		struct tls_config *tlscfg = tls_config_new();
+		if (!tlscfg) LLUA_ERR(pL, format("tls_config_new() == NULL"));
+		if (tls_config_set_ciphers(tlscfg, "compat") != 0)
+			LLUA_ERR(pL, format("error when configuring tls: %s", tls_config_error(tlscfg)));
+		client = tls_client();
+		if (!client) LLUA_ERR(pL, format("tls_client() == NULL"));
+		if (tls_configure(client, tlscfg) != 0)
+			LLUA_ERR(pL, format("error when configuring tls: %s", tls_error(client)));
+		tls_config_free(tlscfg);
 	}
 
-	// push some random integer to provide a distinction between calls to this
-	// function that return nil because they failed or because there was nothing
-	// to return
-	lua_pushinteger(L, (lua_Integer) 1);
+	if (r == NULL)
+		LLUA_ERR(pL, format("cannot connect: %s", strerror(errno)));
+
+	if (tls_active) {
+		if (tls_connect_socket(client, conn_fd, host) != 0)
+			LLUA_ERR(pL, format("tls: cannot connect: %s", tls_error(client)));
+		if (tls_handshake(client) != 0)
+			LLUA_ERR(pL, format("tls: cannot perform handshake: %s", tls_error(client)));
+	} else {
+		if (((conn = fdopen(conn_fd, "r+")) == NULL))
+			LLUA_ERR(pL, format("cannot connect: %s", strerror(errno)));
+	}
+
+	lua_pushboolean(L, true);
 	return 1;
 }
 
@@ -91,15 +114,25 @@ api_conn_send(lua_State *pL)
 	char *data = (char *) luaL_checkstring(pL, 1);
 	char *fmtd = format("%s\r\n", data);
 
-	ssize_t sent = send(conn_fd, fmtd, strlen(fmtd), 0);
+	size_t len = strlen(fmtd);
 
-	if (sent == -1) {
-		LLUA_ERR(pL, format("cannot send: %s", strerror(errno)));
-	} else if ((size_t) sent < (strlen(data) + 2)) {
-		LLUA_ERR(pL, format("sent != len(data): %s", strerror(errno)));
+	while (len) {
+		ssize_t r = -1;
+
+		if (tls_active)
+			r = tls_write(client, fmtd, len);
+		else
+			r = send(conn_fd, fmtd, len, 0);
+
+		if (tls_active && (r == TLS_WANT_POLLIN || r == TLS_WANT_POLLOUT))
+			continue;
+		if (r < 0) LLUA_ERR(pL, NETWRK_ERR());
+
+		data += r; len -= r;
 	}
 
-	return 0;
+	lua_pushboolean(L, true);
+	return 1;
 }
 
 int

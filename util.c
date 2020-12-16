@@ -1,15 +1,19 @@
 #include <assert.h>
 #include <execinfo.h>
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <tls.h>
 
 #include "termbox.h"
 #include "util.h"
 
 extern FILE *conn;
 extern _Bool tb_active;
+extern struct tls *client;
+extern _Bool tls_active;
 
 void
 die(const char *fmt, ...)
@@ -73,7 +77,10 @@ cleanup(void)
 		tb_active = false;
 	}
 
-	if (conn) fclose(conn);
+	if (tls_active) {
+		tls_close(client);
+		tls_free(client);
+	} else if (conn) fclose(conn);
 
 	/*
 	 * Don't call lua_close, as this function may be
