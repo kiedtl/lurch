@@ -1256,7 +1256,7 @@ end
 -- write the input buffer.
 function rt.on_input(event)
     tbrl.on_event(event)
-    tui.inputbar(buffers, cur_buf, nick,
+    tui.prompt(buffers, cur_buf, nick,
         tbrl.bufin[tbrl.hist], tbrl.cursor)
 end
 

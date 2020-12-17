@@ -53,7 +53,7 @@ function M.highlight(text, text_as, no_bold)
     return format("%s%s\x0f", esc, text)
 end
 
-function M.inputbar(bufs, cbuf, nick, inp, cursor)
+function M.prompt(bufs, cbuf, nick, inp, cursor)
     -- if we've scrolled up, don't draw the input.
     if bufs[cbuf].scroll ~= #bufs[cbuf].history then
         lurch.tb_writeline(M.tty_height - 1, "\x16\x02 -- more -- \x0f")
@@ -249,7 +249,7 @@ function M.redraw(bufs, cbuf, nick, inbuf, incurs)
     lurch.tb_clear()
 
     M.buffer_text(bufs, cbuf)
-    M.inputbar(bufs, cbuf, nick, inbuf, incurs)
+    M.prompt(bufs, cbuf, nick, inbuf, incurs)
     M.statusbar(bufs, cbuf)
 end
 
