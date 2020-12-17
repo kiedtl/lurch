@@ -16,7 +16,7 @@ function M.print_banner(version)
 |     ._ _ |_    o ._  _    _ | o  _  ._ _|_\n\
 | |_| | (_ | |   | |  (_   (_ | | (/_ | | |_\n\
  \n\
-lurch %s   (https://github.com/lptstr/lurch)\n\
+lurch %s (https://github.com/lptstr/lurch)\n\
 (c) Kiëd Llaentenn. Lurch is GPLv3 software.\n\
  \n\
 -- -- -- -- -- -- -- -- -- -- -- -- -- -- --\n\
