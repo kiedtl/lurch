@@ -1032,6 +1032,9 @@ cmdhand = {
                 input_buf = tbrl.bufin,
                 input_cursor = tbrl.cursor,
                 input_hist = tbrl.hist,
+
+                set_colors = tui.set_colors,
+                colors = tui.colors,
             }
 
             local ret, err = fp:write(inspect(state))
@@ -1208,6 +1211,9 @@ function rt.init(args)
 
     tui.load_highlight_colors()
 
+    -- create the main buffer, switch to it, and set its color to plain
+    -- white.
+    tui.set_colors[MAINBUF] = 14
     buf_add(MAINBUF)
     buf_switch(1)
 
