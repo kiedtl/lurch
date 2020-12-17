@@ -6,3 +6,5 @@ Implement italics and blink for termbox
 Add undo, completion support to the termbox readline module
 Filter out BEL characters
 Use register/require for running rt/* hooks in main.c (instead of setting a global variable)
+Keep track of nickname's access across MODE changes
+Show nickname's access in messages
