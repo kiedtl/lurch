@@ -41,9 +41,10 @@ function M.highlight(text, text_as, no_bold)
         -- add one to the hash value, as the hash value may be 0
         M.set_colors[text_as] = util.hash(text_as, #M.colors - 1)
         M.set_colors[text_as] = M.set_colors[text_as] + 1
+        M.set_colors[text_as] = M.colors[M.set_colors[text_as]]
     end
 
-    local color = M.colors[M.set_colors[text_as]]
+    local color = M.set_colors[text_as]
     local esc = "\x02"
     if no_bold then esc = "" end
 
@@ -205,8 +206,6 @@ function M.fancy_statusbar()
             end
         end
 
-        -- If there are no unread messages, don't display the buffer in the
-        -- statusbar (unless it's the current buffer)
         local pnch
         if unread_ind ~= "" then
             pnch = M.highlight(format(" %d %s %s ", buf, ch, unread_ind),
@@ -215,6 +214,8 @@ function M.fancy_statusbar()
             pnch = M.highlight(format(" %d %s ", buf, ch), ch, true)
         end
 
+        -- If there are no unread messages, don't display the buffer in the
+        -- statusbar (unless it's the current buffer)
         if buf == cbuf then
             chanlist = format("%s\x16%s\x0f ", chanlist, pnch)
         else
