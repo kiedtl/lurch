@@ -41,8 +41,6 @@ _Bool tb_active = false;
 lua_State *L = NULL;
 int conn_fd = 0;
 FILE *conn = NULL;
-char bufsrv[4096];
-struct tb_event ev;
 
 _Bool tls_active = false;
 struct tls *client = NULL;
@@ -163,10 +161,19 @@ main(int argc, char **argv)
 	struct timeval tpresent = {   0, 0 };
 	struct timeval tcurrent = {   0, 0 };
 
-	int n;
+	/* select(2) stuff */
+	int n = 0;
 	fd_set rd;
 
+	/* buffer for incoming server data. */
+	char bufsrv[4096];
+
+	/* length of data in bufsrv */
 	size_t rc =  0;
+
+	/* incoming user events (key presses, window resizes,
+	 * mouse clicks, etc */
+	struct tb_event ev;
 
 	while ("pigs fly") {
 		FD_ZERO(&rd);
