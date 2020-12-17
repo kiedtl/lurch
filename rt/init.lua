@@ -724,7 +724,15 @@ local irchand = {
     end,
 
     [0] = function(e)
-        prin_irc(0, e.dest, e.fields[1] .. " --", "%s", e.msg or e.dest)
+        local text = "(" .. e.fields[1] .. ")"
+        for i = 2, #e.fields do
+            text = text .. " " .. e.fields[i]
+        end
+        if e.msg and e.msg ~= "" then
+            text = text .. " :" .. e.msg
+        end
+
+        prin_irc(0, MAINBUF, "><", "%s", text)
     end
 }
 
