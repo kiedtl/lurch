@@ -1185,7 +1185,16 @@ function rt.init(args)
 
     -- List of IRCv3 capabilities to send.
     --
-    -- server-time: enables adding the "time" IRCv3 tag to messages
+    -- server-time: enables adding the "time" IRCv3 tag to messages, thus
+    --      allowing us to accurately determine when a message was sent.
+    -- away-notify: allows the server to notify us when a user changes their
+    --      away status
+    -- account-notify: allows the server to notify us when a user logs in
+    --      or logs out of their NickServ account
+    -- echo-message: normally, when the user sends a message, the server
+    --      does not let us know if the message was recieved or not. with
+    --      this enabled, the server will "echo" our messages back to us.
+    --
     -- TODO: SASL
     --
     local caps  = { "server-time", "away-notify", "account-notify", "echo-message" }
