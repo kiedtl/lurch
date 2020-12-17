@@ -15,7 +15,7 @@ extern _Bool tb_active;
 extern struct tls *client;
 extern _Bool tls_active;
 
-void
+void __attribute__((format(printf, 1, 2)))
 die(const char *fmt, ...)
 {
 	if (tb_active) {
@@ -57,7 +57,7 @@ die(const char *fmt, ...)
 	exit(1);
 }
 
-char *
+char * __attribute__((format(printf, 1, 2)))
 format(const char *fmt, ...)
 {
 	static char buf[4096];
