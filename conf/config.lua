@@ -56,4 +56,22 @@ M.no_ident = false
 -- inspired by catgirl (https://git.causal.agency/catgirl)
 --M.statusbar = tui.fancy_statusbar
 
+-- List of IRCv3 capabilities to enable.
+--
+-- Supported capabilities:
+--   * server-time: enables adding the "time" IRCv3 tag to messages, thus
+--        allowing us to accurately determine when a message was sent.
+--   * away-notify: allows the server to notify us when a user changes their
+--        away status
+--   * account-notify: allows the server to notify us when a user logs in
+--        or logs out of their NickServ account
+--   * echo-message: normally, when the user sends a message, the server
+--        does not let us know if the message was recieved or not. with this
+--        enabled, the server will "echo" our messages back to us.
+--
+-- Note that these capabilities will only be enabled if the server
+-- supports it.
+--
+M.caps = { "server-time", "away-notify", "account-notify", "echo-message" }
+
 return M

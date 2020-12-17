@@ -1195,27 +1195,12 @@ function rt.init(args)
         end
     end
 
-    -- List of IRCv3 capabilities to send.
-    --
-    -- server-time: enables adding the "time" IRCv3 tag to messages, thus
-    --      allowing us to accurately determine when a message was sent.
-    -- away-notify: allows the server to notify us when a user changes their
-    --      away status
-    -- account-notify: allows the server to notify us when a user logs in
-    --      or logs out of their NickServ account
-    -- echo-message: normally, when the user sends a message, the server
-    --      does not let us know if the message was recieved or not. with
-    --      this enabled, the server will "echo" our messages back to us.
-    --
-    -- TODO: SASL
-    --
-    local caps  = { "server-time", "away-notify", "account-notify", "echo-message" }
     local _nick = config.nick or os.getenv("IRCNICK") or os.getenv("USER")
     local user  = config.user or os.getenv("IRCUSER") or os.getenv("USER")
     local name  = config.name or _nick
 
     local r, e = irc.connect(config.host, config.port, config.tls,
-        _nick, user, name, config.pass, caps)
+        _nick, user, name, config.pass, config.caps)
     if not r then panic("error: %s\n", e) end
 
     tui.load_highlight_colors()
