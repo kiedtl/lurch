@@ -1,0 +1,7 @@
+Fix support for inputting multi-byte Unicode codepoints
+Support for multi-codepoint Unicode graphemes
+Support for mouse input (switching buffers, highlighting messages, etc)
+Show netsplits/netjoins as a single message (to avoid clogging buffers)
+Implement italics and blink for termbox
+Add undo, completion support to the termbox readline module
+Filter out BEL characters
