@@ -5,19 +5,20 @@ local rt = {}
 
 local inspect = require('inspect')
 
-local irc     = require('irc')
-local config  = require('config')
-local mirc    = require('mirc')
-local util    = require('util')
-local tui     = require('tui')
-local tb      = require('tb')
-local tbrl    = require('tbrl')
+local irc       = require('irc')
+local callbacks = require('callbacks')
+local config    = require('config')
+local mirc      = require('mirc')
+local util      = require('util')
+local tui       = require('tui')
+local tb        = require('tb')
+local tbrl      = require('tbrl')
 
-local printf  = util.printf
-local eprintf = util.eprintf
-local panic   = util.panic
-local format  = string.format
-local hcol    = tui.highlight
+local printf    = util.printf
+local eprintf   = util.eprintf
+local panic     = util.panic
+local format    = string.format
+local hcol      = tui.highlight
 
 L_ERR   = "-!-"
 L_NRM   = "--"
@@ -1216,6 +1217,7 @@ function rt.init(args)
     tui.set_colors[MAINBUF] = 14
     buf_add(MAINBUF)
     buf_switch(1)
+    callbacks.print_banner("beta")
 
     tbrl.enter_callback = parsecmd
     tbrl.bindings[tb.TB_KEY_CTRL_N] = rt.on_keyseq
