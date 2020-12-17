@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <ctype.h>
 #include <errno.h>
 #include <lauxlib.h>
 #include <lua.h>
@@ -155,27 +156,15 @@ api_tb_clear(lua_State *pL)
 	return 0;
 }
 
-
-static inline void
-toggle_attr(uint32_t *color, uint32_t attr)
-{
-	if ((*color & attr) == attr)
-		*color &= 0xFF;
-	else
-		*color |= attr;
-}
-
 const size_t attribs[] = { TB_BOLD, TB_UNDERLINE, TB_REVERSE };
 static inline void
 set_color(uint32_t *old, uint32_t *new, char *color)
 {
 	uint32_t col = strtol(color, NULL, 10);
 
-	*old = *new;
+	*old = *new, *new = col;
 	if (col < sizeof(mirc_colors))
 		*new = mirc_colors[col];
-	else
-		*new = col;
 
 	for (size_t i = 0; i < sizeof(attribs); ++i)
 		if ((*old & attribs[i]) == attribs[i])
@@ -214,41 +203,34 @@ api_tb_writeline(lua_State *pL)
 
 	while (*string) {
 		switch (*string) {
-		break; case MIRC_RESET:
-			++string;
-			c.fg = 15, c.bg = 0;
-		break; case MIRC_BOLD:
-			++string;
-			toggle_attr(&c.fg, TB_BOLD);
-		break; case MIRC_UNDERLINE:
-			++string;
-			toggle_attr(&c.fg, TB_UNDERLINE);
-		break; case MIRC_INVERT:
-			++string;
-			toggle_attr(&c.fg, TB_REVERSE);
-		break; case MIRC_ITALIC:
-		break; case MIRC_BLINK:
-			++string;
-			break;
+		break; case MIRC_BOLD:      ++string; c.fg ^= TB_BOLD;
+		break; case MIRC_UNDERLINE: ++string; c.fg ^= TB_UNDERLINE;
+		break; case MIRC_INVERT:    ++string; c.fg ^= TB_REVERSE;
+		break; case MIRC_RESET:     ++string; c.fg = 15, c.bg = 0;
+		break; case MIRC_ITALIC:    ++string; break;
+		break; case MIRC_BLINK:     ++string; break;
 		break; case MIRC_COLOR:
 			++string;
 			colorbuf[0] = colorbuf[1] = colorbuf[2] = '\0';
 
-			if (*string > '9' || *string < '0') {
+			/* if no digits after MIRC_COLOR, reset */
+			if (!isdigit(*string)) {
 				c.fg = 15, c.bg = 0;
 				break;
 			}
 
 			colorbuf[0] = *string;
-			if (IS_STRINT(string[1])) colorbuf[1] = *(++string);
+			if (isdigit(string[1])) colorbuf[1] = *(++string);
 			set_color(&oldfg, &c.fg, (char *) &colorbuf);
 
 			++string;
-			if (*string != ',' || !IS_STRINT(string[1]))
+
+			/* bg color may or may not be present */
+			if (*string != ',' || !isdigit(string[1]))
 				break;
 
 			colorbuf[0] = *(++string);
-			if (IS_STRINT(string[1])) colorbuf[1] = *(++string);
+			if (isdigit(string[1])) colorbuf[1] = *(++string);
 			set_color(&oldbg, &c.bg, (char *) &colorbuf);
 
 			string += 2;
@@ -285,7 +267,6 @@ api_tb_writeline(lua_State *pL)
 	}
 
 	oldfg = c.fg, oldbg = c.bg;
-
 	return 0;
 }
 
