@@ -65,10 +65,12 @@ function M.simple_promptf(inp, cursor)
     lurch.tb_setcursor(cursor, M.tty_height-1)
 end
 
-function M.fancy_promptf(nick, inp, cursor)
+function M.fancy_promptf(inp, cursor)
     -- by default, the prompt is <NICK>, but if the user is
     -- typing a command, change to prompt to "/"; if the user
-    -- has typed "/me", change the prompt to "* <NICK>".
+    -- has typed "/me", change the prompt to "* <NICK>"; if
+    -- the user has type "/note", change to the prompt to
+    -- "NOTE(<NICK>)".
     --
     -- In all these cases, redundant input is trimmed off (unless
     -- the cursor is on the redundant text, in which case the
@@ -78,6 +80,10 @@ function M.fancy_promptf(nick, inp, cursor)
         prompt = format("* %s ", M.highlight(nick))
         inp = inp:sub(5, #inp)
         cursor = cursor - 4
+    elseif inp:find("/note ") == 1 and cursor >= 6 then
+        prompt = format("NOTE(%s) ", M.highlight(nick))
+        inp = inp:sub(7, #inp)
+        cursor = cursor - 6
     elseif inp:sub(1, 1) == "/" then
         -- if there are two slashes at the beginning of the input,
         -- indicate that it will be treated as a message instead
