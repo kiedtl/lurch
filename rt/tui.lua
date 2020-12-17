@@ -93,6 +93,11 @@ function M.inputbar(bufs, cbuf, nick, inp, cursor)
     -- the prompt's length.
     local rawprompt = mirc.remove(prompt)
 
+    -- strip off stuff from input that can't be shown on the
+    -- screen
+    local offset = (M.tty_width - 1) - #rawprompt
+    inp = inp:sub(-offset)
+
     -- show IRC formatting escape sequences nicely. Use a "marker"
     -- character of '\r' to prevent us from highlighting our own
     -- escape sequences.
@@ -108,10 +113,6 @@ function M.inputbar(bufs, cbuf, nick, inp, cursor)
         end
     end
     inp = tmp
-
-    -- strip off stuff from input that can't be shown on the
-    -- screen
-    inp = util.escsub(inp, -((M.tty_width - 1) - #rawprompt))
 
     -- draw the input buffer and move the cursor to the appropriate
     -- position.

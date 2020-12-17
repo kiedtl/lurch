@@ -234,32 +234,4 @@ function util.table_eq(a, b)
     return true
 end
 
--- a version of string.sub(<negative n>) that doesn't split
--- escape sequences.
-function util.escsub(str, n)
-    local split = 0
-    local splitat = 0
-    for i = 1, #str do
-        splitat = i
-        if split == n then break end
-
-        local byte = str:sub(i, i)
-
-        if byte == mirc.BOLD or byte == mirc.UNDERLINE
-                or byte == mirc.ITALIC or byte == mirc.INVERT
-                or byte == mirc.BLINK or byte == mirc.RESET then
-            i = i + 1
-        elseif byte == mirc.COLOR then
-            local s, e = (str:sub(i + 1, #str)):find("([0-9][0-9]?,[0-9][0-9]?)")
-            i = i + (e - s) + 1
-        elseif byte == mirc._256COLOR then
-            i = i + 4
-        end
-
-        split = split + 1
-    end
-
-    return str:sub(-splitat)
-end
-
 return util
