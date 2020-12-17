@@ -19,30 +19,30 @@ local panic   = util.panic
 local format  = string.format
 local hcol    = tui.highlight
 
-local L_ERR   = "-!-"
-local L_NRM   = "--"
+L_ERR   = "-!-"
+L_NRM   = "--"
 
-local MAINBUF = "<server>"
-local server  = { caps = {} }  -- Server information
-local nick    = config.nick    -- The current nickname
-local cur_buf = nil            -- The current buffer
-local buffers = {}             -- List of all opened buffers
+MAINBUF = config.host
 
--- prototypes
-local buf_add
-local buf_idx
-local buf_cur
-local buf_idx_or_add
-local buf_with_nick
-local buf_addname
-local msg_pings
-local writelog
-local buf_switch
-local prin_irc
-local prin_cmd
-local prin
-local parseirc
-local parsecmd
+server  = { caps = {} }  -- Server information
+nick    = config.nick    -- The current nickname
+cbuf = nil               -- The current buffer
+bufs = {}                -- List of all opened buffers
+
+--local buf_add
+--local buf_idx
+--local buf_cur
+--local buf_idx_or_add
+--local buf_with_nick
+--local buf_addname
+--local msg_pings
+--local writelog
+--local buf_switch
+--local prin_irc
+--local prin_cmd
+--local prin
+--local parseirc
+--local parsecmd
 
 -- add a new buffer. statusbar() should be run after this
 -- to add the new buffer to the statusline.
@@ -59,8 +59,8 @@ function buf_add(name)
     newbuf.names   = {}
     newbuf.access  = {}
 
-    local n_idx = #buffers + 1
-    buffers[n_idx] = newbuf
+    local n_idx = #bufs + 1
+    bufs[n_idx] = newbuf
     return n_idx
 end
 
@@ -68,8 +68,8 @@ end
 -- for that buffer.
 function buf_idx(name)
     local idx = nil
-    for i = 1, #buffers do
-        if buffers[i].name == name then
+    for i = 1, #bufs do
+        if bufs[i].name == name then
             idx = i
             break
         end
@@ -78,7 +78,7 @@ function buf_idx(name)
 end
 
 function buf_cur()
-    return buffers[cur_buf].name
+    return bufs[cbuf].name
 end
 
 function buf_idx_or_add(name)
@@ -88,7 +88,7 @@ function buf_idx_or_add(name)
 end
 
 function buf_with_nick(name, fn, mainbuf)
-    for i, buf in ipairs(buffers) do
+    for i, buf in ipairs(bufs) do
         if buf.names[nick] then
             if not mainbuf and buf.name == MAINBUF then
             else
@@ -99,22 +99,21 @@ function buf_with_nick(name, fn, mainbuf)
 end
 
 function buf_addname(bufidx, name)
-    buffers[bufidx].names[name] = true
-    buffers[buf_idx(MAINBUF)].names[name] = true
+    bufs[bufidx].names[name] = true
+    bufs[buf_idx(MAINBUF)].names[name] = true
 end
 
 -- switch to a buffer and redraw the screen.
 function buf_switch(ch)
-    if buffers[ch] then
-        cur_buf = ch
+    if bufs[ch] then
+        cbuf = ch
 
         -- reset scroll, unread notifications
-        buffers[ch].scroll  = #buffers[ch].history
-        buffers[ch].unreadl = 0; buffers[ch].unreadh = 0
-        buffers[ch].pings   = 0
+        bufs[ch].scroll  = #bufs[ch].history
+        bufs[ch].unreadl = 0; bufs[ch].unreadh = 0
+        bufs[ch].pings   = 0
 
-        tui.redraw(buffers, cur_buf, nick,
-            tbrl.bufin[tbrl.hist], tbrl.cursor)
+        tui.redraw(tbrl.bufin[tbrl.hist], tbrl.cursor)
     end
 end
 
@@ -210,33 +209,33 @@ function prin(priority, timestr, dest, left, right_fmt, ...)
     -- for each line of output, which can contain multiple lines, add to
     -- the buffer's history; update the scroll offset to point to the end
     -- of that buffer's history.
-    local prev_hist_sz = #buffers[bufidx].history
+    local prev_hist_sz = #bufs[bufidx].history
     for line in out:gmatch("([^\n]+)\n?") do
-        local histsz = #buffers[bufidx].history
-        buffers[bufidx].history[histsz + 1] = line
+        local histsz = #bufs[bufidx].history
+        bufs[bufidx].history[histsz + 1] = line
     end
-    if buffers[cur_buf].scroll == prev_hist_sz then
-        buffers[bufidx].scroll = #buffers[bufidx].history
+    if bufs[cbuf].scroll == prev_hist_sz then
+        bufs[bufidx].scroll = #bufs[bufidx].history
     end
 
     -- if the buffer we're writing to is focused and is not scrolled up,
     -- draw the text; otherwise, add to the list of unread notifications
-    local cbuf = buffers[cur_buf]
+    local cbuf = bufs[cbuf]
     if dest == cbuf.name and cbuf.scroll == #cbuf.history then
-        tui.buffer_text(buffers, cur_buf)
+        tui.buffer_text()
     else
         if priority == 0 then
-            buffers[bufidx].unreadl = buffers[bufidx].unreadl + 1
+            bufs[bufidx].unreadl = bufs[bufidx].unreadl + 1
         elseif priority == 1 then
-            buffers[bufidx].unreadh = buffers[bufidx].unreadh + 1
+            bufs[bufidx].unreadh = bufs[bufidx].unreadh + 1
         elseif priority == 2 then
-            buffers[bufidx].pings = buffers[bufidx].pings + 1
+            bufs[bufidx].pings = bufs[bufidx].pings + 1
         end
 
         redraw_statusbar = true
     end
 
-    if redraw_statusbar then tui.statusbar(buffers, cur_buf) end
+    if redraw_statusbar then tui.statusbar() end
 end
 
 local function none(_) end
@@ -315,7 +314,7 @@ local irchand = {
         prin_irc(0, e.dest, "<--", "%s has left %s (%s)",
             hcol(e.nick), e.dest, e.msg)
         local idx = buf_idx_or_add(e.dest)
-        buffers[idx].names[e.nick] = false
+        bufs[idx].names[e.nick] = false
     end,
     ["KICK"] = function(e)
         local p = 0
@@ -358,7 +357,7 @@ local irchand = {
         -- except the main buffer.
         buf_with_nick(e.nick, function(i, buf)
             prin_irc(0, buf.name, "<--", "%s has quit (%s)", hcol(e.nick), e.msg)
-            buffers[i].names[e.nick] = false
+            bufs[i].names[e.nick] = false
         end)
     end,
     ["JOIN"] = function(e)
@@ -372,15 +371,15 @@ local irchand = {
         buf_addname(bufidx, e.nick)
 
         -- if we are the ones joining, then switch to that buffer.
-        if e.nick == nick then buf_switch(#buffers) end
+        if e.nick == nick then buf_switch(#bufs) end
 
         prin_irc(0, e.dest, "-->", "%s has joined %s", hcol(e.nick), e.dest)
     end,
     ["NICK"] = function(e)
         -- copy across nick information (this preserves nick highlighting across
-        -- nickname changes), and display the nick change for all buffers that
+        -- nickname changes), and display the nick change for all bufs that
         -- have that user
-        for _, buf in ipairs(buffers) do
+        for _, buf in ipairs(bufs) do
             if buf.names[e.nick] or e.nick == nick then
                 prin_irc(0, buf.name, "--@", "%s is now known as %s",
                     hcol(e.nick), hcol(e.msg))
@@ -533,7 +532,7 @@ local irchand = {
             -- TODO: update access with mode changes
             -- TODO: show access in PRIVMSGs
             buf_addname(bufidx, _nick)
-            buffers[bufidx].access[_nick] = access
+            bufs[bufidx].access[_nick] = access
         end
 
         prin_irc(0, e.dest, "NAMES", "%s", nicklist)
@@ -559,8 +558,8 @@ local irchand = {
 
         local total = 0
 
-        util.kvmap(buffers[bufidx].names, function(k, _)
-            local access = buffers[bufidx].access[k]
+        util.kvmap(bufs[bufidx].names, function(k, _)
+            local access = bufs[bufidx].access[k]
             if not access then return end
 
             if access == "!" then
@@ -767,7 +766,7 @@ cmdhand = {
         help = { "Close a buffer. The buffers after the one being closed are shifted left." },
         usage = "[buffer]",
         fn = function(a, _, _)
-            local buf = a or cur_buf
+            local buf = a or cbuf
             if not tonumber(buf) then
                 if not buf_idx(buf) then
                     prin_cmd(buf_cur(), L_ERR, "%s is not an open buffer.", a)
@@ -784,55 +783,55 @@ cmdhand = {
                 return
             end
 
-            buffers = util.remove(buffers, buf)
-            while not buffers[cur_buf] do
-                cur_buf = cur_buf - 1
+            bufs = util.remove(bufs, buf)
+            while not bufs[cbuf] do
+                cbuf = cbuf - 1
             end
 
             -- redraw, as the current buffer may have changed,
             -- and the statusbar needs to be redrawn anyway.
-            tui.redraw(buffers, cur_buf, nick, tbrl.bufin, tbrl.cursor)
+            tui.redraw(tbrl.bufin, tbrl.cursor)
         end,
     },
     ["/up"] = {
         help = {},
         fn = function(_, _, _)
             local scr = tui.tty_height - 3
-            if (buffers[cur_buf].scroll - scr) >= 0 then
-                buffers[cur_buf].scroll = buffers[cur_buf].scroll - scr
+            if (bufs[cbuf].scroll - scr) >= 0 then
+                bufs[cbuf].scroll = bufs[cbuf].scroll - scr
             end
-            tui.redraw(buffers, cur_buf, nick, tbrl.bufin[tbrl.hist], tbrl.cursor)
+            tui.redraw(tbrl.bufin[tbrl.hist], tbrl.cursor)
         end
     },
     ["/down"] = {
         help = {},
         fn = function(_, _, _)
             local scr = tui.tty_height - 3
-            if (buffers[cur_buf].scroll + scr) <= #buffers[cur_buf].history then
-                buffers[cur_buf].scroll = buffers[cur_buf].scroll + scr
+            if (bufs[cbuf].scroll + scr) <= #bufs[cbuf].history then
+                bufs[cbuf].scroll = bufs[cbuf].scroll + scr
             end
-            tui.redraw(buffers, cur_buf, nick, tbrl.bufin[tbrl.hist], tbrl.cursor)
+            tui.redraw(tbrl.bufin[tbrl.hist], tbrl.cursor)
         end
     },
     ["/clear"] = {
         help = { "Clear the current buffer." },
         fn = function(_, _, _)
-            buffers[cur_buf].history = {}
-            buffers[cur_buf].scroll = 0
-            tui.redraw(buffers, cur_buf, nick, tbrl.bufin, tbrl.cursor)
+            bufs[cbuf].history = {}
+            bufs[cbuf].scroll = 0
+            tui.redraw(tbrl.bufin, tbrl.cursor)
         end
     },
     ["/redraw"] = {
         help = { "Redraw the screen. Ctrl+L may also be used." },
-        fn = function(_, _, _) tui.redraw(buffers, cur_buf, nick, tbrl.bufin, tbrl.cursor) end,
+        fn = function(_, _, _) tui.redraw(tbrl.bufin, tbrl.cursor) end,
     },
     ["/next"] = {
         help = { "Switch to the next buffer. Ctrl+N may also be used." },
-        fn = function(_, _, _) buf_switch(cur_buf + 1) end
+        fn = function(_, _, _) buf_switch(cbuf + 1) end
     },
     ["/prev"] = {
         help = { "Switch to the previous buffer. Ctrl+P may also be used." },
-        fn = function(_, _, _) buf_switch(cur_buf - 1) end
+        fn = function(_, _, _) buf_switch(cbuf - 1) end
     },
     ["/invite"] = {
         REQUIRE_CHANBUF = true,
@@ -872,7 +871,7 @@ cmdhand = {
             local bufidx = buf_idx_or_add(a)
 
             -- draw the new buffer
-            tui.statusbar(buffers, cur_buf)
+            tui.statusbar()
             buf_switch(bufidx)
         end
     },
@@ -1012,8 +1011,8 @@ cmdhand = {
 
             local state = {
                 server = server,
-                nick = nick, cur_buf = cur_buf,
-                buffers = buffers,
+                nick = nick, cbuf = cbuf,
+                bufs = bufs,
 
                 input_buf = tbrl.bufin,
                 input_cursor = tbrl.cursor,
@@ -1089,7 +1088,7 @@ function parsecmd(inp)
             return
         end
 
-        if hand.REQUIRE_CHAN_OR_USERBUF and cur_buf == 1 then
+        if hand.REQUIRE_CHAN_OR_USERBUF and cbuf == 1 then
             prin_cmd(buf_cur(), L_ERR,
                 "%s must be executed in a channel or user buffer.", _cmd)
         end
@@ -1217,7 +1216,7 @@ local sighand = {
     [12] = function() end,
     -- SIGWINCH
     [28] = function()
-        tui.redraw(buffers, cur_buf, nick, tbrl.bufin, tbrl.cursor)
+        tui.redraw(bufs, cbuf, nick, tbrl.bufin, tbrl.cursor)
     end,
     -- catch-all
     [0] = function() return true end,
@@ -1256,8 +1255,7 @@ end
 -- write the input buffer.
 function rt.on_input(event)
     tbrl.on_event(event)
-    tui.prompt(buffers, cur_buf, nick,
-        tbrl.bufin[tbrl.hist], tbrl.cursor)
+    tui.prompt(tbrl.bufin[tbrl.hist], tbrl.cursor)
 end
 
 function rt.on_complete(text, from, to)
@@ -1270,17 +1268,17 @@ function rt.on_complete(text, from, to)
     local possible = { nick }
     if from == 1 then
         for k, _ in pairs(cmdhand) do possible[#possible + 1] = k end
-        for _, v in ipairs(buffers) do
+        for _, v in ipairs(bufs) do
             if (v.name):find("#") == 1 then
                 possible[#possible + 1] = format("/%s", v.name)
             end
         end
 
-        for k, _ in pairs(buffers[cur_buf].names) do
+        for k, _ in pairs(bufs[cbuf].names) do
             possible[#possible + 1] = format("%s:", k)
         end
     else
-        for k, _ in pairs(buffers[cur_buf].names) do
+        for k, _ in pairs(bufs[cbuf].names) do
             possible[#possible + 1] = format("%s", k)
         end
     end

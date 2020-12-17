@@ -243,4 +243,16 @@ function util.kvmap(tb, fn)
     end
 end
 
+function util.assert_t(...)
+    for i = 1, select("#", ...) do
+        local cur = select(i, ...)
+        local v = select(i, ...)[1]
+        local t = select(i, ...)[2]
+        local c = select(i, ...)[3]
+
+        assert(type(v) == t, format("%s: expected %s, got %s",
+            c or "parameter", t, type(v)))
+    end
+end
+
 return util

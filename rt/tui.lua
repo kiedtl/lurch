@@ -1,9 +1,10 @@
-local config  = require('config')
-local inspect = require('inspect')
-local mirc    = require('mirc')
-local tb      = require('tb')
-local util    = require('util')
-local format  = string.format
+local config   = require('config')
+local inspect  = require('inspect')
+local mirc     = require('mirc')
+local tb       = require('tb')
+local util     = require('util')
+local format   = string.format
+local assert_t = util.assert_t
 
 local M = {}
 
@@ -53,7 +54,7 @@ function M.highlight(text, text_as, no_bold)
     return format("%s%s\x0f", esc, text)
 end
 
-function M.simple_promptf(bufs, cbuf, nick, inp, cursor)
+function M.simple_promptf(inp, cursor)
     -- strip off stuff from input that can't be shown on the
     -- screen, and show IRC formatting escape sequences nicely.
     inp = mirc.show(inp:sub(-(M.tty_width - 1)))
@@ -64,7 +65,7 @@ function M.simple_promptf(bufs, cbuf, nick, inp, cursor)
     lurch.tb_setcursor(cursor, M.tty_height-1)
 end
 
-function M.fancy_promptf(bufs, cbuf, nick, inp, cursor)
+function M.fancy_promptf(nick, inp, cursor)
     -- by default, the prompt is <NICK>, but if the user is
     -- typing a command, change to prompt to "/"; if the user
     -- has typed "/me", change the prompt to "* <NICK>".
@@ -111,17 +112,19 @@ function M.fancy_promptf(bufs, cbuf, nick, inp, cursor)
     lurch.tb_setcursor(cursor + #rawprompt, M.tty_height-1)
 end
 
-M.prompt = function(bufs, cbuf, nick, inp, cursor)
+M.prompt = function(inp, cursor)
+    assert_t({inp, "string", "inp"}, {cursor, "number", "cursor"})
+
     -- if we've scrolled up, don't draw the input.
     if bufs[cbuf].scroll ~= #bufs[cbuf].history then
         lurch.tb_writeline(M.tty_height - 1, "\x16\x02 -- more -- \x0f")
         lurch.tb_setcursor(tb.TB_HIDE_CURSOR, tb.TB_HIDE_CURSOR)
     else
-        M.simple_promptf(bufs, cbuf, nick, inp, cursor)
+        M.simple_promptf(inp, cursor)
     end
 end
 
-function M.simple_statusbar(bufs, cbuf)
+function M.simple_statusbar()
     local chl = ""
     local l = 0
     local fst = cbuf
@@ -165,7 +168,7 @@ function M.simple_statusbar(bufs, cbuf)
     util.settitle("[%s] %s", config.host, bufs[cbuf].name)
 end
 
-function M.fancy_statusbar(bufs, cbuf)
+function M.fancy_statusbar()
     assert(type(cbuf) == "number",
         format("cbuf of type %s, not number", type(cbuf)))
     assert(type(bufs) == "table",
@@ -224,7 +227,7 @@ end
 
 M.statusbar = M.simple_statusbar
 
-function M.buffer_text(bufs, cbuf)
+function M.buffer_text()
     -- keep one blank line in between statusbar and text.
     local line = 2
 
@@ -245,13 +248,13 @@ function M.buffer_text(bufs, cbuf)
     end
 end
 
-function M.redraw(bufs, cbuf, nick, inbuf, incurs)
+function M.redraw(inbuf, incurs)
     M.refresh()
     lurch.tb_clear()
 
-    M.buffer_text(bufs, cbuf)
-    M.prompt(bufs, cbuf, nick, inbuf, incurs)
-    M.statusbar(bufs, cbuf)
+    M.buffer_text()
+    M.prompt(inbuf, incurs)
+    M.statusbar()
 end
 
 function M.format_line(timestr, left, right_fmt, ...)
