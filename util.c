@@ -15,7 +15,7 @@ extern _Bool tb_active;
 extern struct tls *client;
 extern _Bool tls_active;
 
-void __attribute__((format(printf, 1, 2)))
+_Noreturn void __attribute__((format(printf, 1, 2)))
 die(const char *fmt, ...)
 {
 	if (tb_active) {
