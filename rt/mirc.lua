@@ -41,4 +41,30 @@ function mirc.remove(text)
     return text
 end
 
+-- make IRC mirc sequences visible in text.
+function mirc.show(text)
+    local buf = ""
+    local fmt = {
+        [mirc.BOLD] = "B",
+        [mirc.UNDERLINE] = "U",
+        [mirc.ITALIC] = "I",
+        [mirc.INVERT] = "R", -- "Reverse"
+        [mirc.BLINK] = "F",  -- "Flash"
+        [mirc.RESET] = "O",  -- ??? Weechat does it, so it must be OK
+        [mirc.COLOR] = "C",
+    }
+
+    for i = 1, #text do
+        local byte = text:sub(i, i)
+        if fmt[byte] then
+            buf = format("%s%s%s%s%s%s", buf, mirc.RESET,
+                mirc.INVERT, fmt[byte], mirc.RESET, byte)
+        else
+            buf = buf .. byte
+        end
+    end
+
+    return buf
+end
+
 return mirc

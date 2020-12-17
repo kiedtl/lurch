@@ -53,14 +53,18 @@ function M.highlight(text, text_as, no_bold)
     return format("%s%s\x0f", esc, text)
 end
 
-function M.prompt(bufs, cbuf, nick, inp, cursor)
-    -- if we've scrolled up, don't draw the input.
-    if bufs[cbuf].scroll ~= #bufs[cbuf].history then
-        lurch.tb_writeline(M.tty_height - 1, "\x16\x02 -- more -- \x0f")
-        lurch.tb_setcursor(tb.TB_HIDE_CURSOR, tb.TB_HIDE_CURSOR)
-        return
-    end
+function M.simple_promptf(bufs, cbuf, nick, inp, cursor)
+    -- strip off stuff from input that can't be shown on the
+    -- screen, and show IRC formatting escape sequences nicely.
+    inp = mirc.show(inp:sub(-(M.tty_width - 1)))
 
+    -- draw the input buffer and move the cursor to the appropriate
+    -- position.
+    lurch.tb_writeline(M.tty_height-1, inp)
+    lurch.tb_setcursor(cursor, M.tty_height-1)
+end
+
+function M.fancy_promptf(bufs, cbuf, nick, inp, cursor)
     -- by default, the prompt is <NICK>, but if the user is
     -- typing a command, change to prompt to "/"; if the user
     -- has typed "/me", change the prompt to "* <NICK>".
@@ -98,26 +102,23 @@ function M.prompt(bufs, cbuf, nick, inp, cursor)
     local offset = (M.tty_width - 1) - #rawprompt
     inp = inp:sub(-offset)
 
-    -- show IRC formatting escape sequences nicely. Use a "marker"
-    -- character of '\r' to prevent us from highlighting our own
-    -- escape sequences.
-    local tmp = ""
-    local fmt = { [mirc.BOLD] = "B", [mirc.UNDERLINE] = "U",
-        [mirc.ITALIC] = "I", [mirc.INVERT] = "R", [mirc.RESET] = "O" }
-    for i = 1, #inp do
-        local byte = inp:sub(i, i)
-        if fmt[byte] then
-            tmp = format("%s\x0f\x16%s\x0f%s", tmp, fmt[byte], byte)
-        else
-            tmp = tmp .. byte
-        end
-    end
-    inp = tmp
+    -- show IRC formatting escape sequences nicely.
+    inp = mirc.show(inp)
 
     -- draw the input buffer and move the cursor to the appropriate
     -- position.
     lurch.tb_writeline(M.tty_height-1, format("%s%s", prompt, inp))
     lurch.tb_setcursor(cursor + #rawprompt, M.tty_height-1)
+end
+
+M.prompt = function(bufs, cbuf, nick, inp, cursor)
+    -- if we've scrolled up, don't draw the input.
+    if bufs[cbuf].scroll ~= #bufs[cbuf].history then
+        lurch.tb_writeline(M.tty_height - 1, "\x16\x02 -- more -- \x0f")
+        lurch.tb_setcursor(tb.TB_HIDE_CURSOR, tb.TB_HIDE_CURSOR)
+    else
+        M.simple_promptf(bufs, cbuf, nick, inp, cursor)
+    end
 end
 
 function M.simple_statusbar(bufs, cbuf)
@@ -221,7 +222,7 @@ function M.fancy_statusbar(bufs, cbuf)
     util.settitle("[%s] %s", config.host, bufs[cbuf].name)
 end
 
-M.statusbar = M.fancy_statusbar
+M.statusbar = M.simple_statusbar
 
 function M.buffer_text(bufs, cbuf)
     -- keep one blank line in between statusbar and text.
