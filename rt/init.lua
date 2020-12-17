@@ -437,7 +437,7 @@ local irchand = {
     ["255"] = none, ["265"] = none,
     ["266"] = none, ["250"] = none,
 
-    -- WHOIS: <nick> has TLS cert fingerprint of sdflkjsdflsdf
+    -- WHOIS: <nick> has TLS cert fingerprint of sdflsd453lkd8
     ["276"] = function(e)
         prin_irc(0, buf_cur(), "WHOIS", "[%s] %s", hcol(e.fields[3]), e.msg)
     end,
@@ -540,7 +540,58 @@ local irchand = {
     end,
 
     -- End of /names
-    ["366"] = none,
+    ["366"] = function(e)
+        local dest   = assert(e.dest)
+        local bufidx = assert(buf_idx(dest))
+
+        -- print a nice summary of those in the channel.
+        --
+        -- peasants:   normals, those without a special mode
+        -- loudmouths: those with +v (voices)
+        -- halfwits:   those with +h (halfops)
+        -- operators:  those with +o
+        -- founders:   those with +q
+        -- irccops:    those with +Y (server admins)
+        local peasants,  loudmouths, halfwits
+        local operators, founders,   irccops
+        peasants  = 0; loudmouths = 0; halfwits = 0;
+        operators = 0; founders   = 0; irccops  = 0;
+
+        local total = 0
+
+        util.kvmap(buffers[bufidx].names, function(k, _)
+            local access = buffers[bufidx].access[k]
+            if not access then return end
+
+            if access == "!" then
+                irccops = irccops + 1
+            elseif access == "~" then
+                founders = founders + 1
+            elseif access == "@" then
+                operators = operators + 1
+            elseif access == "&" then
+                halfwits = halfwits + 1
+            elseif access == "+" then
+                loudmouths = loudmouths + 1
+            elseif access == "" then
+                peasants = peasants + 1
+            end
+
+            total = total + 1
+        end)
+
+        local txt = ""
+        if irccops    > 0 then txt = format("%s%s irccops, ",    txt, irccops)    end
+        if founders   > 0 then txt = format("%s%s founders, ",   txt, founders)   end
+        if operators  > 0 then txt = format("%s%s operators, ",  txt, operators)  end
+        if halfwits   > 0 then txt = format("%s%s halfwits, ",   txt, halfwits)   end
+        if loudmouths > 0 then txt = format("%s%s loudmouths, ", txt, loudmouths) end
+        if peasants   > 0 then txt = format("%s%s peasants, ",   txt, peasants)   end
+        txt = txt:sub(1, #txt - 2) -- trim comma
+        txt = format("%s denizens of %s (%s)", total, hcol(dest), txt)
+
+        prin_irc(0, dest, "NAMES", "%s", txt)
+    end,
 
     -- MOTD message
     ["372"] = default,

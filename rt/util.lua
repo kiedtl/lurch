@@ -234,4 +234,13 @@ function util.table_eq(a, b)
     return true
 end
 
+util.MAP_BREAK = 0
+function util.kvmap(tb, fn)
+    for k, v in pairs(tb) do
+        if fn(k, v) == util.MAP_BREAK then
+            break
+        end
+    end
+end
+
 return util
