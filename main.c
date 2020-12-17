@@ -169,7 +169,6 @@ main(int argc, char **argv)
 	size_t rc =  0;
 
 	while ("pigs fly") {
-		/* TODO: use poll(2) */
 		FD_ZERO(&rd);
 		FD_SET(STDIN_FILENO, &rd);
 		FD_SET(conn_fd, &rd);
