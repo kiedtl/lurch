@@ -262,7 +262,7 @@ api_tb_writeline(lua_State *pL)
 	
 			if (chwidth > 0) {
 				tb_put_cell(col, line, &c);
-				col += chwidth;
+				col += 1;
 			}
 		}
 	}
