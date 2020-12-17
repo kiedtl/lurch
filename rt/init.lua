@@ -22,6 +22,7 @@ local hcol    = tui.highlight
 L_ERR   = "-!-"
 L_NRM   = "--"
 
+DBGFILE = "/tmp/lurch_debug"
 MAINBUF = config.host
 
 server  = { caps = {} }  -- Server information
@@ -43,6 +44,16 @@ bufs = {}                -- List of all opened buffers
 --local prin
 --local parseirc
 --local parsecmd
+
+-- a simple wrapper around irc.send.
+function send(fmt, ...)
+    if os.getenv("LURCH_DEBUG") then
+        util.append(DBGFILE,
+            format(">> %s\n", format(fmt, ...)))
+    end
+
+    irc.send(fmt, ...)
+end
 
 -- add a new buffer. statusbar() should be run after this
 -- to add the new buffer to the statusline.
@@ -243,7 +254,7 @@ local function default2(e) prin_irc(0, MAINBUF, "--", "There are %s %s", e.field
 local function default(e) prin_irc(0, e.dest, "--", "%s", e.msg) end
 
 local irchand = {
-    ["PING"] = function(e)   irc.send("PONG :%s", e.dest or e.msg) end,
+    ["PING"] = function(e)   send("PONG :%s", e.dest or e.msg) end,
     ["ACCOUNT"] = function(e)
         assert(server.caps["account-notify"])
 
@@ -601,7 +612,7 @@ local irchand = {
     -- End of MOTD
     ["376"] = function(_, _, _, _)
         for c = 1, #config.join do
-            irc.send(":%s JOIN %s", nick, config.join[c])
+            send(":%s JOIN %s", nick, config.join[c])
         end
     end,
 
@@ -627,7 +638,7 @@ local irchand = {
         local newnick = e.fields[3] .. "_" -- sprout a tail
         prin_irc(2, MAINBUF, L_ERR, "Nickname %s already in use; using %s",
             e.fields[3], newnick)
-        irc.send("NICK %s", newnick)
+        send("NICK %s", newnick)
         nick = newnick
     end,
 
@@ -671,19 +682,19 @@ local irchand = {
     ["CTCP_VERSION"] = function(e)
         if config.ctcp_version then
             prin_irc(1, MAINBUF, "CTCP", "%s requested VERSION (reply: %s)", e.nick, config.ctcp_version)
-            irc.send("NOTICE %s :\1VERSION %s\1", e.nick, config.ctcp_version)
+            send("NOTICE %s :\1VERSION %s\1", e.nick, config.ctcp_version)
         end
     end,
     ["CTCP_SOURCE"] = function(e)
         if config.ctcp_source then
             prin_irc(1, MAINBUF, "CTCP", "%s requested SOURCE (reply: %s)", e.nick, config.ctcp_source)
-            irc.send("NOTICE %s :\1SOURCE %s\1", e.nick, config.ctcp_source)
+            send("NOTICE %s :\1SOURCE %s\1", e.nick, config.ctcp_source)
         end
     end,
     ["CTCP_PING"] = function(e)
         if config.ctcp_ping then
             prin_irc(1, MAINBUF, "CTCP", "PING from %s", e.nick)
-            irc.send("NOTICE %s :%s", e.nick, e.fields[2])
+            send("NOTICE %s :%s", e.nick, e.fields[2])
         end
     end,
 
@@ -717,10 +728,6 @@ local irchand = {
 }
 
 function parseirc(reply)
-    if os.getenv("LURCH_DEBUG") then
-        util.append("/tmp/lurch_recieved", reply)
-    end
-
     local event = irc.parse(reply)
     if not event then return end
 
@@ -752,7 +759,7 @@ local function send_both(fmt, ...)
     -- terminal and to the server at the same time.
     --
     -- don't send to the terminal if echo-message is enabled.
-    irc.send(fmt, ...)
+    send(fmt, ...)
 
     if not server.caps["echo-message"] then
         parseirc(format(fmt, ...))
@@ -839,34 +846,34 @@ cmdhand = {
         help = { "Invite a user to the current channel." },
         usage = "<user>",
         fn = function(a, _, _)
-            irc.send(":%s INVITE %s :%s", nick, a, buf_cur())
+            send(":%s INVITE %s :%s", nick, a, buf_cur())
         end
     },
     ["/names"] = {
         REQUIRE_CHANBUF_OR_ARG = true,
         help = { "See the users for a channel (the current one by default)." },
         usage = "[channel]",
-        fn = function(a, _, _) irc.send("NAMES %s", a or buf_cur()) end
+        fn = function(a, _, _) send("NAMES %s", a or buf_cur()) end
     },
     ["/topic"] = {
         -- TODO: separate settopic command
         REQUIRE_CHANBUF_OR_ARG = true,
         help = { "See the current topic for a channel (the current one by default)." },
         usage = "[channel]",
-        fn = function(a, _, _) irc.send("TOPIC %s", a or buf_cur()) end
+        fn = function(a, _, _) send("TOPIC %s", a or buf_cur()) end
     },
     ["/whois"] = {
         REQUIRE_ARG = true,
         help = { "See WHOIS information for a user." },
         usage = "<user>",
-        fn = function(a, _, _) irc.send("WHOIS %s", a) end
+        fn = function(a, _, _) send("WHOIS %s", a) end
     },
     ["/join"] = {
         REQUIRE_ARG = true,
         help = { "Join a channel; if already joined, focus that buffer." },
         usage = "[channel]",
         fn = function(a, _, _)
-            irc.send(":%s JOIN %s", nick, a)
+            send(":%s JOIN %s", nick, a)
 
             local bufidx = buf_idx_or_add(a)
 
@@ -882,7 +889,7 @@ cmdhand = {
         fn = function(a, args, _)
             local msg = config.part_msg
             if a and a ~= "" then msg = format("%s %s", a, args) end
-            irc.send(":%s PART %s :%s", nick, buf_cur(), msg)
+            send(":%s PART %s :%s", nick, buf_cur(), msg)
         end
     },
     ["/quit"] = {
@@ -896,7 +903,7 @@ cmdhand = {
                 msg = format("%s %s", a, args)
             end
 
-            irc.send("QUIT :%s", msg)
+            send("QUIT :%s", msg)
             lurch.cleanup()
             eprintf("[lurch exited]\n")
             os.exit(0)
@@ -906,7 +913,7 @@ cmdhand = {
         REQUIRE_ARG = true,
         help = { "Change nickname." },
         usage = "<nickname>",
-        fn = function(a, _, _) irc.send("NICK %s", a); nick = a; end
+        fn = function(a, _, _) send("NICK %s", a); nick = a; end
     },
     ["/msg"] = {
         REQUIRE_ARG = true,
@@ -920,7 +927,7 @@ cmdhand = {
         REQUIRE_ARG = true,
         help = { "Send a raw IRC command to the server." },
         usage = "<command> <args>",
-        fn = function(a, args, _) irc.send("%s %s", a, args) end
+        fn = function(a, args, _) send("%s %s", a, args) end
     },
     ["/me"] = {
         REQUIRE_ARG = true,
@@ -1231,7 +1238,7 @@ function rt.on_signal(sig)
     local quitmsg = config.quit_msg or "*poof*"
     local handler = sighand[sig] or sighand[0]
     if (handler)() then
-        irc.send("QUIT :%s", quitmsg)
+        send("QUIT :%s", quitmsg)
         lurch.cleanup()
         eprintf("[lurch exited]\n")
         os.exit(0)
@@ -1239,7 +1246,7 @@ function rt.on_signal(sig)
 end
 
 function rt.on_lerror(_)
-    irc.send("QUIT :%s", "*poof*")
+    send("QUIT :%s", "*poof*")
     lurch.cleanup()
 end
 
@@ -1248,6 +1255,10 @@ function rt.on_timeout()
 end
 
 function rt.on_reply(reply)
+    if os.getenv("LURCH_DEBUG") then
+        util.append(DBGFILE, format("<< %s\n", reply))
+    end
+
     parseirc(reply)
 end
 
