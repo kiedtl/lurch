@@ -171,8 +171,8 @@ main(int argc, char **argv)
 	while ("pigs fly") {
 		/* TODO: use poll(2) */
 		FD_ZERO(&rd);
+		FD_SET(STDIN_FILENO, &rd);
 		FD_SET(conn_fd, &rd);
-		FD_SET(0, &rd);
 
 		try_present(&tcurrent, &tpresent);
 		n = select(conn_fd + 1, &rd, 0, 0, &ttimeout);
@@ -228,7 +228,7 @@ main(int argc, char **argv)
 			trespond = time(NULL);
 		}
 
-		if (FD_ISSET(0, &rd)) {
+		if (FD_ISSET(STDIN_FILENO, &rd)) {
 			int ret = 0;
 			while ((ret = tb_peek_event(&ev, 16)) != 0) {
 				assert(ret != -1); /* termbox error */
