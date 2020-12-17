@@ -126,7 +126,7 @@ M.prompt = function(inp, cursor)
         lurch.tb_writeline(M.tty_height - 1, "\x16\x02 -- more -- \x0f")
         lurch.tb_setcursor(tb.TB_HIDE_CURSOR, tb.TB_HIDE_CURSOR)
     else
-        M.simple_promptf(inp, cursor)
+        M.fancy_promptf(inp, cursor)
     end
 end
 
@@ -231,7 +231,7 @@ function M.fancy_statusbar()
     util.settitle("[%s] %s", config.host, bufs[cbuf].name)
 end
 
-M.statusbar = M.simple_statusbar
+M.statusbar = M.fancy_statusbar
 
 function M.buffer_text()
     -- keep one blank line in between statusbar and text.
