@@ -93,16 +93,25 @@ function M.inputbar(bufs, cbuf, nick, inp, cursor)
     -- the prompt's length.
     local rawprompt = mirc.remove(prompt)
 
-    -- show IRC formatting escape sequences nicely.
-    inp = inp:gsub(mirc.BOLD,      "\x16\x0314B\x0f%1")
-    inp = inp:gsub(mirc.UNDERLINE, "\x16\x0314U\x0f%1")
-    inp = inp:gsub(mirc.ITALIC,    "\x16\x0314I\x0f%1")
-    inp = inp:gsub(mirc.INVERT,    "\x16\x0314R\x0f%1")
-    inp = inp:gsub(mirc.RESET,     "\x16\x0314O\x0f%1")
+    -- show IRC formatting escape sequences nicely. Use a "marker"
+    -- character of '\r' to prevent us from highlighting our own
+    -- escape sequences.
+    local tmp = ""
+    local fmt = { [mirc.BOLD] = "B", [mirc.UNDERLINE] = "U",
+        [mirc.ITALIC] = "I", [mirc.INVERT] = "R", [mirc.RESET] = "O" }
+    for i = 1, #inp do
+        local byte = inp:sub(i, i)
+        if fmt[byte] then
+            tmp = format("%s\x0f\x16%s\x0f%s", tmp, fmt[byte], byte)
+        else
+            tmp = tmp .. byte
+        end
+    end
+    inp = tmp
 
     -- strip off stuff from input that can't be shown on the
     -- screen
-    inp = inp:sub(-((M.tty_width - 1) - #rawprompt))
+    inp = util.escsub(inp, -((M.tty_width - 1) - #rawprompt))
 
     -- draw the input buffer and move the cursor to the appropriate
     -- position.

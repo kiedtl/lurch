@@ -12,6 +12,9 @@ mirc.BLINK     = "\x06"
 mirc.RESET     = "\x0f"
 mirc.COLOR     = "\x03"
 
+-- non-standard extension
+mirc._256COLOR  = "\x04"
+
 mirc.BLACK        = 01
 mirc.RED          = 05
 mirc.GREEN        = 03
