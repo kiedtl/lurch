@@ -920,8 +920,16 @@ cmdhand = {
         help = { "Privately message a user. Opens a new buffer." },
         usage = "<user> <message...>",
         fn = function(a, args, _)
-            send_both(":%s PRIVMSG %s :%s", nick, a, args)
+            send_both(":%s PRIVMSG %s :%s", nick, a, args or "")
         end
+    },
+    ["/note"] = {
+        REQUIRE_ARG = true,
+        help = { "Send a NOTICE to a channel." },
+        usage = "<user> <message...>",
+        fn = function(a, args, _)
+            send_both(":%s NOTICE %s :%s", nick, a, args or "")
+        end,
     },
     ["/raw"] = {
         REQUIRE_ARG = true,
