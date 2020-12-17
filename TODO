@@ -5,3 +5,4 @@ Show netsplits/netjoins as a single message (to avoid clogging buffers)
 Implement italics and blink for termbox
 Add undo, completion support to the termbox readline module
 Filter out BEL characters
+Use register/require for running rt/* hooks in main.c (instead of setting a global variable)
