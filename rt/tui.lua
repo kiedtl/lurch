@@ -120,7 +120,51 @@ function M.inputbar(bufs, cbuf, nick, inp, cursor)
     lurch.tb_setcursor(cursor + #rawprompt, M.tty_height-1)
 end
 
-function M.statusbar(bufs, cbuf)
+function M.simple_statusbar(bufs, cbuf)
+    local chl = ""
+    local l = 0
+    local fst = cbuf
+
+    while fst > 1 and l < (M.tty_width / 2) do
+        l = l + lurch.utf8_dwidth(bufs[fst].name) + 3
+        fst = fst - 1
+    end
+
+    l = 0
+    while fst <= #bufs and l < M.tty_width do
+        local ch = bufs[fst]
+        if fst == cbuf then chl = chl .. mirc.RESET end
+
+        chl = chl .. "  "; l = l + 1
+
+        if ch.unreadh > 0 then chl = chl .. mirc.UNDERLINE end
+        if ch.pings > 0   then chl = chl .. mirc.BOLD end
+
+        chl = chl .. ch.name
+        l = l + lurch.utf8_dwidth(ch.name)
+
+        if ch.pings > 0   then chl = chl .. mirc.BOLD end
+        if ch.unreadh > 0 then chl = chl .. mirc.UNDERLINE end
+
+        if l < (M.tty_width - 1) then
+            chl = chl .. "  "; l = l + 2
+        end
+
+        if fst == cbuf then chl = chl .. mirc.INVERT end
+
+        fst = fst + 1
+    end
+
+    local padding = M.tty_width - #(mirc.remove(chl))
+    chl = format("\x16%s%s\x0f", chl, (" "):rep(padding))
+    lurch.tb_writeline(0, chl)
+
+    -- set the terminal title. This is a big help when using terminal
+    -- tabs to mimic a multi-server feature.
+    util.settitle("[%s] %s", config.host, bufs[cbuf].name)
+end
+
+function M.fancy_statusbar(bufs, cbuf)
     assert(type(cbuf) == "number",
         format("cbuf of type %s, not number", type(cbuf)))
     assert(type(bufs) == "table",
@@ -176,6 +220,8 @@ function M.statusbar(bufs, cbuf)
     -- tabs to mimic a multi-server feature.
     util.settitle("[%s] %s", config.host, bufs[cbuf].name)
 end
+
+M.statusbar = M.fancy_statusbar
 
 function M.buffer_text(bufs, cbuf)
     -- keep one blank line in between statusbar and text.

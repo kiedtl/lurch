@@ -49,4 +49,11 @@ M.tz = "UTC-3:00"
 -- requests time out. Note that only a few IRCd's are susceptible to this.
 M.no_ident = false
 
+-- function used to draw the statusbar. There are *two* inbuilt statusbar
+-- functions: simple_statusbar, which is a colorless statusline copied from
+-- icyrc (https://github.com/icyphox/irc), and fancy_statusbar, which is a
+-- more fully-featured statusline which makes heavy use of color, and was
+-- inspired by catgirl (https://git.causal.agency/catgirl)
+--M.statusbar = tui.fancy_statusbar
+
 return M
