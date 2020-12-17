@@ -39,6 +39,7 @@ const struct luaL_Reg lurch_lib[] = {
 	{ "tb_setcursor",  api_tb_setcursor   },
 	{ "mkdirp",        api_mkdir_p        },
 	{ "utf8_insert",   api_utf8_insert    },
+	{ "utf8_dwidth",   api_utf8_dwidth    },
 	{ NULL, NULL },
 };
 
@@ -341,5 +342,31 @@ api_utf8_insert(lua_State *pL)
 	strncat((char *) buf, str + i, strlen(str) - i);
 
 	lua_pushstring(pL, (char *) buf);
+	return 1;
+}
+
+/* get the display width of a string. */
+int
+api_utf8_dwidth(lua_State *pL)
+{
+	const unsigned char *str =
+		(const unsigned char *) luaL_checkstring(pL, 1);
+
+	ssize_t chsz = -1;
+	utf8proc_int32_t chbuf = 0;
+	size_t chwidth = 0, accm = 0;
+
+	while (*str && (chsz = utf8proc_iterate(str, -1, &chbuf))) {
+		if (chsz < 0) LLUA_ERR(pL, "invalid UTF8 string.")
+
+		str += chsz;
+
+		chwidth = 0;
+		if ((size_t) chbuf < sizeof(dwidth))
+			chwidth = dwidth[chbuf];
+		accm += chwidth;
+	}
+
+	lua_pushinteger(pL, (lua_Integer) accm);
 	return 1;
 }

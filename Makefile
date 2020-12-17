@@ -17,7 +17,7 @@ WARNING  = -Wall -Wpedantic -Wextra -Wold-style-definition \
 DEF      = -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200112L -D_XOPEN_SOURCE -D_GNU_SOURCE
 INCL     = -Itb/src/ -I/usr/include/$(LUA) -I ~/local/include -Itool/
 CC       = clang
-CFLAGS   = -Og -ggdb $(DEF) $(INCL) $(WARNING)
+CFLAGS   = -Og -ggdb $(DEF) $(INCL) $(WARNING) -funsigned-char
 LD       = bfd
 LDFLAGS  = -fuse-ld=$(LD) -L/usr/include -lm -ltls -l$(LUA)
 
