@@ -25,7 +25,7 @@
 #include "util.h"
 
 /* maximum rate at which the screen is refreshed */
-const struct timeval REFRESH = { 0, 3000 };
+const struct timeval REFRESH = { 0, 2046 };
 
 #define TIMEOUT 4096
 
@@ -45,7 +45,7 @@ FILE *conn = NULL;
 _Bool tls_active = false;
 struct tls *client = NULL;
 
-void try_present(struct timeval *tcurrent, struct timeval *tpresent);
+void try_present(struct timeval *tcur, struct timeval *tpre);
 void signal_lhand(int sig);
 void signal_fatal(int sig);
 
@@ -161,6 +161,9 @@ main(int argc, char **argv)
 	struct timeval tpresent = {   0, 0 };
 	struct timeval tcurrent = {   0, 0 };
 
+	assert(gettimeofday(&tpresent, NULL) == 0);
+	tb_present();
+
 	/* select(2) stuff */
 	int n = 0;
 	fd_set rd;
@@ -261,18 +264,35 @@ main(int argc, char **argv)
 
 // utility functions
 
+static struct tb_cell *last_tb_buf;
+static size_t last_tb_size;
+
 /* check if (a) REFRESH time has passed, and (b) if the termbox
  * buffer has been modified; if both those conditions are met, refresh
  * the screen. */
 void
-try_present(struct timeval *tcurrent, struct timeval *tpresent)
+try_present(struct timeval *tcur, struct timeval *tpre)
 {
-	assert(gettimeofday(tcurrent, NULL) == 0);
+	assert(gettimeofday(tcur, NULL) == 0);
 	struct timeval diff;
-	timersub(tcurrent, tpresent, &diff);
-	if (diff.tv_sec >= REFRESH.tv_sec && diff.tv_usec >= REFRESH.tv_usec) {
-		assert(gettimeofday(tpresent, NULL) == 0);
+	timersub(tcur, tpre, &diff);
+
+	if (!timercmp(&diff, &REFRESH, >=)) {
+		/*assert(gettimeofday(tpre, NULL) == 0);
+		tb_present();*/
+		return;
+	}
+
+	size_t size = (tb_width() * tb_height());
+	size = size * sizeof(struct tb_cell);
+	size = size > last_tb_size ? last_tb_size : size;
+
+	struct tb_cell *tb_buf = tb_cell_buffer();
+
+	if (memcmp(last_tb_buf, tb_buf, size) == 0) {
 		tb_present();
+		last_tb_buf = tb_buf;
+		last_tb_size = size;
 	}
 }
 
