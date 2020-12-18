@@ -722,19 +722,10 @@ local irchand = {
             prin_irc(0, MAINBUF, "--", "Disabling IRCv3 capability: %s", e.msg)
         end
     end,
-
-    [0] = function(e)
-        local text = "(" .. e.fields[1] .. ")"
-        for i = 2, #e.fields do
-            text = text .. " " .. e.fields[i]
-        end
-        if e.msg and e.msg ~= "" then
-            text = text .. " :" .. e.msg
-        end
-
-        prin_irc(0, MAINBUF, "><", "%s", text)
-    end
 }
+
+CFGHND_CONTINUE = 0
+CFGHND_RETURN   = 1
 
 function parseirc(reply)
     local event = irc.parse(reply)
@@ -756,8 +747,26 @@ function parseirc(reply)
     -- the sender
     if event.dest == nick then event.dest = event.nick end
 
-    local handler = irchand[cmd] or irchand[0]
-    handler(event)
+    local cfghnd = config.handlers[cmd]
+    if cfghnd then
+        if cfghnd(event) == CFGHND_RETURN then
+            return
+        end
+    end
+
+    if not irchand[cmd] then
+        local text = "(" .. e.fields[1] .. ")"
+        for i = 2, #e.fields do
+            text = text .. " " .. e.fields[i]
+        end
+        if e.msg and e.msg ~= "" then
+            text = text .. " :" .. e.msg
+        end
+
+        prin_irc(0, MAINBUF, "><", "%s", text)
+    else
+        (irchand[cmd])(event)
+    end
 end
 
 function send_both(fmt, ...)

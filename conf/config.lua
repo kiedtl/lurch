@@ -62,8 +62,12 @@ M.commands = {
 -- commands); usage of this feature requires knowledge of the IRC protocol
 -- and all its quirks.
 --
--- This can be used to implement triggers, as in Weechat.
-M.handlers
+-- If the handler returns CFGHND_CONTINUE or nil, the normal handler will
+-- be run; if it returns CFGHND_RETURN, then the default handler will not
+-- be executed.
+--
+-- This can be used to impliment triggers, as in Weechat.
+M.handlers = { }
 
 -- what timezone to display times in. (format: "UTC[+-]<offset>")
 M.tz = "UTC-3:00"
