@@ -62,14 +62,14 @@ function buf_add(name)
     assert(name)
 
     local newbuf = {}
-    newbuf.history = {}
+    newbuf.history = {}     -- lines in buffer.
     newbuf.name    = name
     newbuf.unreadh = 0      -- high-priority unread messages
     newbuf.unreadl = 0      -- low-priority unread messages
     newbuf.pings   = 0      -- maximum-priority unread messages
-    newbuf.scroll  = #newbuf.history
-    newbuf.names   = {}
-    newbuf.access  = {}
+    newbuf.scroll  = 0      -- scroll offset.
+    newbuf.names   = {}     -- nicknames in buffer/channel.
+    newbuf.access  = {}     -- privilege for nicknames. (e.g. ~, @, +)
 
     local n_idx = #bufs + 1
     bufs[n_idx] = newbuf
@@ -121,7 +121,7 @@ function buf_switch(ch)
         cbuf = ch
 
         -- reset scroll, unread notifications
-        bufs[ch].scroll  = #bufs[ch].history
+        bufs[ch].scroll  = 0
         bufs[ch].unreadl = 0; bufs[ch].unreadh = 0
         bufs[ch].pings   = 0
 
@@ -216,24 +216,17 @@ function prin(priority, timestr, dest, left, right_fmt, ...)
         redraw_statusbar = true
     end
 
-    local out = tui.format_line(timestr, left, right_fmt, ...)
+    local right = format(right_fmt, ...)
+    --local out = tui.format_line(timestr, left, right_fmt, ...)
 
-    -- for each line of output, which can contain multiple lines, add to
-    -- the buffer's history; update the scroll offset to point to the end
-    -- of that buffer's history.
-    local prev_hist_sz = #bufs[bufidx].history
-    for line in out:gmatch("([^\n]+)\n?") do
-        local histsz = #bufs[bufidx].history
-        bufs[bufidx].history[histsz + 1] = line
-    end
-    if bufs[cbuf].scroll == prev_hist_sz then
-        bufs[bufidx].scroll = #bufs[bufidx].history
-    end
+    -- Add the output to the history and wait for it to be drawn.
+    local histsz = #bufs[bufidx].history
+    bufs[bufidx].history[histsz + 1] = { timestr, left, right }
 
     -- if the buffer we're writing to is focused and is not scrolled up,
     -- draw the text; otherwise, add to the list of unread notifications
     local cbuf = bufs[cbuf]
-    if dest == cbuf.name and cbuf.scroll == #cbuf.history then
+    if dest == cbuf.name and cbuf.scroll ==  0 then
         tui.buffer_text()
     else
         if priority == 0 then
@@ -816,20 +809,17 @@ cmdhand = {
     ["/up"] = {
         help = {},
         fn = function(_, _, _)
-            local scr = tui.tty_height - 3
-            if (bufs[cbuf].scroll - scr) >= 0 then
-                bufs[cbuf].scroll = bufs[cbuf].scroll - scr
-            end
+            local scr = math.floor(tui.tty_height / 3)
+            bufs[cbuf].scroll = bufs[cbuf].scroll + scr
             tui.redraw(tbrl.bufin[tbrl.hist], tbrl.cursor)
         end
     },
     ["/down"] = {
         help = {},
         fn = function(_, _, _)
-            local scr = tui.tty_height - 3
-            if (bufs[cbuf].scroll + scr) <= #bufs[cbuf].history then
-                bufs[cbuf].scroll = bufs[cbuf].scroll + scr
-            end
+            local scr = math.floor(tui.tty_height / 3)
+            bufs[cbuf].scroll = bufs[cbuf].scroll - scr
+            if bufs[cbuf].scroll < 0 then bufs[cbuf].scroll = 0 end
             tui.redraw(tbrl.bufin[tbrl.hist], tbrl.cursor)
         end
     },

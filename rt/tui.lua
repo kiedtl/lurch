@@ -123,7 +123,7 @@ M.prompt = function(inp, cursor)
     assert_t({inp, "string", "inp"}, {cursor, "number", "cursor"})
 
     -- if we've scrolled up, don't draw the input.
-    if bufs[cbuf].scroll ~= #bufs[cbuf].history then
+    if bufs[cbuf].scroll ~= 0 then
         lurch.tb_writeline(M.tty_height - 1, "\x16\x02 -- more -- \x0f")
         lurch.tb_setcursor(tb.TB_HIDE_CURSOR, tb.TB_HIDE_CURSOR)
     else
@@ -234,42 +234,10 @@ end
 
 M.statusbar = M.fancy_statusbar
 
-function M.buffer_text()
-    -- keep one blank line in between statusbar and text.
-    local line = 2
-
-    -- beginning at the top of the terminal, draw each line
-    -- of text from that buffer's history, then move down.
-    -- If there is nothing to draw, just clear the line and
-    -- move on.
-    if bufs[cbuf].history then
-        local hist_start = bufs[cbuf].scroll - (M.tty_height-4)
-        for i = hist_start, bufs[cbuf].scroll do
-
-            local msg = bufs[cbuf].history[i]
-            if msg then lurch.tb_writeline(line, msg) end
-
-            line = line + 1
-            if line == (M.tty_height-1) then break end
-        end
-    end
-end
-
-function M.redraw(inbuf, incurs)
-    M.refresh()
-    lurch.tb_clear()
-
-    M.buffer_text()
-    M.prompt(inbuf, incurs)
-    M.statusbar()
-end
-
-function M.format_line(timestr, left, right_fmt, ...)
+function M.format_line(timestr, left, right)
     assert(timestr)
     assert(left)
-    assert(right_fmt)
-
-    local right = format(right_fmt, ...)
+    assert(right)
 
     -- fold message to width (see /bin/fold)
     local infocol_width = config.left_col_width + config.time_col_width
@@ -292,6 +260,54 @@ function M.format_line(timestr, left, right_fmt, ...)
 
     return format("\x0f\x0314%s\x0f%s %s%s %s", timestr,
         (" "):rep(time_pad), (" "):rep(left_pad), left, right)
+end
+
+function M.buffer_text()
+    if not bufs[cbuf].history then return end
+
+    -- keep one blank line in between statusbar and text,
+    -- and don't overwrite the prompt/inputline.
+    local line = 2
+    local lineend = M.tty_height - 1
+
+    -- beginning at the top of the terminal, draw each line
+    -- of text from that buffer's history, then move down.
+    -- If there is nothing to draw, just clear the line and
+    -- move on.
+    local h_st  = #bufs[cbuf].history - (M.tty_height-4)
+    local h_end = #bufs[cbuf].history
+    local scr   = bufs[cbuf].scroll
+
+    for i = (h_st - scr), (h_end - scr) do
+        local msg = bufs[cbuf].history[i]
+
+        if msg then
+            -- fold the text to width. this is done now, instead
+            -- of when prin_*() is called, so that when the terminal
+            -- size changes we can fold text according to the
+            -- new terminal width.
+            local out = M.format_line(msg[1], msg[2], msg[3])
+
+            for tline in out:gmatch("([^\n]+)\n?") do
+                lurch.tb_writeline(line, tline)
+                line = line + 1
+                if line == lineend then break end
+            end
+        else
+            line = line + 1
+        end
+
+        if line == lineend then break end
+    end
+end
+
+function M.redraw(inbuf, incurs)
+    M.refresh()
+    lurch.tb_clear()
+
+    M.buffer_text()
+    M.prompt(inbuf, incurs)
+    M.statusbar()
 end
 
 return M
