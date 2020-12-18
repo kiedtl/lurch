@@ -79,14 +79,10 @@ end
 -- check if a buffer exists, and if so, return the index
 -- for that buffer.
 function buf_idx(name)
-    local idx = nil
     for i = 1, #bufs do
-        if bufs[i].name == name then
-            idx = i
-            break
-        end
+        if bufs[i].name == name then return i end
     end
-    return idx
+    return nil
 end
 
 function buf_cur()
