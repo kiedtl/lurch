@@ -1228,7 +1228,6 @@ function rt.init(args)
     tbrl.bindings[tb.TB_KEY_CTRL_T] = rt.on_keyseq
     tbrl.bindings[tb.TB_KEY_CTRL_R] = rt.on_keyseq
     tbrl.bindings[tb.TB_KEY_CTRL_O] = rt.on_keyseq
-    tbrl.bindings[tb.TB_KEY_CTRL_Z] = rt.on_keyseq
 
     tbrl.enter_callback = parsecmd
     tbrl.resize_callback = function()

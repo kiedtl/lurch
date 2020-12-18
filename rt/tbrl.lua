@@ -116,10 +116,6 @@ M.bindings = {
     end
 }
 
-function M.bind_keyseq(key, fn)
-    M.bindings[key] = fn
-end
-
 function M.on_event(event, enter_callback)
     if event.type == tb.TB_EVENT_KEY then
         M.on_key_event(event, enter_callback, keyseq_callback)
