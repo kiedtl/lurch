@@ -9,6 +9,7 @@ M.hist = #M.bufin
 M.cursor = 0
 
 M.enter_callback = nil
+M.resize_callback = nil
 
 local _ulen = function(s)
     return assert(utf8.len(s))
@@ -122,6 +123,10 @@ end
 function M.on_event(event, enter_callback)
     if event.type == tb.TB_EVENT_KEY then
         M.on_key_event(event, enter_callback, keyseq_callback)
+    elseif event.type == tb.TB_EVENT_RESIZE then
+        if M.resize_callback then
+            M.resize_callback()
+        end
     end
 end
 

@@ -1216,7 +1216,6 @@ function rt.init(args)
     buf_switch(1)
     callbacks.print_banner("beta")
 
-    tbrl.enter_callback = parsecmd
     tbrl.bindings[tb.TB_KEY_CTRL_N] = rt.on_keyseq
     tbrl.bindings[tb.TB_KEY_CTRL_P] = rt.on_keyseq
     tbrl.bindings[tb.TB_KEY_PGUP]   = rt.on_keyseq
@@ -1230,6 +1229,11 @@ function rt.init(args)
     tbrl.bindings[tb.TB_KEY_CTRL_R] = rt.on_keyseq
     tbrl.bindings[tb.TB_KEY_CTRL_O] = rt.on_keyseq
     tbrl.bindings[tb.TB_KEY_CTRL_Z] = rt.on_keyseq
+
+    tbrl.enter_callback = parsecmd
+    tbrl.resize_callback = function()
+        tui.redraw(tbrl.bufin[tbrl.hist], tbrl.cursor)
+    end
 end
 
 local sighand = {
