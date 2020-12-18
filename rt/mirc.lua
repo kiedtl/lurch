@@ -2,6 +2,7 @@
 --
 -- TODO: unit tests
 
+local format = string.format
 local mirc = {}
 
 mirc.BOLD      = "\x02"
