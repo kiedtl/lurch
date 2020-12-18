@@ -1,3 +1,4 @@
+local mirc   = require('mirc')
 local format = string.format
 local M = {}
 
@@ -67,7 +68,16 @@ M.commands = {
 -- be executed.
 --
 -- This can be used to impliment triggers, as in Weechat.
-M.handlers = { }
+M.handlers = {
+    ["PRIVMSG"] = function(e)
+        -- if the message is a quote, display it in light yellow.
+        if (e.msg):match("^>") then
+            e.msg = mirc.COLOR .. "08" .. e.msg .. mirc.RESET
+        end
+
+        return CFGHND_CONTINUE
+    end,
+}
 
 -- what timezone to display times in. (format: "UTC[+-]<offset>")
 M.tz = "UTC-3:00"
