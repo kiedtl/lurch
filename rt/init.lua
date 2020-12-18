@@ -755,12 +755,12 @@ function parseirc(reply)
     end
 
     if not irchand[cmd] then
-        local text = "(" .. e.fields[1] .. ")"
-        for i = 2, #e.fields do
-            text = text .. " " .. e.fields[i]
+        local text = "(" .. event.fields[1] .. ")"
+        for i = 2, #event.fields do
+            text = text .. " " .. event.fields[i]
         end
-        if e.msg and e.msg ~= "" then
-            text = text .. " :" .. e.msg
+        if event.msg and event.msg ~= "" then
+            text = text .. " :" .. event.msg
         end
 
         prin_irc(0, MAINBUF, "><", "%s", text)
