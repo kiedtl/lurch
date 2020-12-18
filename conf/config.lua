@@ -58,6 +58,13 @@ M.commands = {
     ["/l"] = alias_to("/leave"),
 }
 
+-- user-defined handlers for IRC commands (not to be confused with lurch's
+-- commands); usage of this feature requires knowledge of the IRC protocol
+-- and all its quirks.
+--
+-- This can be used to implement triggers, as in Weechat.
+M.handlers
+
 -- what timezone to display times in. (format: "UTC[+-]<offset>")
 M.tz = "UTC-3:00"
 

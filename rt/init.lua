@@ -746,9 +746,6 @@ function parseirc(reply)
     -- the type of message we're dealing with.
     local cmd = event.fields[1]
 
-    -- TODO: remove this
-    if not cmd then panic("cmd null (ev=%s) on reply %s\n", inspect(event), reply) end
-
     -- When recieving MOTD messages and similar stuff from
     -- the IRCd, send it to the main tab
     if cmd:find("00.") or cmd:find("2[56].") or cmd:find("37.") then
