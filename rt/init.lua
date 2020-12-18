@@ -843,7 +843,7 @@ cmdhand = {
     },
     ["/redraw"] = {
         help = { "Redraw the screen. Ctrl+L may also be used." },
-        fn = function(_, _, _) tui.redraw(tbrl.bufin, tbrl.cursor) end,
+        fn = function(_, _, _) tui.redraw(tbrl.bufin[tbrl.hist], tbrl.cursor) end,
     },
     ["/next"] = {
         help = { "Switch to the next buffer. Ctrl+N may also be used." },
