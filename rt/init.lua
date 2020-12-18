@@ -763,19 +763,17 @@ function parseirc(reply)
     handler(event)
 end
 
-local function send_both(fmt, ...)
+function send_both(fmt, ...)
     -- this is a simple function to send the input to the
     -- terminal and to the server at the same time.
-    --
-    -- don't send to the terminal if echo-message is enabled.
     send(fmt, ...)
 
+    -- don't send to the terminal if echo-message is enabled.
     if not server.caps["echo-message"] then
         parseirc(format(fmt, ...))
     end
 end
 
-local cmdhand
 cmdhand = {
     ["/close"] = {
         REQUIRE_CHANBUF_OR_ARG = true,

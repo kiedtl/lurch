@@ -1,3 +1,4 @@
+local format = string.format
 local M = {}
 
 M.tls  = true
@@ -37,8 +38,25 @@ M.left_col_width = 12
 -- words that will generate a notification if they appear in a message
 M.pingwords = { "kiedtl" }
 
--- user defined commands. These take the place of aliases.
-M.commands = { }
+-- user-defined commands. These take the place of aliases; the alias_to()
+-- function below is a convenience function that can be used to quickly
+-- alias commands.
+local alias_to = function(text)
+    return {
+        help = "", usage = "",
+        fn = function(a, args, inp)
+            local c = format("%s %s %s", text, a or "", args or "")
+            parsecmd(c)
+        end,
+    }
+end
+
+M.commands = {
+    ["/shr"] = alias_to("/shrug"),
+    ["/j"] = alias_to("/join"),
+    ["/p"] = alias_to("/part"),
+    ["/l"] = alias_to("/leave"),
+}
 
 -- what timezone to display times in. (format: "UTC[+-]<offset>")
 M.tz = "UTC-3:00"
