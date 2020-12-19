@@ -175,10 +175,10 @@ function prin_irc(prio, dest, left, right_fmt, ...)
         local utc_time   = util.time_from_iso8601(srvtime)
         time = utc_time + (offset * 60 * 60)
 
-        prin(prio, os.date("%H:%M", time), dest, left, right_fmt, ...)
+        prin(prio, os.date(config.timefmt, time), dest, left, right_fmt, ...)
     else
         time = util.time_with_offset(offset)
-        prin(prio, os.date("%H:%M", time), dest, left, right_fmt, ...)
+        prin(prio, os.date(config.timefmt, time), dest, left, right_fmt, ...)
     end
 
     -- don't log batch messages.
@@ -196,7 +196,7 @@ function prin_cmd(dest, left, right_fmt, ...)
     local offset = assert(util.parse_offset(config.tz))
 
     local now = util.time_with_offset(offset)
-    prin(priority, os.date("%H:%M", now), dest, left, right_fmt, ...)
+    prin(priority, os.date(config.timefmt, now), dest, left, right_fmt, ...)
 end
 
 function prin(priority, timestr, dest, left, right_fmt, ...)

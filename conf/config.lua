@@ -36,6 +36,14 @@ M.time_col_width = 5
 M.right_col_width = nil -- defaults to $(terminal_width - left_col_width - time_col_width)
 M.left_col_width = 12
 
+-- Time/date format. This is shown to the left of every message. See
+-- the documentation for os.date() for info on the various format sequences.
+--
+-- When changing this, be sure to update config.time_col_width as appropriate.
+-- To disable time altogether, set this to an empty string and set the
+-- config.time_col_width variable to 0.
+M.timefmt = "%H:%M"
+
 -- words that will generate a notification if they appear in a message
 M.pingwords = { "kiedtl" }
 
