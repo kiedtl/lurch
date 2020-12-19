@@ -236,6 +236,7 @@ function util.table_eq(a, b)
 end
 
 util.MAP_BREAK = 0
+util.MAP_CONT  = 1
 function util.kvmap(tb, fn)
     for k, v in pairs(tb) do
         if fn(k, v) == util.MAP_BREAK then
