@@ -201,7 +201,7 @@ end
 
 function prin(priority, timestr, dest, left, right_fmt, ...)
     assert_t({timestr, "string", "timestr"}, {dest, "string", "dest"},
-        {left, "string", "left"}, {right, "string", "right"})
+        {left, "string", "left"}, {right_fmt, "string", "right_fmt"})
 
     local redraw_statusline = false
 
