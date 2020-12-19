@@ -736,12 +736,17 @@ function parseirc(reply)
     -- the sender
     if event.dest == nick then event.dest = event.nick end
 
-    local cfghnd = config.handlers[cmd]
-    if cfghnd then
-        if cfghnd(event) == CFGHND_RETURN then
-            return
-        end
+    -- run each user handler, if it's not disabled.
+    local _return = false
+    if config.handlers[cmd] then
+        util.kvmap(config.handlers[cmd], function(_, v)
+            if v.disabled then return util.MAP_CONT end
+
+            local ret = (v.fn)(event)
+            if ret == CFGHND_RETURN then _return = true end
+        end)
     end
+    if _return then return end
 
     if not irchand[cmd] then
         local text = "(" .. event.fields[1] .. ")"
@@ -889,6 +894,35 @@ cmdhand = {
             local msg = config.part_msg
             if a and a ~= "" then msg = format("%s %s", a, args) end
             send(":%s PART %s :%s", nick, buf_cur(), msg)
+        end
+    },
+    ["/disable"] = {
+        REQUIRE_ARG = true,
+        help = {
+            "Disable an active handler defined in config.lua.",
+            "Example: /disable PRIVMSG quotes",
+        },
+        usage = "<cmd> <name>",
+        fn = function(a, args, _)
+            if not args then
+                prin_cmd(buf_cur(), L_ERR, "Need handler name (see /help disable).")
+                return
+            end
+
+            local name = format("'%s::%s'", a, args)
+            if not config.handlers[a] or not config.handlers[a][args] then
+                prin_cmd(buf_cur(), L_ERR, "No such handler %s", name)
+                return
+            end
+
+            local hnd = config.handlers[a][args]
+            if hnd.disabled then
+                prin_cmd(buf_cur(), L_ERR, "Handler %s is already disabled.", name)
+                return
+            end
+
+            config.handlers[a][args].disabled = true
+            prin_cmd(buf_cur(), L_NRM, "Handler %s disabled.", name)
         end
     },
     ["/quit"] = {

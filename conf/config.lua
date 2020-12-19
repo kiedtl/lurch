@@ -43,8 +43,11 @@ M.pingwords = { "kiedtl" }
 -- function below is a convenience function that can be used to quickly
 -- alias commands.
 local alias_to = function(text)
-    return { help = "",
-        fn = function(a, args, _) parsecmd(text .. (a or "") .. (args or "")) end,
+    return {
+        help = { "" },
+        fn = function(a, args, _)
+            parsecmd(text .. (a or "") .. (args or ""))
+        end,
     }
 end
 
@@ -63,16 +66,24 @@ M.commands = {
 -- be run; if it returns CFGHND_RETURN, then the default handler will not
 -- be executed.
 --
--- This can be used to impliment triggers, as in Weechat.
+-- These handlers can be disabled by setting
+-- config.handlers[<CMD>][<NAME>].disabled = true, or by using the /disable
+-- command (e.g. /disable PRIVMSG quotes).
+--
+-- This can be used to implement triggers, as in Weechat.
 M.handlers = {
-    ["PRIVMSG"] = function(e)
+    ["PRIVMSG"] = {
         -- if the message is a quote, display it in light yellow.
-        if (e.msg):match("^>") then
-            e.msg = mirc.COLOR .. "08" .. e.msg .. mirc.RESET
-        end
+        ["quotes"] = {
+            fn = function(e)
+                if (e.msg):match("^>") then
+                    e.msg = mirc.COLOR .. "08" .. e.msg .. mirc.RESET
+                end
 
-        return CFGHND_CONTINUE
-    end,
+                return CFGHND_CONTINUE
+            end
+        },
+    },
 }
 
 -- what timezone to display times in. (format: "UTC[+-]<offset>")
