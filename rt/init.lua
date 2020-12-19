@@ -735,6 +735,13 @@ function parseirc(reply)
     -- the sender
     if event.dest == nick then event.dest = event.nick end
 
+    -- if the user sends themself stuff, forward it to the main
+    -- buffer. It doesn't always come from the user, the server may
+    -- be sending messages that way for some reason.
+    if event.dest == nick and event.nick == nick then
+        event.dest = MAINBUF
+    end
+
     -- run each user handler, if it's not disabled.
     local _return = false
     if config.handlers[cmd] then
