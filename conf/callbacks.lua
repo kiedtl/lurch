@@ -258,4 +258,28 @@ function M.set_title()
     util.settitle("[%s] %s", config.host, bufs[cbuf].name)
 end
 
+-- called whenever there is a new unread message/event in a buffer.
+--
+-- type: the type of notification. A low-priority notification (e.g.
+--      joins, quits, parts, etc) will be 0, a medium-priority notification
+--      (e.g. messages, notices, actions) will be 1, and high-priority
+--      notifications (messages that ping the user) will be 2.
+-- buffer: the number of the buffer to which the unread message was sent.
+-- left, right: value of the left and right columns, respectively. Don't use
+--      the value of the left column to get the nickname of the user who sent
+--      a message, it will be contaminated with escape sequences; use the
+--      event parameter instead.
+-- event: the parsed IRC message that led to the IRC event. (See irc.lua)
+function M.on_unread(type, dest, time, left, right, event)
+    if type == 2 then
+        -- Disabled by default.
+        --os.execute("notify-send All your pings are belong to us")
+    end
+end
+
+-- called when the unread notifications are cleared for a buffer (e.g.
+-- when the user switched to that buffer).
+function M.on_cleared_unread(buffer)
+end
+
 return M

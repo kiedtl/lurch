@@ -87,6 +87,18 @@ function buf_add(name)
     return n_idx
 end
 
+-- Clear all unread notifications for a buffer. statusline() should
+-- be run after this.
+function buf_read(idx)
+    assert(bufs[idx])
+
+    bufs[idx].unreadl = 0
+    bufs[idx].unreadh = 0
+    bufs[idx].pings   = 0
+
+    callbacks.on_cleared_unread(idx)
+end
+
 -- check if a buffer exists, and if so, return the index
 -- for that buffer.
 function buf_idx(name)
@@ -128,9 +140,8 @@ function buf_switch(ch)
         cbuf = ch
 
         -- reset scroll, unread notifications
+        buf_read(ch)
         bufs[ch].scroll  = 0
-        bufs[ch].unreadl = 0; bufs[ch].unreadh = 0
-        bufs[ch].pings   = 0
 
         redraw()
     end
@@ -171,13 +182,15 @@ end
 -- print a response to an irc message.
 local last_ircevent = nil
 function prin_irc(prio, dest, left, right_fmt, ...)
+    assert(last_ircevent)
+
     -- get the offset defined in the configuration and parse it.
     local offset = assert(util.parse_offset(config.tz))
     local time
 
     -- if server-time is available, use that time instead of the
     -- local time.
-    if server.caps["server-time"] and last_ircevent and last_ircevent.tags.time then
+    if server.caps["server-time"] and last_ircevent.tags.time then
         -- the server-time is stored as a tag in the IRC message, in the
         -- format yyyy-mm-ddThh:mm:ss.sssZ, but is in the UTC timezone.
         -- convert it to the timezone the user wants.
@@ -192,13 +205,15 @@ function prin_irc(prio, dest, left, right_fmt, ...)
     end
 
     -- don't log batch messages.
-    if not last_ircevent or (last_ircevent and not last_ircevent.tags.time) then
+    if not last_ircevent.tags.batch then
         writelog(time, dest, left, right_fmt, ...)
     end
 end
 
 -- print text in response to a command.
 function prin_cmd(dest, left, right_fmt, ...)
+    last_ircevent = nil
+
     local priority = 0
     if left == L_ERR then priority = 2 end
 
@@ -210,7 +225,7 @@ function prin_cmd(dest, left, right_fmt, ...)
 end
 
 function prin(priority, time, dest, left, right_fmt, ...)
-    assert_t({time, "table", "time"}, {dest, "string", "dest"},
+    assert_t({time, "number", "time"}, {dest, "string", "dest"},
         {left, "string", "left"}, {right_fmt, "string", "right_fmt"})
 
     local timestr = os.date(config.timefmt, time)
@@ -246,6 +261,8 @@ function prin(priority, time, dest, left, right_fmt, ...)
         end
 
         redraw_statusline = true
+        callbacks.on_unread(priority, bufidx, time, left,
+            right, last_ircevent)
     end
 
     if redraw_statusline then tui.statusline() end
@@ -850,6 +867,30 @@ cmdhand = {
             bufs[cbuf].scroll = 0
             redraw()
         end
+    },
+    ["/read"] = {
+        REQUIRE_ARG = true,
+        help = {
+            "Clear unread message notifications for a buffer.",
+            "Examples:\n" ..
+                "/read 1        Clear notifications for the main buffer.\n" ..
+                "/read all      Clear notifications for all buffers.\n" ..
+                "/read 34       Clear notifications for buffer 34."
+        },
+        usage = "<buffer>",
+        fn = function(a, _, _)
+            if a == "all" then
+                for i = 1, #bufs do
+                    buf_read(i)
+                end
+            elseif tonumber(a) then
+                buf_read(tonumber(a))
+            else
+                prin_cmd(buf_cur(), L_ERR, "Unknown buffer '%s'. Buffer should be either 'all' or '[0-9]+'.")
+            end
+
+            tui.statusline()
+        end,
     },
     ["/redraw"] = {
         help = { "Redraw the screen. Ctrl+L may also be used." },
