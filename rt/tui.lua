@@ -8,10 +8,11 @@ local assert_t = util.assert_t
 
 local M = {}
 
-M.set_colors = {}
-M.colors     = {}
-M.tty_height = 80
-M.tty_width  = 24
+M.prompt_func = nil
+M.set_colors  = {}
+M.colors      = {}
+M.tty_height  = 80
+M.tty_width   = 24
 
 function M.refresh()
     M.tty_height, M.tty_width = lurch.tb_size()
@@ -55,71 +56,7 @@ function M.highlight(text, text_as, no_bold)
     return format("%s%s\x0f", esc, text)
 end
 
-function M.simple_promptf(inp, cursor)
-    -- strip off stuff from input that can't be shown on the
-    -- screen, and show IRC formatting escape sequences nicely.
-    inp = mirc.show(inp:sub(-(M.tty_width - 1)))
-
-    -- draw the input buffer and move the cursor to the appropriate
-    -- position.
-    lurch.tb_writeline(M.tty_height-1, inp)
-    lurch.tb_setcursor(cursor, M.tty_height-1)
-end
-
-function M.fancy_promptf(inp, cursor)
-    -- by default, the prompt is <NICK>, but if the user is
-    -- typing a command, change to prompt to "/"; if the user
-    -- has typed "/me", change the prompt to "* <NICK>"; if
-    -- the user has type "/note", change to the prompt to
-    -- "NOTE(<NICK>)".
-    --
-    -- In all these cases, redundant input is trimmed off (unless
-    -- the cursor is on the redundant text, in which case the
-    -- input is shown as-is).
-    local prompt
-    if inp:find("/me ") == 1 and cursor >= 4 then
-        prompt = format("* %s ", M.highlight(nick))
-        inp = inp:sub(5, #inp)
-        cursor = cursor - 4
-    elseif inp:find("/note ") == 1 and cursor >= 6 then
-        prompt = format("NOTE(%s) ", M.highlight(nick))
-        inp = inp:sub(7, #inp)
-        cursor = cursor - 6
-    elseif inp:sub(1, 1) == "/" then
-        -- if there are two slashes at the beginning of the input,
-        -- indicate that it will be treated as a message instead
-        -- of a command.
-        if inp:sub(2, 2) == "/" then
-            prompt = format("<%s> \x0314/\x0f", M.highlight(nick))
-        else
-            prompt = format("\x0314/\x0f")
-        end
-
-        inp = inp:sub(2, #inp)
-        cursor = cursor - 1
-    else
-        prompt = format("<%s> ", M.highlight(nick))
-    end
-
-    -- strip escape sequences so that we may accurately calculate
-    -- the prompt's length.
-    local rawprompt = mirc.remove(prompt)
-
-    -- strip off stuff from input that can't be shown on the
-    -- screen
-    local offset = (M.tty_width - 1) - #rawprompt
-    inp = inp:sub(-offset)
-
-    -- show IRC formatting escape sequences nicely.
-    inp = mirc.show(inp)
-
-    -- draw the input buffer and move the cursor to the appropriate
-    -- position.
-    lurch.tb_writeline(M.tty_height-1, format("%s%s", prompt, inp))
-    lurch.tb_setcursor(cursor + #rawprompt, M.tty_height-1)
-end
-
-M.prompt = function(inp, cursor)
+function M.prompt(inp, cursor)
     assert_t({inp, "string", "inp"}, {cursor, "number", "cursor"})
 
     -- if we've scrolled up, don't draw the input.
@@ -127,7 +64,7 @@ M.prompt = function(inp, cursor)
         lurch.tb_writeline(M.tty_height - 1, "\x16\x02 -- more -- \x0f")
         lurch.tb_setcursor(tb.TB_HIDE_CURSOR, tb.TB_HIDE_CURSOR)
     else
-        M.fancy_promptf(inp, cursor)
+        M.prompt_func(inp, cursor) --M.fancy_promptf(inp, cursor)
     end
 end
 

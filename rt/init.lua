@@ -1190,6 +1190,9 @@ function rt.on_keyseq(key)
 end
 
 function rt.init(args)
+    -- set the prompt function
+    tui.prompt_func = callbacks.prompt
+
     tui.refresh()
 
     if tui.tty_width < 40 or tui.tty_height < 8 then
