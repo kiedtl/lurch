@@ -257,4 +257,16 @@ function util.assert_t(...)
     end
 end
 
+function util.revgmatch(str, pat, fn)
+    local buf = {}
+    for item in str:gmatch(pat) do
+        buf[#buf + 1] = item
+    end
+    for i = #buf, 1, -1 do
+        if fn(i, buf[i]) == util.MAP_BREAK then
+            break
+        end
+    end
+end
+
 return util

@@ -134,11 +134,15 @@ function M.buffer_text()
             -- Reset the colors before drawing the line
             lurch.tb_writeline(line, mirc.RESET)
 
-            for tline in out:gmatch("([^\n]+)\n?") do
+            -- since we're drawing bottom-up, we need to iterate
+            -- backwards.
+            util.revgmatch(out, "([^\n]+)\n?", function(_, tline)
                 lurch.tb_writeline(line, tline)
                 line = line - 1
-                if line == linestart then break end
-            end
+                if line == linestart then
+                    return util.MAP_BREAK
+                end
+            end)
         else
             line = line - 1
         end
