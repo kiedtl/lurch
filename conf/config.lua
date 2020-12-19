@@ -32,8 +32,23 @@ M.ctcp_ping    = true
 -- if set to false, will simply filter out mirc colors.
 M.mirc = true
 
+-- Maximum widths for the various columns.
+--
+-- Columns:
+--    time:  the column in which the time is shown.
+--    left:  the column in which the nicknames, "NOTE", etc are shown.
+--    right: the "main" column in which messages are shown.
+--
+-- By default, the right column width defaults to:
+--    $(terminal_width - left_column_width - time_column_width)
+--
+-- If the width of a column exceeds the maximum width for that column,
+-- it will either be folded to the correct width (for the right column),
+-- trimmed (for the left column in case of channel messages), or displayed
+-- as-is (for the time column, and for the left column).
+--
 M.time_col_width = 5
-M.right_col_width = nil -- defaults to $(terminal_width - left_col_width - time_col_width)
+M.right_col_width = nil
 M.left_col_width = 12
 
 -- Time/date format. This is shown to the left of every message. See
