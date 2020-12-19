@@ -4,7 +4,7 @@ local irc = {}
 
 function irc.send(fmt, ...)
     local r, e = lurch.conn_send(fmt:format(...))
-    if not r then util.panic("%s", e) end
+    if not r then util.panic("error: %s\n", e) end
 end
 
 function irc.connect(host, port, tls, nick, user, name, pass, caps)
