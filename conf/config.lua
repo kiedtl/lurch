@@ -1,4 +1,5 @@
 local mirc   = require('mirc')
+local util   = require('util')
 local format = string.format
 local M = {}
 
@@ -61,6 +62,22 @@ M.mirc = true
 M.time_col_width = 5
 M.right_col_width = nil
 M.left_col_width = 12
+
+-- This function is used to provide the terminal colors that lurch
+-- will use to highlight nicknames and channels. By default, it gets
+-- these colors from conf/colors.
+M.colors = function()
+    -- read a list of newline-separated colors from conf/colors.
+    -- the colors are terminal 256-bit colors. e.g. 3, 65, 245, &c
+    local data = util.read(__LURCH_EXEDIR .. "/conf/colors")
+
+    local colors = {}
+    for line in data:gmatch("([^\n]+)\n?") do
+        colors[#colors + 1] = tonumber(line)
+    end
+
+    return colors
+end
 
 -- Time/date format. This is shown to the left of every message. See
 -- the documentation for os.date() for info on the various format sequences.

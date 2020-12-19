@@ -1227,7 +1227,7 @@ function rt.init(args)
     tui.termtitle_func = callbacks.set_title
 
     tui.refresh()
-    tui.load_highlight_colors()
+    tui.colors = config.colors()
 
     if tui.tty_width < 40 or tui.tty_height < 8 then
         panic("screen width too small (min 40x8)\n")

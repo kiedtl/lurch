@@ -20,16 +20,6 @@ function M.refresh()
     M.tty_height, M.tty_width = lurch.tb_size()
 end
 
-function M.load_highlight_colors()
-    -- read a list of newline-separated colors from ./conf/colors.
-    -- the colors are terminal 256-bit colors.
-    local data = util.read(__LURCH_EXEDIR .. "/conf/colors")
-
-    for line in data:gmatch("([^\n]+)\n?") do
-        M.colors[#M.colors + 1] = tonumber(line)
-    end
-end
-
 function M.highlight(text, text_as, no_bold)
     assert_t({text, "string", "text"})
     if not text_as then text_as = text end
