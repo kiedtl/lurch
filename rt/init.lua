@@ -1089,6 +1089,9 @@ cmdhand = {
 }
 
 function parsecmd(inp)
+    -- Run user hooks
+    inp = callbacks.on_input(inp)
+
     -- the input line clears itself, there's no need to clear it...
 
     -- split the input line into the command (first word), a (second

@@ -126,6 +126,18 @@ end
 -- delete the builtin ones if you so please.
 M.prompt = M.fancy_promptf
 
+-- Called when <Enter> is recieved. The input is changed to whatever this
+-- function returns.
+--
+-- Be careful, returning nil will cause the input to be changed to nil no
+-- matter what is entered, meaning that Ctrl+C will no longer work to exit
+-- (pkill and friends would have to be used). (This is because pressing
+-- Ctrl+C simply simulates the user typing "/quit" and pressing <Enter>).
+function M.on_input(input)
+    -- By default, don't modify the input.
+    return input
+end
+
 -- A pretty barebones statusline function, inspired by icyrc's [0] statusline.
 -- [0]: https://github.com/icyphox/icyrc
 --
