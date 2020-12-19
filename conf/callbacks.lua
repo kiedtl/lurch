@@ -113,9 +113,9 @@ function M.fancy_promptf(inp, cursor)
     -- show IRC formatting escape sequences nicely.
     inp = mirc.show(inp)
 
-    -- draw the input buffer and move the cursor to the appropriate
-    -- position.
-    lurch.tb_writeline(tui.tty_height-1, format("%s%s", prompt, inp))
+    -- Clear the line, remove any bold/color, draw the input buffer
+    -- and move the cursor to the appropriate position.
+    lurch.tb_writeline(tui.tty_height-1, format("\x0f%s%s", prompt, inp))
     lurch.tb_setcursor(cursor + #rawprompt, tui.tty_height-1)
 end
 

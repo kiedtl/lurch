@@ -131,6 +131,9 @@ function M.buffer_text()
             -- terminal width when the screen is redrawn.
             local out = M.format_line(msg[1], msg[2], msg[3])
 
+            -- Reset the colors before drawing the line
+            lurch.tb_writeline(line, mirc.RESET)
+
             for tline in out:gmatch("([^\n]+)\n?") do
                 lurch.tb_writeline(line, tline)
                 line = line - 1
