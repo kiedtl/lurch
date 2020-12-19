@@ -222,7 +222,6 @@ function prin(priority, timestr, dest, left, right_fmt, ...)
     end
 
     local right = format(right_fmt, ...)
-    --local out = tui.format_line(timestr, left, right_fmt, ...)
 
     -- Add the output to the history and wait for it to be drawn.
     local histsz = #bufs[bufidx].history
