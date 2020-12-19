@@ -267,37 +267,43 @@ function M.buffer_text()
 
     -- keep one blank line in between statusbar and text,
     -- and don't overwrite the prompt/inputline.
-    local line = 2
-    local lineend = M.tty_height - 1
+    local linestart = 1
+    local lineend = M.tty_height - 2
+    local line = lineend
 
-    -- beginning at the top of the terminal, draw each line
-    -- of text from that buffer's history, then move down.
+    -- beginning at the bottom of the terminal, draw each line
+    -- of text from that buffer's history, then move up.
     -- If there is nothing to draw, just clear the line and
     -- move on.
+    --
+    -- this bottom-up approach is used because we don't know in
+    -- advance how many lines a particular history entry will take
+    -- up, and thus don't know how many history events will fit
+    -- on the screen.
     local h_st  = #bufs[cbuf].history - (M.tty_height-4)
     local h_end = #bufs[cbuf].history
     local scr   = bufs[cbuf].scroll
 
-    for i = (h_st - scr), (h_end - scr) do
+    for i = (h_end - scr), (h_st - scr), -1 do
         local msg = bufs[cbuf].history[i]
 
         if msg then
             -- fold the text to width. this is done now, instead
             -- of when prin_*() is called, so that when the terminal
-            -- size changes we can fold text according to the
-            -- new terminal width.
+            -- size changes we can fold text according to the new
+            -- terminal width when the screen is redrawn.
             local out = M.format_line(msg[1], msg[2], msg[3])
 
             for tline in out:gmatch("([^\n]+)\n?") do
                 lurch.tb_writeline(line, tline)
-                line = line + 1
-                if line == lineend then break end
+                line = line - 1
+                if line == linestart then break end
             end
         else
-            line = line + 1
+            line = line - 1
         end
 
-        if line == lineend then break end
+        if line == linestart then break end
     end
 end
 
