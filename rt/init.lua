@@ -1270,9 +1270,10 @@ function rt.init(args)
     local _nick = config.nick or os.getenv("IRCNICK") or os.getenv("USER")
     local user  = config.user or os.getenv("IRCUSER") or os.getenv("USER")
     local name  = config.name or _nick
+    local pass  = util.capture(config.pass)
 
     local r, e = irc.connect(config.host, config.port, config.tls,
-        _nick, user, name, config.pass, config.caps)
+        _nick, user, name, pass, config.caps)
 
     -- For now, we whine and crash if something happened. Later, we'll just
     -- try to reconnect.

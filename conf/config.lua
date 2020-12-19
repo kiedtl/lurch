@@ -8,8 +8,19 @@ M.port = 6697
 
 M.nick = "inebriate|lurch"
 
--- server password. This is distinct from SASL or Nickserv IDENTIFY.
-M.pass = nil
+-- Command that will give the server password as its output. The actual
+-- password should not be stored here for obvious reasons.
+--
+-- This is distinct from the password used with SASL or Nickserv IDENTIFY,
+-- but some IRC servers will accept passwords from here as if a NickServ
+-- IDENTIFY command was run anyway.
+--
+-- By default, the command is 'pass show irc', which runs pash [0] and
+-- shows the password entry 'irc'. This command can be substituted for the
+-- equivalent pass command (or whatever your password manager is).
+--
+-- [0]: https://github.com/dylanaraps/pash
+M.pass = "pash show irc"
 
 -- If this is nil, it defaults to M.nick
 M.user = nil

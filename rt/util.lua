@@ -16,6 +16,15 @@ function util.last_gmatch(s, pat)
     return last
 end
 
+function util.capture(cmd)
+    local cmd = io.popen(cmd, 'r')
+    if not cmd then return nil end
+    local out = cmd:read('a')
+    if not out then return nil end
+    cmd:close()
+    return out
+end
+
 function util.printf(fmt, ...)
     io.write(string.format(fmt, ...))
 end
