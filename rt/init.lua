@@ -185,10 +185,10 @@ function prin_irc(prio, dest, left, right_fmt, ...)
         local utc_time   = util.time_from_iso8601(srvtime)
         time = utc_time + (offset * 60 * 60)
 
-        prin(prio, os.date(config.timefmt, time), dest, left, right_fmt, ...)
+        prin(prio, time, dest, left, right_fmt, ...)
     else
         time = util.time_with_offset(offset)
-        prin(prio, os.date(config.timefmt, time), dest, left, right_fmt, ...)
+        prin(prio, time, dest, left, right_fmt, ...)
     end
 
     -- don't log batch messages.
@@ -206,13 +206,16 @@ function prin_cmd(dest, left, right_fmt, ...)
     local offset = assert(util.parse_offset(config.tz))
 
     local now = util.time_with_offset(offset)
-    prin(priority, os.date(config.timefmt, now), dest, left, right_fmt, ...)
+    prin(priority, now, dest, left, right_fmt, ...)
 end
 
-function prin(priority, timestr, dest, left, right_fmt, ...)
-    assert_t({timestr, "string", "timestr"}, {dest, "string", "dest"},
+function prin(priority, time, dest, left, right_fmt, ...)
+    assert_t({time, "table", "time"}, {dest, "string", "dest"},
         {left, "string", "left"}, {right_fmt, "string", "right_fmt"})
 
+    local timestr = os.date(config.timefmt, time)
+
+    -- keep track of whether we should redraw the statusline afterwards.
     local redraw_statusline = false
 
     local bufidx = buf_idx(dest)
