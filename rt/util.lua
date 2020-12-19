@@ -33,6 +33,9 @@ function util.eprintf(fmt, ...)
     io.stderr:write(string.format(fmt, ...))
 end
 
+-- XXX: This is more of a "die" function than a "panic"
+-- function, that is, it informs the user of errors in the
+-- configuration, not of errors thrown from code.
 function util.panic(fmt, ...)
     lurch.cleanup()
     util.eprintf(fmt, ...)
