@@ -262,7 +262,7 @@ local irchand = {
         local msg
         local account = e.fields[2] or e.msg
         if not account then
-            msg = format("%s unidentified", hcol(e.nick))
+            msg = format("%s has unidentified", hcol(e.nick))
         else
             msg = format("%s has identified as %s", hcol(e.nick), account)
         end
