@@ -30,7 +30,8 @@ function M.load_highlight_colors()
 end
 
 function M.highlight(text, text_as, no_bold)
-    assert_t({text, "string", "text"}, {text_as, "string", "text_as"})
+    assert_t({text, "string", "text"})
+    if not text_as then text_as = text end
 
     -- store nickname highlight color, so that we don't have to
     -- calculate the text's hash each time
@@ -75,7 +76,7 @@ end
 function M.format_line(timestr, left, right)
     assert_t(
         { timestr, "string", "timestr" },
-        { left, "string", "left" }, { right, "string", "right" },
+        { left, "string", "left" }, { right, "string", "right" }
     )
 
     -- fold message to width (see /bin/fold)
