@@ -31,8 +31,9 @@ extern _Bool tls_active;
 
 const struct luaL_Reg lurch_lib[] = {
 	{ "conn_init",     api_conn_init      },
-	{ "cleanup",       api_cleanup        },
 	{ "conn_send",     api_conn_send      },
+	{ "conn_active",   api_conn_active    },
+	{ "cleanup",       api_cleanup        },
 	{ "tb_size",       api_tb_size        },
 	{ "tb_clear",      api_tb_clear       },
 	{ "tb_writeline",  api_tb_writeline   },
@@ -102,11 +103,13 @@ api_conn_init(lua_State *pL)
 }
 
 int
-api_cleanup(lua_State *pL)
+api_conn_active(lua_State *pL)
 {
-	UNUSED(pL);
-	cleanup();
-	return 0;
+	_Bool active = false;
+	if ((tls_active && client) || (!tls_active && conn))
+		active = true;
+	lua_pushboolean(pL, active);
+	return 1;
 }
 
 int
@@ -135,6 +138,14 @@ api_conn_send(lua_State *pL)
 
 	lua_pushboolean(L, true);
 	return 1;
+}
+
+int
+api_cleanup(lua_State *pL)
+{
+	UNUSED(pL);
+	cleanup();
+	return 0;
 }
 
 int

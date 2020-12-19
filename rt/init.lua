@@ -49,6 +49,10 @@ bufs = {}                -- List of all opened buffers
 
 -- a simple wrapper around irc.send.
 function send(fmt, ...)
+    if not lurch.conn_active() then
+        return
+    end
+
     if os.getenv("LURCH_DEBUG") then
         util.append(DBGFILE,
             format(">> %s\n", format(fmt, ...)))

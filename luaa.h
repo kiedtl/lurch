@@ -6,8 +6,9 @@
 #include <lualib.h>
 
 int api_conn_init(lua_State *pL);
-int api_cleanup(lua_State *pL);
 int api_conn_send(lua_State *pL);
+int api_conn_active(lua_State *pL);
+int api_cleanup(lua_State *pL);
 int api_tb_size(lua_State *pL);
 int api_tb_clear(lua_State *pL);
 int api_tb_writeline(lua_State *pL);
