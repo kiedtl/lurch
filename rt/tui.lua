@@ -10,6 +10,7 @@ local M = {}
 
 M.prompt_func     = nil
 M.statusline_func = nil
+M.termtitle_func  = nil
 M.set_colors      = {}
 M.colors          = {}
 M.tty_height      = 80
@@ -66,11 +67,8 @@ function M.prompt(inp, cursor)
 end
 
 function M.statusline()
-    -- set the terminal title. This is a big help when using terminal
-    -- tabs to mimic multi-server support.
-    util.settitle("[%s] %s", config.host, bufs[cbuf].name)
-
     M.statusline_func()
+    M.termtitle_func()
 end
 
 function M.format_line(timestr, left, right)

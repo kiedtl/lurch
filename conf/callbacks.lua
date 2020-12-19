@@ -1,7 +1,9 @@
-local mirc = require('mirc')
-local tui  = require('tui')
-local util = require('util')
+local mirc   = require('mirc')
+local config = require('config')
+local tui    = require('tui')
+local util   = require('util')
 local format = string.format
+
 local M = {}
 
 -- This is called at the beginning of lurch, and its purpose
@@ -229,5 +231,14 @@ end
 -- or when the screen is redrawn. By default, it is set the the fancy_statusline
 -- example above.
 M.statusline = M.fancy_statusline
+
+-- This is called every time the statusline is called. It should set the
+-- terminals title. This is extremely useful when using terminal tabs or
+-- a terminal multiplexer (e.g. tmux) to mimic multi-server functionality.
+--
+-- By default, the title is "[<SERVER>] <CHANNEL>"
+function M.set_title()
+    util.settitle("[%s] %s", config.host, bufs[cbuf].name)
+end
 
 return M

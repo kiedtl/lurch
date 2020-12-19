@@ -1192,6 +1192,7 @@ function rt.init(args)
     -- set the prompt/statusline functions
     tui.prompt_func = callbacks.prompt
     tui.statusline_func = callbacks.statusline
+    tui.termtitle_func = callbacks.set_title
 
     tui.refresh()
 
