@@ -30,12 +30,7 @@ function M.load_highlight_colors()
 end
 
 function M.highlight(text, text_as, no_bold)
-    assert(text)
-    assert(type(text) == "string",
-        format("text of type %s, not string", type(text)))
-    if not text_as then text_as = text end
-    assert(type(text_as) == "string",
-        format("text_as of type %s, not string", type(text_as)))
+    assert_t({text, "string", "text"}, {text_as, "string", "text_as"})
 
     -- store nickname highlight color, so that we don't have to
     -- calculate the text's hash each time
@@ -78,9 +73,10 @@ function M.statusline()
 end
 
 function M.format_line(timestr, left, right)
-    assert(timestr)
-    assert(left)
-    assert(right)
+    assert_t(
+        { timestr, "string", "timestr" },
+        { left, "string", "left" }, { right, "string", "right" },
+    )
 
     -- fold message to width (see /bin/fold)
     local infocol_width = config.left_col_width + config.time_col_width
