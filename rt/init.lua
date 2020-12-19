@@ -1260,6 +1260,9 @@ function rt.init(args)
         tui.redraw(tbrl.bufin[tbrl.hist], tbrl.cursor)
     end
 
+    -- Misc stuff
+    callbacks.on_startup()
+
     -- Finally, we can connect to the server.
     local _nick = config.nick or os.getenv("IRCNICK") or os.getenv("USER")
     local user  = config.user or os.getenv("IRCUSER") or os.getenv("USER")

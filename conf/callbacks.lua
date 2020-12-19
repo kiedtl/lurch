@@ -6,6 +6,11 @@ local format = string.format
 
 local M = {}
 
+-- This is called at lurch's startup, just after the TUI and readline
+-- have been setup.
+function M.on_startup()
+end
+
 -- This is called at the beginning of lurch, and its purpose
 -- it to print some nice text and ascii art on the main buffer.
 -- Of course, you could just stuff this into on_startup().
