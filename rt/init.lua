@@ -828,7 +828,7 @@ cmdhand = {
         fn = function(_, _, _)
             bufs[cbuf].history = {}
             bufs[cbuf].scroll = 0
-            tui.redraw(tbrl.bufin, tbrl.cursor)
+            tui.redraw(tbrl.bufin[tbrl.hist], tbrl.cursor)
         end
     },
     ["/redraw"] = {
