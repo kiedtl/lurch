@@ -1189,17 +1189,6 @@ function rt.on_keyseq(key)
 end
 
 function rt.init(args)
-    -- set the prompt/statusline functions
-    tui.prompt_func = callbacks.prompt
-    tui.statusline_func = callbacks.statusline
-    tui.termtitle_func = callbacks.set_title
-
-    tui.refresh()
-
-    if tui.tty_width < 40 or tui.tty_height < 8 then
-        panic("screen width too small (min 40x8)\n")
-    end
-
     --
     -- for each option, if it begins with a "-", toggle
     -- the corresponding configuration value if it has no
@@ -1223,23 +1212,35 @@ function rt.init(args)
         end
     end
 
-    local _nick = config.nick or os.getenv("IRCNICK") or os.getenv("USER")
-    local user  = config.user or os.getenv("IRCUSER") or os.getenv("USER")
-    local name  = config.name or _nick
+    -- Set up the TUI. Retrieve the column width, set the prompt
+    -- and statusline functions, and load the highlight colors.
+    tui.prompt_func = callbacks.prompt
+    tui.statusline_func = callbacks.statusline
+    tui.termtitle_func = callbacks.set_title
 
-    local r, e = irc.connect(config.host, config.port, config.tls,
-        _nick, user, name, config.pass, config.caps)
-    if not r then panic("error: %s\n", e) end
-
+    tui.refresh()
     tui.load_highlight_colors()
 
+    if tui.tty_width < 40 or tui.tty_height < 8 then
+        panic("screen width too small (min 40x8)\n")
+    end
+
     -- create the main buffer, switch to it, and set its color to plain
-    -- white.
+    -- white. Print the lurch logo.
     tui.set_colors[MAINBUF] = 14
     buf_add(MAINBUF)
     buf_switch(1)
     callbacks.print_banner("beta")
 
+    -- Setup the termbox readline. Before termbox was used, lurch just
+    -- used the normal GNU readline, but we now have to implement our
+    -- own readline since GNU readline doesn't work in termbox/ncurses.
+    -- This means we'll have to implement common features such as
+    -- input history (DONE), completion (TODO), and undo/redo (TODO).
+    --
+    -- Bind keys used to move across buffers and scroll text. When these
+    -- bound keys are entered by the user, the rt.on_keyseq function will
+    -- be called.
     tbrl.bindings[tb.TB_KEY_CTRL_N] = rt.on_keyseq
     tbrl.bindings[tb.TB_KEY_CTRL_P] = rt.on_keyseq
     tbrl.bindings[tb.TB_KEY_PGUP]   = rt.on_keyseq
@@ -1247,16 +1248,31 @@ function rt.init(args)
     tbrl.bindings[tb.TB_KEY_CTRL_L] = rt.on_keyseq
     tbrl.bindings[tb.TB_KEY_CTRL_C] = rt.on_keyseq
 
+    -- Bind keys used to insert IRC formatting escape sequences.
     tbrl.bindings[tb.TB_KEY_CTRL_B] = rt.on_keyseq
     tbrl.bindings[tb.TB_KEY_CTRL_U] = rt.on_keyseq
     tbrl.bindings[tb.TB_KEY_CTRL_T] = rt.on_keyseq
     tbrl.bindings[tb.TB_KEY_CTRL_R] = rt.on_keyseq
     tbrl.bindings[tb.TB_KEY_CTRL_O] = rt.on_keyseq
 
+    -- Set the functions to be called when <enter> is pressed, or when
+    -- the screen is resized.
     tbrl.enter_callback = parsecmd
     tbrl.resize_callback = function()
         tui.redraw(tbrl.bufin[tbrl.hist], tbrl.cursor)
     end
+
+    -- Finally, we can connect to the server.
+    local _nick = config.nick or os.getenv("IRCNICK") or os.getenv("USER")
+    local user  = config.user or os.getenv("IRCUSER") or os.getenv("USER")
+    local name  = config.name or _nick
+
+    local r, e = irc.connect(config.host, config.port, config.tls,
+        _nick, user, name, config.pass, config.caps)
+
+    -- For now, we whine and crash if something happened. Later, we'll just
+    -- try to reconnect.
+    if not r then panic("error: %s\n", e) end
 end
 
 local sighand = {
