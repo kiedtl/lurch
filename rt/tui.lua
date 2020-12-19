@@ -1,4 +1,3 @@
-local config   = require('config')
 local inspect  = require('inspect')
 local mirc     = require('mirc')
 local tb       = require('tb')
@@ -8,6 +7,7 @@ local assert_t = util.assert_t
 
 local M = {}
 
+M.linefmt_func    = nil
 M.prompt_func     = nil
 M.statusline_func = nil
 M.termtitle_func  = nil
@@ -61,17 +61,19 @@ function M.statusline()
     M.termtitle_func()
 end
 
-function M.format_line(timestr, left, right)
+function M.format_line(timestr, left, right, timew, leftw, rightw)
+    -- rightw can be nil
     assert_t(
-        { timestr, "string", "timestr" },
-        { left, "string", "left" }, { right, "string", "right" }
+        { timestr, "string", "timestr" }, { timew, "number", "timew" },
+        { left, "string", "left" },   { right, "string", "right" },
+        { leftw, "number", "leftw" }  --{ rightw, "number", "rightw" }
     )
 
     -- fold message to width (see /bin/fold)
-    local infocol_width = config.left_col_width + config.time_col_width
-    local width = (config.right_col_width or M.tty_width - infocol_width)
+    local infow = leftw + timew
+    local width = (rightw or M.tty_width - infow)
     right = util.fold(right, width - 4)
-    right = right:gsub("\n", format("\n%s", (" "):rep(infocol_width + 4)))
+    right = right:gsub("\n", format("\n%s", (" "):rep(infow + 4)))
 
     -- Strip escape sequences from the left column so that
     -- we can calculate how much padding to add for alignment, and
@@ -81,15 +83,15 @@ function M.format_line(timestr, left, right)
     -- Generate a cursor right sequence based on the length of
     -- the above "raw" word. The nick column is a fixed width
     -- of LEFT_PADDING so it's simply 'LEFT_PADDING - word_len'
-    local left_pad = (config.left_col_width + 1) - #raw
-    local time_pad = (config.time_col_width + 1) - #timestr
-    if #raw > config.left_col_width then left_pad = 0 end
-    if #timestr > config.time_col_width then time_pad = 0 end
+    local left_pad = (leftw + 1) - #raw
+    local time_pad = (timew + 1) - #timestr
+    if #raw > leftw then left_pad = 0 end
+    if #timestr > timew then time_pad = 0 end
 
-    return config.linefmt(time_pad, left_pad, timestr, left, right)
+    return M.linefmt_func(time_pad, left_pad, timestr, left, right)
 end
 
-function M.buffer_text()
+function M.buffer_text(timew, leftw, rightw)
     if not bufs[cbuf].history then return end
 
     -- keep one blank line in between statusline and text,
@@ -119,7 +121,8 @@ function M.buffer_text()
             -- of when prin_*() is called, so that when the terminal
             -- size changes we can fold text according to the new
             -- terminal width when the screen is redrawn.
-            local out = M.format_line(msg[1], msg[2], msg[3])
+            local out = M.format_line(msg[1], msg[2], msg[3],
+                timew, leftw, rightw)
 
             -- Reset the colors before drawing the line
             lurch.tb_writeline(line, mirc.RESET)
@@ -145,9 +148,9 @@ function M.redraw(inbuf, incurs)
     M.refresh()
     lurch.tb_clear()
 
-    M.buffer_text()
-    M.prompt(inbuf, incurs)
     M.statusline()
+    M.buffer_text(timew, leftw, rightw)
+    M.prompt(inbuf, incurs)
 end
 
 return M

@@ -47,6 +47,12 @@ bufs = {}                -- List of all opened buffers
 --local parseirc
 --local parsecmd
 
+-- a simple wrapper around tui.redraw.
+function redraw()
+    tui.redraw(tbrl.bufin[tbrl.hist], tbrl.cursor, config.time_col_width,
+        config.left_col_width, config.right_col_width)
+end
+
 -- a simple wrapper around irc.send.
 function send(fmt, ...)
     if not lurch.conn_active() then
@@ -126,7 +132,7 @@ function buf_switch(ch)
         bufs[ch].unreadl = 0; bufs[ch].unreadh = 0
         bufs[ch].pings   = 0
 
-        tui.redraw(tbrl.bufin[tbrl.hist], tbrl.cursor)
+        redraw()
     end
 end
 
@@ -226,7 +232,8 @@ function prin(priority, timestr, dest, left, right_fmt, ...)
     -- draw the text; otherwise, add to the list of unread notifications
     local cbuf = bufs[cbuf]
     if dest == cbuf.name and cbuf.scroll ==  0 then
-        tui.buffer_text()
+        tui.buffer_text(config.time_col_width, config.left_col_width,
+            config.right_col_width)
     else
         if priority == 0 then
             bufs[bufidx].unreadl = bufs[bufidx].unreadl + 1
@@ -814,7 +821,7 @@ cmdhand = {
 
             -- redraw, as the current buffer may have changed,
             -- and the statusline needs to be redrawn anyway.
-            tui.redraw(tbrl.bufin, tbrl.cursor)
+            redraw()
         end,
     },
     ["/up"] = {
@@ -822,7 +829,7 @@ cmdhand = {
         fn = function(_, _, _)
             local scr = math.floor(tui.tty_height / 3)
             bufs[cbuf].scroll = bufs[cbuf].scroll + scr
-            tui.redraw(tbrl.bufin[tbrl.hist], tbrl.cursor)
+            redraw()
         end
     },
     ["/down"] = {
@@ -831,7 +838,7 @@ cmdhand = {
             local scr = math.floor(tui.tty_height / 3)
             bufs[cbuf].scroll = bufs[cbuf].scroll - scr
             if bufs[cbuf].scroll < 0 then bufs[cbuf].scroll = 0 end
-            tui.redraw(tbrl.bufin[tbrl.hist], tbrl.cursor)
+            redraw()
         end
     },
     ["/clear"] = {
@@ -839,12 +846,12 @@ cmdhand = {
         fn = function(_, _, _)
             bufs[cbuf].history = {}
             bufs[cbuf].scroll = 0
-            tui.redraw(tbrl.bufin[tbrl.hist], tbrl.cursor)
+            redraw()
         end
     },
     ["/redraw"] = {
         help = { "Redraw the screen. Ctrl+L may also be used." },
-        fn = function(_, _, _) tui.redraw(tbrl.bufin[tbrl.hist], tbrl.cursor) end,
+        fn = function(_, _, _) redraw() end,
     },
     ["/next"] = {
         help = { "Switch to the next buffer. Ctrl+N may also be used." },
@@ -1224,11 +1231,13 @@ function rt.init(args)
         end
     end
 
-    -- Set up the TUI. Retrieve the column width, set the prompt
-    -- and statusline functions, and load the highlight colors.
-    tui.prompt_func = callbacks.prompt
+    -- Set up the TUI. Retrieve the column width, set the prompt,
+    -- line format, and statusline functions, and load the highlight
+    -- colors.
+    tui.linefmt_func    = config.linefmt
+    tui.prompt_func     = callbacks.prompt
     tui.statusline_func = callbacks.statusline
-    tui.termtitle_func = callbacks.set_title
+    tui.termtitle_func  = callbacks.set_title
 
     tui.refresh()
     tui.colors = config.colors()
@@ -1270,9 +1279,7 @@ function rt.init(args)
     -- Set the functions to be called when <enter> is pressed, or when
     -- the screen is resized.
     tbrl.enter_callback = parsecmd
-    tbrl.resize_callback = function()
-        tui.redraw(tbrl.bufin[tbrl.hist], tbrl.cursor)
-    end
+    tbrl.resize_callback = function() redraw() end
 
     -- Misc stuff
     callbacks.on_startup()
@@ -1303,9 +1310,7 @@ local sighand = {
     -- SIGUSR2
     [12] = function() end,
     -- SIGWINCH
-    [28] = function()
-        tui.redraw(bufs, cbuf, nick, tbrl.bufin, tbrl.cursor)
-    end,
+    [28] = function() redraw() end,
     -- catch-all
     [0] = function() return true end,
 }
