@@ -848,9 +848,7 @@ cmdhand = {
         REQUIRE_ARG = true,
         help = { "Invite a user to the current channel." },
         usage = "<user>",
-        fn = function(a, _, _)
-            send(":%s INVITE %s :%s", nick, a, buf_cur())
-        end
+        fn = function(a, _, _) send(":%s INVITE %s :%s", nick, a, buf_cur()) end
     },
     ["/names"] = {
         REQUIRE_CHANBUF_OR_ARG = true,
