@@ -8,11 +8,12 @@ local assert_t = util.assert_t
 
 local M = {}
 
-M.prompt_func = nil
-M.set_colors  = {}
-M.colors      = {}
-M.tty_height  = 80
-M.tty_width   = 24
+M.prompt_func     = nil
+M.statusline_func = nil
+M.set_colors      = {}
+M.colors          = {}
+M.tty_height      = 80
+M.tty_width       = 24
 
 function M.refresh()
     M.tty_height, M.tty_width = lurch.tb_size()
@@ -64,112 +65,17 @@ function M.prompt(inp, cursor)
         lurch.tb_writeline(M.tty_height - 1, "\x16\x02 -- more -- \x0f")
         lurch.tb_setcursor(tb.TB_HIDE_CURSOR, tb.TB_HIDE_CURSOR)
     else
-        M.prompt_func(inp, cursor) --M.fancy_promptf(inp, cursor)
+        M.prompt_func(inp, cursor)
     end
 end
 
-function M.simple_statusbar()
-    local chl = ""
-    local l = 0
-    local fst = cbuf
-
-    while fst > 1 and l < (M.tty_width / 2) do
-        l = l + lurch.utf8_dwidth(bufs[fst].name) + 3
-        fst = fst - 1
-    end
-
-    l = 0
-    while fst <= #bufs and l < M.tty_width do
-        local ch = bufs[fst]
-        if fst == cbuf then chl = chl .. mirc.RESET end
-
-        chl = chl .. "  "; l = l + 1
-
-        if ch.unreadh > 0 then chl = chl .. mirc.UNDERLINE end
-        if ch.pings > 0   then chl = chl .. mirc.BOLD end
-
-        chl = chl .. ch.name
-        l = l + lurch.utf8_dwidth(ch.name)
-
-        if ch.pings > 0   then chl = chl .. mirc.BOLD end
-        if ch.unreadh > 0 then chl = chl .. mirc.UNDERLINE end
-
-        if l < (M.tty_width - 1) then
-            chl = chl .. "  "; l = l + 2
-        end
-
-        if fst == cbuf then chl = chl .. mirc.INVERT end
-
-        fst = fst + 1
-    end
-
-    local padding = M.tty_width - #(mirc.remove(chl))
-    chl = format("\x16%s%s\x0f", chl, (" "):rep(padding))
-    lurch.tb_writeline(0, chl)
-
+function M.statusline()
     -- set the terminal title. This is a big help when using terminal
-    -- tabs to mimic a multi-server feature.
+    -- tabs to mimic multi-server support.
     util.settitle("[%s] %s", config.host, bufs[cbuf].name)
+
+    M.statusline_func()
 end
-
-function M.fancy_statusbar()
-    assert(type(cbuf) == "number",
-        format("cbuf of type %s, not number", type(cbuf)))
-    assert(type(bufs) == "table",
-        format("bufs of type %s, not table", type(bufs)))
-
-    local chanlist = ""
-    for buf = 1, #bufs do
-        local ch = bufs[buf].name
-        local bold = false
-        local unread_ind = ""
-
-        if bufs[buf].unreadl > 0 or bufs[buf].unreadh > 0 or bufs[buf].pings > 0 then
-            if bufs[buf].pings > 0 then
-                bold = true
-                if bufs[buf].unreadh > 0 then
-                    unread_ind = format("+%d,%d", bufs[buf].pings, bufs[buf].unreadh)
-                else
-                    unread_ind = format("+%d", bufs[buf].pings)
-                end
-            elseif bufs[buf].unreadh > 0 then
-                if bufs[buf].unreadl > 0 then
-                    unread_ind = format("+%d (%d)", bufs[buf].unreadh, bufs[buf].unreadl)
-                else
-                    unread_ind = format("+%d", bufs[buf].unreadh)
-                end
-            elseif bufs[buf].unreadl > 0 then
-                unread_ind = format("(%d)", bufs[buf].unreadl)
-            end
-        end
-
-        local pnch
-        if unread_ind ~= "" then
-            pnch = M.highlight(format(" %d %s %s ", buf, ch, unread_ind),
-                ch, not bold)
-        elseif unread_ind == "" and buf == cbuf then
-            pnch = M.highlight(format(" %d %s ", buf, ch), ch, true)
-        end
-
-        -- If there are no unread messages, don't display the buffer in the
-        -- statusbar (unless it's the current buffer)
-        if buf == cbuf then
-            chanlist = format("%s\x16%s\x0f ", chanlist, pnch)
-        else
-            if pnch then
-                chanlist = format("%s%s ", chanlist, pnch)
-            end
-        end
-    end
-
-    lurch.tb_writeline(0, chanlist)
-
-    -- set the terminal title. This is a big help when using terminal
-    -- tabs to mimic a multi-server feature.
-    util.settitle("[%s] %s", config.host, bufs[cbuf].name)
-end
-
-M.statusbar = M.fancy_statusbar
 
 function M.format_line(timestr, left, right)
     assert(timestr)
@@ -202,7 +108,7 @@ end
 function M.buffer_text()
     if not bufs[cbuf].history then return end
 
-    -- keep one blank line in between statusbar and text,
+    -- keep one blank line in between statusline and text,
     -- and don't overwrite the prompt/inputline.
     local linestart = 1
     local lineend = M.tty_height - 2
@@ -250,7 +156,7 @@ function M.redraw(inbuf, incurs)
 
     M.buffer_text()
     M.prompt(inbuf, incurs)
-    M.statusbar()
+    M.statusline()
 end
 
 return M

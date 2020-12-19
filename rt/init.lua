@@ -56,7 +56,7 @@ function send(fmt, ...)
     irc.send(fmt, ...)
 end
 
--- add a new buffer. statusbar() should be run after this
+-- add a new buffer. statusline() should be run after this
 -- to add the new buffer to the statusline.
 function buf_add(name)
     assert(name)
@@ -204,12 +204,12 @@ function prin(priority, timestr, dest, left, right_fmt, ...)
     assert(left)
     assert(right_fmt)
 
-    local redraw_statusbar = false
+    local redraw_statusline = false
 
     local bufidx = buf_idx(dest)
     if not bufidx then
         bufidx = buf_add(dest)
-        redraw_statusbar = true
+        redraw_statusline = true
     end
 
     local right = format(right_fmt, ...)
@@ -233,10 +233,10 @@ function prin(priority, timestr, dest, left, right_fmt, ...)
             bufs[bufidx].pings = bufs[bufidx].pings + 1
         end
 
-        redraw_statusbar = true
+        redraw_statusline = true
     end
 
-    if redraw_statusbar then tui.statusbar() end
+    if redraw_statusline then tui.statusline() end
 end
 
 local function none(_) end
@@ -803,7 +803,7 @@ cmdhand = {
             end
 
             -- redraw, as the current buffer may have changed,
-            -- and the statusbar needs to be redrawn anyway.
+            -- and the statusline needs to be redrawn anyway.
             tui.redraw(tbrl.bufin, tbrl.cursor)
         end,
     },
@@ -882,7 +882,7 @@ cmdhand = {
             local bufidx = buf_idx_or_add(a)
 
             -- draw the new buffer
-            tui.statusbar()
+            tui.statusline()
             buf_switch(bufidx)
         end
     },
@@ -1190,8 +1190,9 @@ function rt.on_keyseq(key)
 end
 
 function rt.init(args)
-    -- set the prompt function
+    -- set the prompt/statusline functions
     tui.prompt_func = callbacks.prompt
+    tui.statusline_func = callbacks.statusline
 
     tui.refresh()
 

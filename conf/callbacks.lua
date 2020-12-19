@@ -119,4 +119,109 @@ end
 -- delete the builtin ones if you so please.
 M.prompt = M.fancy_promptf
 
+-- A pretty barebones statusline function, inspired by icyrc's [0] statusline.
+-- [0]: https://github.com/icyphox/icyrc
+--
+-- See: callbacks.statusline
+function M.simple_statusline()
+    local chl = ""
+    local l = 0
+    local fst = cbuf
+
+    while fst > 1 and l < (M.tty_width / 2) do
+        l = l + lurch.utf8_dwidth(bufs[fst].name) + 3
+        fst = fst - 1
+    end
+
+    l = 0
+    while fst <= #bufs and l < M.tty_width do
+        local ch = bufs[fst]
+        if fst == cbuf then chl = chl .. mirc.RESET end
+
+        chl = chl .. "  "; l = l + 1
+
+        if ch.unreadh > 0 then chl = chl .. mirc.UNDERLINE end
+        if ch.pings > 0   then chl = chl .. mirc.BOLD end
+
+        chl = chl .. ch.name
+        l = l + lurch.utf8_dwidth(ch.name)
+
+        if ch.pings > 0   then chl = chl .. mirc.BOLD end
+        if ch.unreadh > 0 then chl = chl .. mirc.UNDERLINE end
+
+        if l < (M.tty_width - 1) then
+            chl = chl .. "  "; l = l + 2
+        end
+
+        if fst == cbuf then chl = chl .. mirc.INVERT end
+
+        fst = fst + 1
+    end
+
+    local padding = M.tty_width - #(mirc.remove(chl))
+    chl = format("\x16%s%s\x0f", chl, (" "):rep(padding))
+    lurch.tb_writeline(0, chl)
+end
+
+-- A more fully-featured statusline, heavily based on catgirl's [0] statusbar.
+-- Unlike simple_statusline, which is just white on black, it makes heavy use
+-- of color.
+--
+-- See: callbacks.statusline
+-- [0]: https://git.causal.agency/catgirl
+function M.fancy_statusline()
+    local chanlist = ""
+    for buf = 1, #bufs do
+        local ch = bufs[buf].name
+        local bold = false
+        local unread_ind = ""
+
+        if bufs[buf].unreadl > 0 or bufs[buf].unreadh > 0 or bufs[buf].pings > 0 then
+            if bufs[buf].pings > 0 then
+                bold = true
+                if bufs[buf].unreadh > 0 then
+                    unread_ind = format("+%d,%d", bufs[buf].pings, bufs[buf].unreadh)
+                else
+                    unread_ind = format("+%d", bufs[buf].pings)
+                end
+            elseif bufs[buf].unreadh > 0 then
+                if bufs[buf].unreadl > 0 then
+                    unread_ind = format("+%d (%d)", bufs[buf].unreadh, bufs[buf].unreadl)
+                else
+                    unread_ind = format("+%d", bufs[buf].unreadh)
+                end
+            elseif bufs[buf].unreadl > 0 then
+                unread_ind = format("(%d)", bufs[buf].unreadl)
+            end
+        end
+
+        local pnch
+        if unread_ind ~= "" then
+            pnch = tui.highlight(format(" %d %s %s ", buf, ch, unread_ind),
+                ch, not bold)
+        elseif unread_ind == "" and buf == cbuf then
+            pnch = tui.highlight(format(" %d %s ", buf, ch), ch, true)
+        end
+
+        -- If there are no unread messages, don't display the buffer in the
+        -- statusline (unless it's the current buffer)
+        if buf == cbuf then
+            chanlist = format("%s\x16%s\x0f ", chanlist, pnch)
+        else
+            if pnch then
+                chanlist = format("%s%s ", chanlist, pnch)
+            end
+        end
+    end
+
+    lurch.tb_writeline(0, chanlist)
+end
+
+-- The statusline function, the purpose of which is to print the list
+-- of open channels on the top of the terminal window (aka the 'statusline').
+-- This is called whenever a new buffer is opened, when a buffer is closed,
+-- or when the screen is redrawn. By default, it is set the the fancy_statusline
+-- example above.
+M.statusline = M.fancy_statusline
+
 return M
