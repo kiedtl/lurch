@@ -77,7 +77,7 @@ cleanup(void)
 		tb_active = false;
 	}
 
-	if (tls_active) {
+	if (tls_active && client) {
 		tls_close(client);
 		tls_free(client);
 	} else if (conn) fclose(conn);
