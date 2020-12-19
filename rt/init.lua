@@ -19,6 +19,7 @@ local eprintf   = util.eprintf
 local panic     = util.panic
 local format    = string.format
 local hcol      = tui.highlight
+local assert_t  = util.assert_t
 
 L_ERR   = "-!-"
 L_NRM   = "--"
@@ -59,7 +60,7 @@ end
 -- add a new buffer. statusline() should be run after this
 -- to add the new buffer to the statusline.
 function buf_add(name)
-    assert(name)
+    assert_t({name, "string", "name"})
 
     local newbuf = {}
     newbuf.history = {}     -- lines in buffer.
@@ -199,10 +200,8 @@ function prin_cmd(dest, left, right_fmt, ...)
 end
 
 function prin(priority, timestr, dest, left, right_fmt, ...)
-    assert(timestr)
-    assert(dest)
-    assert(left)
-    assert(right_fmt)
+    assert_t({timestr, "string", "timestr"}, {dest, "string", "dest"},
+        {left, "string", "left"}, {right, "string", "right"})
 
     local redraw_statusline = false
 
