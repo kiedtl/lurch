@@ -144,7 +144,7 @@ function M.buffer_text(timew, leftw, rightw)
     end
 end
 
-function M.redraw(inbuf, incurs)
+function M.redraw(inbuf, incurs, timew, leftw, rightw)
     M.refresh()
     lurch.tb_clear()
 

@@ -231,7 +231,7 @@ function M.fancy_statusline()
         -- If there are no unread messages, don't display the buffer in the
         -- statusline (unless it's the current buffer)
         if buf == cbuf then
-            chanlist = format("%s\x16%s\x0f ", chanlist, pnch)
+            chanlist = format("%s\x0f\x16%s\x0f ", chanlist, pnch)
         else
             if pnch then
                 chanlist = format("%s%s ", chanlist, pnch)
@@ -239,7 +239,7 @@ function M.fancy_statusline()
         end
     end
 
-    lurch.tb_writeline(0, chanlist)
+    lurch.tb_writeline(0, "\x0f" .. chanlist)
 end
 
 -- The statusline function, the purpose of which is to print the list
