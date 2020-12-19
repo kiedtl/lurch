@@ -96,8 +96,7 @@ function M.format_line(timestr, left, right)
     if #raw > config.left_col_width then left_pad = 0 end
     if #timestr > config.time_col_width then time_pad = 0 end
 
-    return format("\x0f\x0314%s\x0f%s %s%s %s", timestr,
-        (" "):rep(time_pad), (" "):rep(left_pad), left, right)
+    return config.linefmt(time_pad, left_pad, timestr, left, right)
 end
 
 function M.buffer_text()
