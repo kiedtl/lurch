@@ -873,8 +873,8 @@ cmdhand = {
         help = {
             "Clear unread message notifications for a buffer.",
             "Examples:\n" ..
-                "/read 1        Clear notifications for the main buffer.\n" ..
                 "/read all      Clear notifications for all buffers.\n" ..
+                "/read 1        Clear notifications for the main buffer.\n" ..
                 "/read 34       Clear notifications for buffer 34."
         },
         usage = "<buffer>",
