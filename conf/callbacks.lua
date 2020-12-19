@@ -185,13 +185,19 @@ function M.fancy_statusline()
                     unread_ind = format("+%d", bufs[buf].pings)
                 end
             elseif bufs[buf].unreadh > 0 then
-                if bufs[buf].unreadl > 0 then
-                    unread_ind = format("+%d (%d)", bufs[buf].unreadh, bufs[buf].unreadl)
-                else
-                    unread_ind = format("+%d", bufs[buf].unreadh)
-                end
+                -- Uncomment the lines below if you want low-priority
+                -- events (joins, quits, etc) to show in the statusline.
+                --if bufs[buf].unreadl > 0 then
+                --    unread_ind = format("+%d (%d)", bufs[buf].unreadh, bufs[buf].unreadl)
+                --else
+                --    unread_ind = format("+%d", bufs[buf].unreadh)
+                --end
+
+                unread_ind = format("+%d", bufs[buf].unreadh)
             elseif bufs[buf].unreadl > 0 then
-                unread_ind = format("(%d)", bufs[buf].unreadl)
+                -- Uncomment this, too, if you want low-priority events
+                -- to show in the statusline.
+                --unread_ind = format("(%d)", bufs[buf].unreadl)
             end
         end
 
