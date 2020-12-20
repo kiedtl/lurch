@@ -40,7 +40,7 @@ die(const char *fmt, ...)
 	char *buf_sz_str = getenv("LURCH_DEBUG");
 
 	if (buf_sz_str == NULL) {
-		fprintf(stderr, "NOTE: set $LURCH_DEBUG >0 for backtrace\n");
+		fprintf(stderr, "NOTE: set $LURCH_DEBUG >0 for a backtrace.\n");
 	} else {
 		size_t buf_sz = strtol(buf_sz_str, NULL, 10);
 		void *buffer[buf_sz];
