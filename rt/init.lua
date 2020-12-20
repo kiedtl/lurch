@@ -971,6 +971,18 @@ cmdhand = {
         usage = "<user>",
         fn = function(a, _, _) send("WHOIS %s", a) end
     },
+    ["/who"] = {
+        REQUIRE_ARG = true,
+        help = { "See WHO information for a user." },
+        usage = "<user>",
+        fn = function(a, _, _) send("WHO %s", a) end
+    },
+    ["/whowas"] = {
+        REQUIRE_ARG = true,
+        help = { "See WHOWAS information for a user." },
+        usage = "<user>",
+        fn = function(a, _, _) send("WHOWAS %s", a) end
+    },
     ["/join"] = {
         REQUIRE_ARG = true,
         help = { "Join a channel; if already joined, focus that buffer." },
