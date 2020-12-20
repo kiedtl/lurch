@@ -695,9 +695,8 @@ local irchand = {
 
     -- cannot join channel (you are banned)
     ["474"] = function(e)
-        prin_irc(2, e.fields[3], L_ERR, "you're banned creep")
-        local buf = buf_idx(e.fields[3])
-        if buf then buf_switch(buf) end
+        local ch = e.fields[3]
+        prin_irc(2, ch, L_ERR, "cannot join %s (you're banned creep)", ch)
     end,
 
     -- WHOIS: <nick> is using a secure connection (response to /whois)

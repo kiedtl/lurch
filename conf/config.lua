@@ -38,17 +38,21 @@ M.user = nil
 -- your "real name". if nil, defaults to the nickname.
 M.name = "o hai"
 
--- channels to join by on startup.
+-- Channels to join when connected.
 M.join = { "#chaos" }
 
 -- Mode to set when connected.
 M.mode = "+i"
 
--- default quit/part message. default to ""
+-- default quit/part message. (defaults to an empty string)
 M.quit_msg = "*thud*"
 M.part_msg = "*confused shouting*"
 
--- set these to nil to not respond to CTCP messages.
+-- Default replies for CTCP queries from users/server.
+--
+-- Set these to nil to not respond to CTCP messages. Note that doing so
+-- may cause issues if the network you're connected to *requires* users
+-- to respond to, say, VERSION requests from the server.
 M.ctcp_version = "lurch (beta)"
 M.ctcp_source  = "https://github.com/lptstr/lurch"
 M.ctcp_ping    = true
