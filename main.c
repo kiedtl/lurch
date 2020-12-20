@@ -142,14 +142,6 @@ main(int argc, char **argv)
 	reconn = !lua_toboolean(L, 1);
 
 	/*
-	 * no buffering for server,stdin,stdout. buffering causes
-	 * certain escape sequences to not be output until a newline
-	 * is sent, which often will badly mess up the TUI.
-	 */
-	setvbuf(stdin, NULL, _IONBF, 0);
-	setvbuf(stdout, NULL, _IONBF, 0);
-
-	/*
 	 * ttimeout: how long select(2) should wait for activity.
 	 * tpresent: last time tb_present() was called.
 	 * tcurrent: buffer for gettimeofday(2).
