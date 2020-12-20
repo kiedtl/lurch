@@ -929,6 +929,22 @@ cmdhand = {
         help = { "Switch to the previous buffer. Ctrl+P may also be used." },
         fn = function(_, _, _) buf_switch(cbuf - 1) end
     },
+    ["/away"] = {
+        help = {
+            "Set away status. An empty status indicates that you're back.",
+            "Examples:\n" ..
+                "/away Ill be bacck     Sets away message to 'Ill be bacck'\n" ..
+                "/away                  Clears away status."
+        },
+        usage = "[message]",
+        fn = function(a, args, _)
+            if a then
+                send("AWAY :%s %s", nick, a, args)
+            else
+                send("AWAY")
+            end
+        end,
+    },
     ["/invite"] = {
         REQUIRE_CHANBUF = true,
         REQUIRE_ARG = true,
