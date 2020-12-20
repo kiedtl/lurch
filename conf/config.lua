@@ -149,6 +149,8 @@ M.commands = {
     ["/j"] = alias_to("/join"),
     ["/p"] = alias_to("/part"),
     ["/l"] = alias_to("/leave"),
+    ["/afk"] = alias_to("/away Away"),
+    ["/back"] = alias_to("/away"),
 }
 
 -- user-defined handlers for IRC commands (not to be confused with lurch's
