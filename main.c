@@ -299,5 +299,13 @@ signal_lhand(int sig)
 void
 signal_fatal(int sig)
 {
-	die("received signal %d; aborting.", sig);
+	char *sigstrs[] = {
+		[SIGILL]  = "SIGILL",
+		[SIGSEGV] = "SIGSEGV",
+		[SIGFPE]  = "SIGFPE",
+		[SIGBUS]  = "SIGBUS",
+	};
+
+	die("received signal %s (%d); aborting.",
+		sigstrs[sig] ? sigstrs[sig] : "???", sig);
 }
