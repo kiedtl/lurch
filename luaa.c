@@ -60,7 +60,7 @@ api_conn_init(lua_State *pL)
 	struct addrinfo *res, *r;
 
 	if(getaddrinfo(host, port, &hints, &res) != 0) {
-		LLUA_ERR(pL, format("cannot resolve hostname: %s", strerror(errno)));
+		LLUA_ERR(pL, format("can't resolve: %s", strerror(errno)));
 	}
 
 	for(r = res; r != NULL; r = r->ai_next) {
@@ -78,22 +78,22 @@ api_conn_init(lua_State *pL)
 		struct tls_config *tlscfg = tls_config_new();
 		if (!tlscfg) LLUA_ERR(pL, format("tls_config_new() == NULL"));
 		if (tls_config_set_ciphers(tlscfg, "compat") != 0)
-			LLUA_ERR(pL, format("error when configuring tls: %s", tls_config_error(tlscfg)));
+			LLUA_ERR(pL, format("tls_config: %s", tls_config_error(tlscfg)));
 		client = tls_client();
 		if (!client) LLUA_ERR(pL, format("tls_client() == NULL"));
 		if (tls_configure(client, tlscfg) != 0)
-			LLUA_ERR(pL, format("error when configuring tls: %s", tls_error(client)));
+			LLUA_ERR(pL, format("tls_config: %s", tls_error(client)));
 		tls_config_free(tlscfg);
 	}
 
 	if (r == NULL)
-		LLUA_ERR(pL, format("cannot connect: %s", strerror(errno)));
+		LLUA_ERR(pL, format("can't connect: %s", strerror(errno)));
 
 	if (tls_active) {
 		if (tls_connect_socket(client, conn_fd, host) != 0)
-			LLUA_ERR(pL, format("tls: cannot connect: %s", tls_error(client)));
+			LLUA_ERR(pL, format("tls: can't connect: %s", tls_error(client)));
 		if (tls_handshake(client) != 0)
-			LLUA_ERR(pL, format("tls: cannot perform handshake: %s", tls_error(client)));
+			LLUA_ERR(pL, format("tls: can't perform handshake: %s", tls_error(client)));
 	}
 
 	lua_pushboolean(L, true);
