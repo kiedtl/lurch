@@ -1419,10 +1419,6 @@ function rt.on_lerror(_)
     lurch.cleanup()
 end
 
-function rt.on_timeout()
-    panic("fatal timeout\n");
-end
-
 function rt.on_reply(reply)
     if os.getenv("LURCH_DEBUG") then
         util.append(DBGFILE, format("<< %s\n", reply))
