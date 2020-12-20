@@ -6,11 +6,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <tls.h>
+#include <unistd.h>
 
 #include "termbox.h"
 #include "util.h"
 
-extern FILE *conn;
+extern int conn_fd;
 extern _Bool tb_active;
 extern struct tls *client;
 extern _Bool tls_active;
@@ -80,7 +81,10 @@ cleanup(void)
 	if (tls_active && client) {
 		tls_close(client);
 		tls_free(client);
-	} else if (conn) fclose(conn);
+	} else if (conn_fd != 0) {
+		close(conn_fd);
+		conn_fd = 0;
+	}
 
 	/*
 	 * Don't call lua_close, as this function may be

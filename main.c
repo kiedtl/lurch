@@ -40,7 +40,7 @@ _Bool tb_active = false;
 
 lua_State *L = NULL;
 int conn_fd = 0;
-FILE *conn = NULL;
+//FILE *conn = NULL;
 _Bool reconn = false;
 
 _Bool tls_active = false;

@@ -94,9 +94,6 @@ api_conn_init(lua_State *pL)
 			LLUA_ERR(pL, format("tls: cannot connect: %s", tls_error(client)));
 		if (tls_handshake(client) != 0)
 			LLUA_ERR(pL, format("tls: cannot perform handshake: %s", tls_error(client)));
-	} else {
-		if (((conn = fdopen(conn_fd, "r+")) == NULL))
-			LLUA_ERR(pL, format("cannot connect: %s", strerror(errno)));
 	}
 
 	lua_pushboolean(L, true);
@@ -107,7 +104,7 @@ int
 api_conn_active(lua_State *pL)
 {
 	_Bool active = false;
-	if ((tls_active && client) || (!tls_active && conn))
+	if ((tls_active && client) || (!tls_active && conn_fd != 0))
 		active = true;
 	if (reconn) /* we need to reconnect */
 		active = false;
