@@ -27,10 +27,12 @@ L_NRM   = "--"
 DBGFILE = "/tmp/lurch_debug"
 MAINBUF = config.host
 
-server  = { caps = {} }  -- Server information
-nick    = config.nick    -- The current nickname
-cbuf = nil               -- The current buffer
-bufs = {}                -- List of all opened buffers
+reconn      = config.reconn  -- Number of times we've reconnected.
+reconn_wait = 5              -- Seconds to wait before reconnecting.
+nick        = config.nick    -- The current nickname
+cbuf        = nil            -- The current buffer
+bufs        = {}             -- List of all opened buffers
+server      = { caps = {} }  -- Server information
 
 --local buf_add
 --local buf_idx
@@ -46,6 +48,22 @@ bufs = {}                -- List of all opened buffers
 --local prin
 --local parseirc
 --local parsecmd
+
+-- a simple wrapper around irc.connect.
+function connect()
+    server.last_reconn = os.time()
+
+    local _nick = config.nick or os.getenv("IRCNICK") or os.getenv("USER")
+    local user  = config.user or os.getenv("IRCUSER") or os.getenv("USER")
+    local name  = config.name or _nick
+    local pass  = util.capture(config.pass)
+
+    nick = _nick
+
+    local r, e = irc.connect(config.host, config.port, config.tls,
+        _nick, user, name, pass, config.caps)
+    return r, e
+end
 
 -- a simple wrapper around tui.redraw.
 function redraw()
@@ -1328,17 +1346,44 @@ function rt.init(args)
     callbacks.on_startup()
 
     -- Finally, we can connect to the server.
-    local _nick = config.nick or os.getenv("IRCNICK") or os.getenv("USER")
-    local user  = config.user or os.getenv("IRCUSER") or os.getenv("USER")
-    local name  = config.name or _nick
-    local pass  = util.capture(config.pass)
+    prin_cmd(MAINBUF, L_ERR, "Connecting to %s:%s (TLS: %s)",
+        config.host, config.port, config.tls)
+    return connect()
+end
 
-    local r, e = irc.connect(config.host, config.port, config.tls,
-        _nick, user, name, pass, config.caps)
+function rt.on_disconnect(_err)
+    if reconn == 0 then
+        panic("lurch: link lost: %s\n", _err or "unknown error")
+    end
 
-    -- For now, we whine and crash if something happened. Later, we'll just
-    -- try to reconnect.
-    if not r then panic("error: %s\n", e) end
+    -- Wait for an increasing amount of time before reconnecting.
+    if (os.time() - reconn_wait) < server.last_reconn then
+        return false
+    end
+
+    reconn = reconn - 1
+    prin_cmd(MAINBUF, L_ERR,
+        "Link lost, attempting reconnection... (%s tries left)", reconn)
+
+    local ret, err = connect()
+    if not ret then
+        reconn_wait = math.floor(reconn_wait * 1.6)
+        prin_cmd(MAINBUF, L_ERR, "Unable to connect (%s), waiting %s seconds",
+            err, reconn_wait)
+    else
+        -- rejoin channels.
+        -- FIXME: this will join channels that have been left, too
+        for i = 2, #bufs do
+            -- clear the names list of the channels. it will
+            -- be refreshed when the server sends 353.
+            bufs[i].names = {}
+            bufs[i].access = {}
+
+            send(":%s JOIN :%s", nick, bufs[i].name)
+        end
+    end
+
+    return ret, err
 end
 
 local sighand = {
@@ -1357,11 +1402,6 @@ local sighand = {
     -- catch-all
     [0] = function() return true end,
 }
-
-function rt.on_disconnect(err)
-    if not err then err = "server closed connection" end
-    panic("disconnected: %s\n", err)
-end
 
 function rt.on_signal(sig)
     local quitmsg = config.quit_msg or "*poof*"

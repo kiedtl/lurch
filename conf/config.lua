@@ -3,6 +3,15 @@ local util   = require('util')
 local format = string.format
 local M = {}
 
+-- Maximum number of times to try and reconnect to the server if
+-- disconnected for any reason. Set to -1 for infinite reconnect.
+--
+-- NOTE: beware of this feature if you were K-lined for any reason;
+-- lurch *might* try to reconnect even in those scenarios (though
+-- this hasn't been confirmed, as the author of lurch has never
+-- been K-lined before).
+M.reconn = 4
+
 M.tls  = true
 M.host = "irc.tilde.chat"
 M.port = 6697

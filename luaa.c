@@ -28,6 +28,7 @@ extern lua_State *L;
 extern _Bool tb_active;
 extern struct tls *client;
 extern _Bool tls_active;
+extern _Bool reconn;
 
 const struct luaL_Reg lurch_lib[] = {
 	{ "conn_init",     api_conn_init      },
@@ -108,6 +109,8 @@ api_conn_active(lua_State *pL)
 	_Bool active = false;
 	if ((tls_active && client) || (!tls_active && conn))
 		active = true;
+	if (reconn) /* we need to reconnect */
+		active = false;
 	lua_pushboolean(pL, active);
 	return 1;
 }

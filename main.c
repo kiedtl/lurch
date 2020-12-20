@@ -41,6 +41,7 @@ _Bool tb_active = false;
 lua_State *L = NULL;
 int conn_fd = 0;
 FILE *conn = NULL;
+_Bool reconn = false;
 
 _Bool tls_active = false;
 struct tls *client = NULL;
@@ -137,29 +138,33 @@ main(int argc, char **argv)
 		lua_pushstring(L, argv[i]);
 		lua_settable(L, -3);
 	}
-	llua_call(L, "init", 1, 0);
+	llua_call(L, "init", 1, 1);
+	reconn = !lua_toboolean(L, 1);
 
 	/*
 	 * no buffering for server,stdin,stdout. buffering causes
 	 * certain escape sequences to not be output until a newline
 	 * is sent, which often will badly mess up the TUI.
-	 *
-	 * by now, the server connection should have been opened.
 	 */
 	setvbuf(stdin, NULL, _IONBF, 0);
 	setvbuf(stdout, NULL, _IONBF, 0);
-	if (!tls_active) setvbuf(conn, NULL, _IONBF, 0);
 
 	/*
 	 * trespond: last time we got something from the server.
 	 * ttimeout: how long select(2) should wait for activity.
 	 * tpresent: last time tb_present() was called.
 	 * tcurrent: buffer for gettimeofday(2).
+	 *
+	 * ttimeout is set to 0,0 so as to prevent reconnection
+	 * activity from being disrupted if there is no user input
+	 * (if there's no user input, select() times out and the
+	 * loop continues, and the on_disconnect() handler doesn't
+	 * get called).
 	 */
 	time_t trespond = 0;
-	struct timeval ttimeout = { 120, 0 };
-	struct timeval tpresent = {   0, 0 };
-	struct timeval tcurrent = {   0, 0 };
+	struct timeval ttimeout = { 0, 0 };
+	struct timeval tpresent = { 0, 0 };
+	struct timeval tcurrent = { 0, 0 };
 
 	assert(gettimeofday(&tpresent, NULL) == 0);
 	tb_present();
@@ -179,25 +184,25 @@ main(int argc, char **argv)
 	struct tb_event ev;
 
 	while ("pigs fly") {
+		try_present(&tcurrent, &tpresent);
+
 		FD_ZERO(&rd);
 		FD_SET(STDIN_FILENO, &rd);
-		FD_SET(conn_fd, &rd);
+		if (!reconn) FD_SET(conn_fd, &rd);
 
-		try_present(&tcurrent, &tpresent);
 		n = select(conn_fd + 1, &rd, 0, 0, &ttimeout);
 
 		if (n < 0) {
 			if (errno == EINTR)
 				continue;
 			die("error on select():");
-		} else if (n == 0) {
-			if (time(NULL) - trespond >= TIMEOUT)
-				llua_call(L, "on_timeout", 0, 0);
-
-			continue;
 		}
 
-		if (FD_ISSET(conn_fd, &rd)) {
+		if (reconn) {
+			lua_pushstring(L, (const char *) NETWRK_ERR());
+			llua_call(L, "on_disconnect", 1, 1);
+			reconn = !lua_toboolean(L, 1);
+		} else if (FD_ISSET(conn_fd, &rd)) {
 			ssize_t r = -1;
 			size_t max = sizeof(bufsrv) - 1 - rc;
 
@@ -207,14 +212,12 @@ main(int argc, char **argv)
 				r = read(conn_fd, &bufsrv[rc], max);
 
 			if (tb_active && (r == TLS_WANT_POLLIN || r == TLS_WANT_POLLOUT)) {
-				continue;
+				; /* do nothing */
 			} else if (r < 0) {
-				if (errno == EINTR)
-					continue;
-				die("error on read():");
+				if (errno != EINTR)
+					die("error on read():");
 			} else if (r == 0) {
-				lua_pushstring(L, (const char *) NETWRK_ERR());
-				llua_call(L, "on_disconnect", 1, 0);
+				reconn = true;
 				continue;
 			}
 
