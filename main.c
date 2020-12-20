@@ -150,7 +150,6 @@ main(int argc, char **argv)
 	setvbuf(stdout, NULL, _IONBF, 0);
 
 	/*
-	 * trespond: last time we got something from the server.
 	 * ttimeout: how long select(2) should wait for activity.
 	 * tpresent: last time tb_present() was called.
 	 * tcurrent: buffer for gettimeofday(2).
@@ -161,7 +160,6 @@ main(int argc, char **argv)
 	 * loop continues, and the on_disconnect() handler doesn't
 	 * get called).
 	 */
-	time_t trespond = 0;
 	struct timeval ttimeout = { 0, 0 };
 	struct timeval tpresent = { 0, 0 };
 	struct timeval tcurrent = { 0, 0 };
@@ -237,7 +235,6 @@ main(int argc, char **argv)
 
 			rc -= ptr - bufsrv;
 			memmove(&bufsrv, ptr, rc);
-			trespond = time(NULL);
 		}
 
 		if (FD_ISSET(STDIN_FILENO, &rd)) {
