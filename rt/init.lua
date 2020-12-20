@@ -232,7 +232,7 @@ end
 function prin_cmd(dest, left, right_fmt, ...)
     last_ircevent = nil
 
-    local priority = 0
+    local priority = 1
     if left == L_ERR then priority = 2 end
 
     -- get the offset defined in the configuration and parse it.
