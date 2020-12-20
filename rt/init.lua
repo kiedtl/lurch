@@ -647,7 +647,15 @@ local irchand = {
     ["375"] = default,
 
     -- End of MOTD
+    --
+    -- Now that we know that the server has accepted our connection,
+    -- and nothing has gone wrong in the registration process, we can
+    -- connect to the default channels and set the default mode.
     ["376"] = function(_, _, _, _)
+        if config.mode and config.mode ~= "" then
+            send(":%s MODE %s :%s", nick, nick, config.mode)
+        end
+
         for c = 1, #config.join do
             send(":%s JOIN %s", nick, config.join[c])
         end

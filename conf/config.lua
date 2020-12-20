@@ -41,6 +41,9 @@ M.name = "o hai"
 -- channels to join by on startup.
 M.join = { "#chaos" }
 
+-- Mode to set when connected.
+M.mode = "+i"
+
 -- default quit/part message. default to ""
 M.quit_msg = "*thud*"
 M.part_msg = "*confused shouting*"
