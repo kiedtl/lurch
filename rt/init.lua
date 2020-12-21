@@ -1155,13 +1155,20 @@ cmdhand = {
         fn = function(_, _, _)
             prin_cmd(buf_cur(), "--", "")
             prin_cmd(buf_cur(), "--", "[builtin]")
-
             local cmdlist = ""
             for k, _ in pairs(cmdhand) do
                 cmdlist = cmdlist .. k .. " "
             end
-
             prin_cmd(buf_cur(), "--", "%s", cmdlist)
+
+            prin_cmd(buf_cur(), "--", "")
+            prin_cmd(buf_cur(), "--", "[user]")
+            cmdlist = ""
+            for k, _ in pairs(config.commands) do
+                cmdlist = cmdlist .. k .. " "
+            end
+            prin_cmd(buf_cur(), "--", "%s", cmdlist)
+
         end,
     },
     ["/dump"] = {
