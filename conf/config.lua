@@ -154,6 +154,15 @@ M.commands = {
     ["/back"] = alias_to("/away"),
     ["/ns"] = alias_to("/msg NickServ"),
     ["/cs"] = alias_to("/msg ChanServ"),
+
+    ["/op"] = alias_to("/mode +o"),
+    ["/deop"] = alias_to("/mode -o"),
+    ["/hop"] = alias_to("/mode +h"),
+    ["/dehop"] = alias_to("/mode -h"),
+    ["/voice"] = alias_to("/mode +v"),
+    ["/devoice"] = alias_to("/mode -v"),
+    ["/ban"] = alias_to("/mode +b"),
+    ["/unban"] = alias_to("/mode -b"),
 }
 
 -- user-defined handlers for IRC commands (not to be confused with lurch's
