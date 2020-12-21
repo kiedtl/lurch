@@ -166,6 +166,16 @@ M.commands = {
 
     ["/invex"] = alias_to("/mode +I"),
     ["/deinvex"] = alias_to("/mode -I"),
+
+    ["/kickban"] = {
+        REQUIRE_ARG = true,
+        help = { "Kick and ban a user." },
+        usage = "<user> [reason...]",
+        fn = function(a, args, _)
+            parsecmd(format("/kick %s %s", a, args))
+            parsecmd(format("/ban %s", a))
+        end,
+    },
 }
 
 -- user-defined handlers for IRC commands (not to be confused with lurch's
