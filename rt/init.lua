@@ -1018,7 +1018,7 @@ cmdhand = {
 
             local mode = a
             if args and args ~= "" then mode = mode .. " " .. args end
-            send("MODE %s :%s", recipient, mode)
+            send("MODE %s %s", recipient, mode)
         end,
     },
     ["/kick"] = {
