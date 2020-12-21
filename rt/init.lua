@@ -201,10 +201,22 @@ end
 local last_ircevent = nil
 function prin_irc(prio, dest, left, right_fmt, ...)
     assert(last_ircevent)
+    local right = format(right_fmt, ...)
 
     -- get the offset defined in the configuration and parse it.
     local offset = assert(util.parse_offset(config.tz))
     local time
+
+    local ignlvl = nil
+    for pat, lvl in pairs(config.ignores) do
+        if (last_ircevent.from):match(pat) then
+            ignlvl = lvl
+            break
+        end
+    end
+
+    -- If the user is ignored, skip printing and logging.
+    if ignlvl == "B" then return end
 
     -- if server-time is available, use that time instead of the
     -- local time.
@@ -215,11 +227,21 @@ function prin_irc(prio, dest, left, right_fmt, ...)
         local srvtime = last_ircevent.tags.time
         local utc_time   = util.time_from_iso8601(srvtime)
         time = utc_time + (offset * 60 * 60)
-
-        prin(prio, time, dest, left, right_fmt, ...)
     else
         time = util.time_with_offset(offset)
-        prin(prio, time, dest, left, right_fmt, ...)
+    end
+
+    -- If the user is dimmed, color the message/sender a light grey.
+    if ignlvl == "D" then
+        right = mirc.remove(right)
+        right = mirc.COLOR .. "15" .. right .. mirc.RESET
+        left  = mirc.remove(left)
+        left  = mirc.COLOR .. "15" .. left .. mirc.RESET
+    end
+
+    -- If the user is filtered, skip printing.
+    if ignlvl ~= "F" then
+        prin(prio, time, dest, left, right)
     end
 
     -- don't log batch messages.
@@ -239,12 +261,12 @@ function prin_cmd(dest, left, right_fmt, ...)
     local offset = assert(util.parse_offset(config.tz))
 
     local now = util.time_with_offset(offset)
-    prin(priority, now, dest, left, right_fmt, ...)
+    prin(priority, now, dest, left, format(right_fmt, ...))
 end
 
-function prin(priority, time, dest, left, right_fmt, ...)
+function prin(priority, time, dest, left, right)
     assert_t({time, "number", "time"}, {dest, "string", "dest"},
-        {left, "string", "left"}, {right_fmt, "string", "right_fmt"})
+        {left, "string", "left"}, {right, "string", "right"})
 
     local timestr = os.date(config.timefmt, time)
 
@@ -256,8 +278,6 @@ function prin(priority, time, dest, left, right_fmt, ...)
         bufidx = buf_add(dest)
         redraw_statusline = true
     end
-
-    local right = format(right_fmt, ...)
 
     -- Add the output to the history and wait for it to be drawn.
     local histsz = #bufs[bufidx].history
@@ -763,6 +783,7 @@ local irchand = {
     end,
 }
 
+CFGHND_ALL      = -1
 CFGHND_CONTINUE = 0
 CFGHND_RETURN   = 1
 
@@ -794,6 +815,12 @@ function parseirc(reply)
     end
 
     -- run each user handler, if it's not disabled.
+    if config.handlers[CFGHND_ALL] then
+        if (config.handlers[CFGHND_ALL]) == CFGHND_RETURN then
+            return
+        end
+    end
+
     local _return = false
     if config.handlers[cmd] then
         util.kvmap(config.handlers[cmd], function(_, v)
@@ -1026,6 +1053,26 @@ cmdhand = {
             if args == "" then args = nil end
             local reason = args or config.kick_msg or ""
             send("KICK %s %s :%s", bufs[cbuf].name, a, reason)
+        end,
+    },
+    ["/ignore"] = {
+        help = {
+            "Temporarily change the ignore status for a user, or list ignore users.",
+            "Ignore status can be one of 'B' (Block), 'F' (Filter), 'D' (Dim), or ''"
+        },
+        usage = "[<pattern> [ignore_type]]",
+        fn = function(a, args, _)
+            if not a then
+                local lvlstrs = { B = "Block", F = "Filter", D = "Dim" }
+                prin_cmd(buf_cur(), L_NRM, "Ignored users:")
+                for pat, lvl in pairs(config.ignores) do
+                    prin_cmd(buf_cur(), L_NRM, "  - %-24s %s (%s)", pat, lvl, lvlstrs[lvl] or "None")
+                end
+            else
+                if args == "" then args = nil end
+                local oldign = config.ignores[a]; config.ignores[a] = args
+                prin_cmd(buf_cur(), L_NRM, "Ignore status for '%s' is now '%s' (was '%s')", a, args, oldign)
+            end
         end,
     },
     ["/join"] = {

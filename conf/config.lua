@@ -233,4 +233,22 @@ M.no_ident = false
 --
 M.caps = { "server-time", "away-notify", "account-notify", "echo-message" }
 
+-- List of blocked/dimmed/filtered user patterns. Blocked ("B") users are
+-- filtered out completely, while filtered ("F") users are only filtered out
+-- from the screen (but are shown in logs). Dimmed ("D") users have their
+-- messages colored a light grey.
+--
+-- NOTE: the following lines are actual spammers on freenode, so it may be
+-- best to not unblock them.
+--
+-- NOTE: these patterns are actual Lua patterns, and an invalid pattern will
+-- cause lurch to crash.
+M.ignores = {
+    ["joaquinito0[1-9]"] = "D",
+    [".-!Bearfield.-@"] = "D",
+    [".-!MrMoney.-@"] = "D",
+    [".-!rareman.-@"] = "D",
+    [".-!MrETH1.-@"] = "D",
+}
+
 return M
