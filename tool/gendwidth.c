@@ -16,8 +16,8 @@ main(void)
 	);
 
 	for (size_t i = 0; i < UTF8_MAX; ++i) {
-		int w = utf8proc_charwidth((utf8proc_int32_t) i);
-		cols += printf("%i, ", w);
+		size_t w = utf8proc_charwidth((utf8proc_int32_t) i);
+		cols += printf("[%zu] = %zu, ", i, w);
 
 		if ((cols + 7) >= 80) {
 			printf("\n\t");
