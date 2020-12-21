@@ -331,12 +331,8 @@ local irchand = {
     ["MODE"] = function(e)
         if not e.dest then e.dest = e.msg end
         if (e.dest):find("#") then
-            local mode = e.fields[3] or ""
-            for i = 4, #e.fields do
-                if not e.fields[i] then break end
-                mode = mode .. " " .. e.fields[i]
-            end
-            mode = mode .. " " .. e.msg
+            if not e.fields[3] then panic(inspect(e)) end
+            local mode = util.join(" ", e.fields, 3)
             prin_irc(0, e.dest, "--", "Mode [%s] by %s", mode, hcol(e.nick))
         else
             prin_irc(0, MAINBUF, "--", "Mode %s", e.msg)

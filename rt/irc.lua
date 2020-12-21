@@ -94,12 +94,17 @@ function irc.parse(rawmsg)
 
     -- Grab all the stuff before the next ':' and stuff it into
     -- a table for later. Anything after the ':' is the message.
-    local data, msg = rawmsg:gmatch("([^:]+):?(.*)")()
+    local data, msg, _ = rawmsg:gmatch("([^:]+):?(.*)([%s]*)")()
     event.msg = msg or ""
 
     event.fields = {}
     for w in data:gmatch("([^%s]+)%s?") do
         event.fields[#event.fields + 1] = w
+    end
+
+    -- if the message contains no whitespace, add it to the fields.
+    if not msg:find("%s") then
+        event.fields[#event.fields + 1] = msg
     end
 
     -- If the field after the typical dest is a channel, use
