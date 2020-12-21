@@ -78,7 +78,7 @@ end
 -- FIXME: this may occasionally split unicode characters
 function util.fold(text, width)
     local _raw_len = function(data)
-        return #mirc.remove(data)
+        return lurch.utf8_dwidth(mirc.remove(data))
     end
 
     local res = ""
@@ -90,7 +90,9 @@ function util.fold(text, width)
         if not last_line then last_line = res..w end
 
         -- break up long words.
-        w = w:gsub(("."):rep(width - 1), "%1\n", 1)
+        if _raw_len(w) >= width then
+            w = lurch.utf8_insert(w, width - 1, '\n')
+        end
 
         -- only append a newline if the word's width is greater
         -- than zero. This is to prevent situations where a
