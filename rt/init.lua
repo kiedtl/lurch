@@ -1263,8 +1263,10 @@ function parsecmd(inp)
 
     -- split the input line into the command (first word), a (second
     -- word), and args (the rest of the input)
-    local _cmd, a, args = inp:gmatch("([^%s]+)%s?([^%s]*)%s?(.*)")()
+    local pw, _cmd, a, args = inp:gmatch("(%s*)([^%s]+)%s?([^%s]*)%s?(.*)")()
     if not _cmd then return end
+
+    _cmd = pw .. _cmd
     if a == "" then a = nil; args = nil end
 
     -- if the command matches "/<number>", switch to that buffer.
