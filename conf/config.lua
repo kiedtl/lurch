@@ -139,7 +139,7 @@ local alias_to = function(text)
     return {
         help = { "" },
         fn = function(a, args, _)
-            parsecmd(text .. (a or "") .. (args or ""))
+            parsecmd(format("%s %s %s", text, a, args))
         end,
     }
 end
@@ -151,6 +151,8 @@ M.commands = {
     ["/l"] = alias_to("/leave"),
     ["/afk"] = alias_to("/away Away"),
     ["/back"] = alias_to("/away"),
+    ["/ns"] = alias_to("/msg NickServ"),
+    ["/cs"] = alias_to("/msg ChanServ"),
 }
 
 -- user-defined handlers for IRC commands (not to be confused with lurch's
