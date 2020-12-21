@@ -931,9 +931,7 @@ cmdhand = {
     },
     ["/cmd"] = {
         REQUIRE_ARG = true,
-        help = {
-            "Execute a command, and use its output as input for the current buffer."
-        },
+        help = { "Execute a command, and use its output as input for the current buffer." },
         usage = "<command> [args...]",
         fn = function(a, args, _)
             -- FIXME: ensure this doesn't block on long-running commands
