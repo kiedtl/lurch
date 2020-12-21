@@ -79,7 +79,7 @@ function send(fmt, ...)
 
     if os.getenv("LURCH_DEBUG") then
         util.append(DBGFILE,
-            format(">> %s\n", format(fmt, ...)))
+            format("<< %s\n", format(fmt, ...)))
     end
 
     irc.send(fmt, ...)
@@ -1488,7 +1488,7 @@ end
 
 function rt.on_reply(reply)
     if os.getenv("LURCH_DEBUG") then
-        util.append(DBGFILE, format("<< %s\n", reply))
+        util.append(DBGFILE, format(">> %s\n", reply))
     end
 
     parseirc(reply)
