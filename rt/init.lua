@@ -1021,6 +1021,17 @@ cmdhand = {
             send("MODE %s :%s", recipient, mode)
         end,
     },
+    ["/kick"] = {
+        REQUIRE_CHANBUF = true,
+        REQUIRE_ARG = true,
+        help = { "Kick a user from the current channel." },
+        usage = "<user> [reason...]",
+        fn = function(a, args, _)
+            if args == "" then args = nil end
+            local reason = args or config.kick_msg or ""
+            send("KICK %s %s :%s", bufs[cbuf].name, a, reason)
+        end,
+    },
     ["/join"] = {
         REQUIRE_ARG = true,
         help = { "Join a channel; if already joined, focus that buffer." },

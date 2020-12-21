@@ -44,8 +44,9 @@ M.join = { "#lurch" }
 -- Mode to set when connected.
 M.mode = "+i"
 
--- default quit/part message. (defaults to an empty string)
+-- default kick/quit/part message. (defaults to an empty string)
 M.quit_msg = "*thud*"
+M.kick_msg = "your presence is no longer desired"
 M.part_msg = "*confused shouting*"
 
 -- Default replies for CTCP queries from users/server.
