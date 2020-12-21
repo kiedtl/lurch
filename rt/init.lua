@@ -991,6 +991,22 @@ cmdhand = {
             send("PRIVMSG %s :\1%s\1", a, args)
         end
     },
+    ["/mode"] = {
+        REQUIRE_ARG = true,
+        help = {
+            "Set a user/channel mode.",
+            "If run in the main buffer, sets the user mode; otherwise, sets a channel mode."
+        },
+        usage = "<mode...>",
+        fn = function(a, args, _)
+            local recipient = bufs[cbuf].name
+            if cbuf == 1 then recipient = nick end
+
+            local mode = a
+            if args and args ~= "" then mode = mode .. " " .. args end
+            send("MODE %s :%s", recipient, mode)
+        end,
+    },
     ["/join"] = {
         REQUIRE_ARG = true,
         help = { "Join a channel; if already joined, focus that buffer." },
