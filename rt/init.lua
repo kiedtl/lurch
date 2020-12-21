@@ -929,6 +929,22 @@ cmdhand = {
         help = { "Switch to the previous buffer. Ctrl+P may also be used." },
         fn = function(_, _, _) buf_switch(cbuf - 1) end
     },
+    ["/cmd"] = {
+        REQUIRE_ARG = true,
+        help = {
+            "Execute a command, and use its output as input for the current buffer."
+        },
+        usage = "<command> [args...]",
+        fn = function(a, args, _)
+            -- FIXME: ensure this doesn't block on long-running commands
+            local command = format("%s -c '%s %s'",
+                os.getenv("SHELL") or "/bin/sh", a, args)
+            local output = util.capture(command)
+            for line in output:gmatch("([^\n]+)\n?") do
+                parsecmd(line)
+            end
+        end,
+    },
     ["/away"] = {
         help = {
             "Set away status. An empty status indicates that you're back.",
@@ -1488,7 +1504,7 @@ end
 
 function rt.on_reply(reply)
     if os.getenv("LURCH_DEBUG") then
-        util.append(DBGFILE, format(">> %s\n", reply))
+        util.append(DBGFILE, format("<s< %s\n", reply))
     end
 
     parseirc(reply)
