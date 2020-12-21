@@ -163,6 +163,9 @@ M.commands = {
     ["/devoice"] = alias_to("/mode -v"),
     ["/ban"] = alias_to("/mode +b"),
     ["/unban"] = alias_to("/mode -b"),
+
+    ["/invex"] = alias_to("/mode +I"),
+    ["/deinvex"] = alias_to("/mode -I"),
 }
 
 -- user-defined handlers for IRC commands (not to be confused with lurch's
