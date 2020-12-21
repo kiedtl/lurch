@@ -983,6 +983,14 @@ cmdhand = {
         usage = "<user>",
         fn = function(a, _, _) send("WHOWAS %s", a) end
     },
+    ["/ctcp"] = {
+        REQUIRE_ARG = true,
+        help = { "Send a CTCP query to a user." },
+        usage = "<user> <query>",
+        fn = function(a, args, _)
+            send("PRIVMSG %s :\1%s\1", a, args)
+        end
+    },
     ["/join"] = {
         REQUIRE_ARG = true,
         help = { "Join a channel; if already joined, focus that buffer." },
