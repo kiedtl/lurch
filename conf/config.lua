@@ -68,7 +68,7 @@ M.mirc = true
 --    left:  the column in which the nicknames, "NOTE", etc are shown.
 --    right: the "main" column in which messages are shown.
 --
--- By default, the right column width defaults to:
+-- By default, the right column width is:
 --    $(terminal_width - left_column_width - time_column_width)
 --
 -- If the width of a column exceeds the maximum width for that column,
