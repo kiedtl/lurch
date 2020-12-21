@@ -137,7 +137,7 @@ M.pingwords = { "kiedtl" }
 -- alias commands.
 local alias_to = function(text)
     return {
-        help = { "" },
+        help = { format("An alias to '%s'", text) },
         fn = function(a, args, _)
             parsecmd(format("%s %s %s", text, a, args))
         end,
