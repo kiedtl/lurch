@@ -83,8 +83,8 @@ function util.fold(text, width)
 
     local res = ""
 
-    -- iterate over each word
-    for w, wh in string.gmatch(text, "([^%s]+%s?)([%s]*)") do
+    -- iterate over each word and surrounding whitespace
+    for wp, w, wt in string.gmatch(text, "([%s]*)([^%s]+%s?)([%s]*)") do
         -- get the last line of the message.
         local last_line = util.last_gmatch(res..w, "([^\n]+)\n?")
         if not last_line then last_line = res..w end
@@ -101,7 +101,8 @@ function util.fold(text, width)
         end
 
         res = res .. w
-        if wh then res = res .. wh end
+        if wp then res = wp .. res end
+        if wt then res = res .. wt end
     end
 
     return res
