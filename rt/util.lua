@@ -284,4 +284,15 @@ function util.revgmatch(str, pat, fn)
     end
 end
 
+function util.join(str, tb, from, to)
+    if not tb then return "" end
+    from = from or 1; to = to or #tb
+
+    local buf = tb[from]
+    for i = (from + 1), to do
+        buf = buf .. str .. tb[i]
+    end
+    return buf
+end
+
 return util
