@@ -1119,12 +1119,13 @@ cmdhand = {
             local cmd = a
             if not (cmd:find("/") == 1) then cmd = "/" .. cmd end
 
-            if not cmdhand[cmd] then
+            if not cmdhand[cmd] and not config.commands[cmd] then
                 prin_cmd(buf_cur(), L_ERR, "No such command '%s'", a)
                 return
             end
 
-            local cmdinfo = cmdhand[cmd]
+            local cmdinfo = cmdhand[cmd] or config.commands[cmd]
+
             prin_cmd(buf_cur(), "--", "")
             prin_cmd(buf_cur(), "--", "Help for %s", cmd)
 
