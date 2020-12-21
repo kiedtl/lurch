@@ -39,7 +39,7 @@ M.user = nil
 M.name = "o hai"
 
 -- Channels to join when connected.
-M.join = { "#chaos" }
+M.join = { "#lurch" }
 
 -- Mode to set when connected.
 M.mode = "+i"
