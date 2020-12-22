@@ -567,7 +567,8 @@ local irchand = {
         --    hcol(e.fields[3]))
     end,
 
-    -- WHOIS: <nick> has been idle for 45345 seconds, and has been online since 4534534534
+    -- WHOIS: <nick> has been idle for 45345 seconds, and has been online
+    -- since 4534534534
     ["317"] = function(e)
         prin_irc(0, buf_cur(), "WHOIS", "[%s] has been idle for %s",
             hcol(e.fields[3]), util.fmt_duration(tonumber(e.fields[4])))
