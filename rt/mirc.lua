@@ -33,6 +33,10 @@ mirc.LIGHTMAGENTA = 13
 mirc.LIGHTCYAN    = 11
 mirc.WHITE        = 00
 
+function mirc.bold(text)
+    return mirc.BOLD .. text .. mirc.RESET
+end
+
 function mirc.remove(text)
     text = text:gsub("[\x02\x1f\x1d\x16\x06\x0f]", "")
     text = text:gsub("\x03[0-9][0-9]?,[0-9][0-9]?", "")
