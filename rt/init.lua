@@ -862,7 +862,7 @@ function parseirc(reply)
             text = text .. " :" .. event.msg
         end
 
-        prin_irc(1, MAINBUF, "><", "%s", text)
+        prin_irc(1, MAINBUF, "-?-", "%s", text)
     else
         (irchand[cmd])(event)
     end
