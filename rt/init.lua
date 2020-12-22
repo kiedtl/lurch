@@ -750,7 +750,9 @@ local irchand = {
     ["396"] = function(e) prin_irc(0, MAINBUF, L_NORM, "%s %s", e.fields[3], e.msg) end,
 
     -- No such nick/channel
-    ["401"] = function(e) prin_irc(0, MAINBUF, L_ERR, "No such nick/channel %s", e.fields[3]) end,
+    ["401"] = function(e)
+        prin_irc(1, buf_cur(), L_ERR, "No such nick/channel %s", e.fields[3])
+    end,
 
     -- Nickname is already in use
     ["433"] = function(e)
