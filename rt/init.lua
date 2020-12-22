@@ -747,6 +747,12 @@ local irchand = {
         prin_irc(1, buf_cur(), L_ERR, "No such nick/channel %s", e.fields[3])
     end,
 
+    -- Nickname is reserved (being held for registered user)
+    ["432"] = function(e)
+        prin_irc(1, buf_cur(), L_ERR, "Nickname %s is reserved: %s",
+            hcol(e.fields[3]), e.msg)
+    end,
+
     -- Nickname is already in use
     ["433"] = function(e)
         assert(e.fields[3] == nick)
