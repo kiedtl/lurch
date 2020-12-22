@@ -252,10 +252,21 @@ end
 
 util.MAP_BREAK = 0
 util.MAP_CONT  = 1
+util.map_SETIT = 2
 function util.kvmap(tb, fn)
     for k, v in pairs(tb) do
         if fn(k, v) == util.MAP_BREAK then
             break
+        end
+    end
+end
+function util.ivmap(tb, fn)
+    for i, v in ipairs(tb) do
+        local ret, a1 = fn(i, v)
+        if ret == util.MAP_BREAK then
+            break
+        elseif ret == util.MAP_SETIT then
+            i = a1
         end
     end
 end
