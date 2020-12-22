@@ -403,29 +403,17 @@ local irchand = {
             e.nick, e.fields[3] or e.msg)
     end,
     ["PRIVMSG"] = function(e)
-        local rsender = e.nick or e.from
-        local sender = rsender
-        local priority = 1
+        local pings = msg_pings(rsender, e.msg)
+        local sender = e.nick or e.from
+        local sndfmt = config.leftfmt.message(sender, pings)
 
-        -- remove extra characters from nick that won't fit.
-        if #sender > (config.left_col_width-2) then
-            sender = (sender):sub(1, config.left_col_width-3)
-            sender = sender .. format("\x0f\x0314+\x0f")
-        end
-
-        if msg_pings(rsender, e.msg) then
-            sender = format("<\x16%s\x0f>", hcol(sender, rsender))
-            priority = 2
-        else
-            sender = format("<%s>", hcol(sender, rsender))
-        end
+        local prio = 1
+        if pings then prio = 2 end
 
         -- convert or remove mIRC IRC colors.
-        if not config.mirc then
-            e.msg = mirc.remove(e.msg)
-        end
+        if not config.mirc then e.msg = mirc.remove(e.msg) end
 
-        prin_irc(priority, e.dest, sender, "%s", e.msg)
+        prin_irc(prio, e.dest, sndfmt, "%s", e.msg)
     end,
     ["QUIT"] = function(e)
         -- display quit message for all buffers that user has joined,
@@ -826,7 +814,8 @@ local irchand = {
             e.msg = mirc.remove(e.msg)
         end
 
-        prin_irc(prio, e.dest, "*", "%s %s", sender_fmt, e.msg)
+        prin_irc(prio, e.dest, config.leftfmt.action, "%s %s",
+            sender_fmt, e.msg)
     end,
     ["CTCP_VERSION"] = function(e)
         if config.ctcp_version then

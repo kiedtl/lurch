@@ -78,7 +78,7 @@ function M.fancy_promptf(inp, cursor)
     local hnick = tui.highlight(nick)
 
     if inp:find("/me ") == 1 and cursor >= 4 then
-        prompt = format("* %s ", hnick)
+        prompt = format("%s %s ", config.leftfmt.action, hnick)
         inp = inp:sub(5, #inp)
         cursor = cursor - 4
     elseif inp:find("/note ") == 1 and cursor >= 6 then
@@ -90,7 +90,7 @@ function M.fancy_promptf(inp, cursor)
         -- indicate that it will be treated as a message instead
         -- of a command.
         if inp:sub(2, 2) == "/" then
-            prompt = format("<%s> \x0314/\x0f", hnick)
+            prompt = format("%s \x0314/\x0f", hnick)
         else
             prompt = format("\x0314/\x0f")
         end
@@ -103,11 +103,11 @@ function M.fancy_promptf(inp, cursor)
 
     -- strip escape sequences so that we may accurately calculate
     -- the prompt's length.
-    local rawprompt = mirc.remove(prompt)
+    local rawprompt_len = lurch.utf8_dwidth(mirc.remove(prompt))
 
     -- strip off stuff from input that can't be shown on the
     -- screen
-    local offset = (tui.tty_width - 1) - #rawprompt
+    local offset = (tui.tty_width - 1) - rawprompt_len
     inp = inp:sub(-offset)
 
     -- show IRC formatting escape sequences nicely.
@@ -116,7 +116,7 @@ function M.fancy_promptf(inp, cursor)
     -- Clear the line, remove any bold/color, draw the input buffer
     -- and move the cursor to the appropriate position.
     lurch.tb_writeline(tui.tty_height-1, format("\x0f%s%s", prompt, inp))
-    lurch.tb_setcursor(cursor + #rawprompt, tui.tty_height-1)
+    lurch.tb_setcursor(cursor + rawprompt_len, tui.tty_height-1)
 end
 
 -- The function that is called on every keypress. It should, at the

@@ -1,4 +1,5 @@
 local mirc   = require('mirc')
+local tui    = require('tui')
 local util   = require('util')
 local format = string.format
 local M = {}
@@ -132,17 +133,38 @@ end
 
 -- Values used for the left column (excluding channel messages).
 --
--- error:  value used for error messages (e.g. "Cannot join: invite-only channel")
--- normal: value normally used for messages.
--- away:   value used for messages pertaining to a user's away status (e.g.:
+-- error:   value used for error messages (e.g. "Cannot join: invite-only channel")
+-- normal:  value normally used for messages.
+-- away:    value used for messages pertaining to a user's away status (e.g.:
 --      "<nick> is now away" or "<nick> is back")
--- nick:   value used for messages pertaining to a nickname (e.g.: nick changes,
+-- nick:    value used for messages pertaining to a nickname (e.g.: nick changes,
 --      "That nickname is in use", etc)
+-- action:  value used from CTCP ACTIONs (/me)
+-- message: function that's called to format the sender of a message.
 M.leftfmt = {
     error = "×",
     normal = "--",
     away = "-<>",
     nick = "--@",
+    action = "·",
+    message = function(sender, pings)
+        local sndfmt = sender
+
+        -- Remove extra characters fromt the nickname that won't fit.
+        --
+        -- We can use "#sender" instead of lurch.utf8_dwidth, because
+        -- nicknames may only contain ASCII characters.
+        if #sender > (M.left_col_width - 2) then
+            sndfmt = sndfmt:sub(1, M.left_col_width - 3)
+            sndfmt = sndfmt .. format("\x0f\x0314+\x0f")
+        end
+
+        sndfmt = tui.highlight(sndfmt, sender)
+        if pings then sndfmt = "\x16" .. sndfmt .. "\x0f" end
+        sndfmt = "<" .. sndfmt .. ">"
+
+        return sndfmt
+    end,
 }
 
 -- words that will generate a notification if they appear in a message
