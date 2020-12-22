@@ -39,7 +39,12 @@ local function _right()
     if M.cursor < _ulen(M.bufin[M.hist]) then M.cursor = M.cursor + 1 end
 end
 local function _left() if M.cursor > 0 then M.cursor = M.cursor - 1 end end
-local function _up() if M.hist > 1 then M.hist = M.hist - 1; M.cursor = 0 end end
+local function _up()
+    if M.hist > 1 then
+        M.hist = M.hist - 1
+        M.cursor = _ulen(M.bufin[M.hist])
+    end
+end
 local function _down()
     if M.hist < #M.bufin then M.hist = M.hist + 1; M.cursor = 0 end
 end
