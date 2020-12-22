@@ -505,6 +505,20 @@ local irchand = {
         prin_irc(0, buf_cur(), "WHOIS", "[%s] %s", hcol(e.fields[3]), e.msg)
     end,
 
+    -- AWAY: You are no longer marked as being away
+    ["305"] = function(e)
+        util.ivmap(bufs, function(i, v)
+            prin_irc(0, v.name, "--", "(Away) %s", e.msg)
+        end)
+    end,
+
+    -- AWAY: You have been marked as being away
+    ["306"] = function(e)
+        util.ivmap(bufs, function(i, v)
+            prin_irc(0, v.name, "--", "(Away) %s", e.msg)
+        end)
+    end,
+
     -- WHOIS: <nick> is a registered nick
     ["307"] = function(e)
         prin_irc(0, buf_cur(), "WHOIS", "[%s] %s", hcol(e.fields[3]), e.msg)
