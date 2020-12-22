@@ -544,6 +544,21 @@ local irchand = {
         prin_irc(0, buf_cur(), "WHOIS", "[%s] %s (%s)", hcol(e.fields[3]), e.fields[4], e.msg)
     end,
 
+    -- WHO: RPL_ENDOFWHO
+    ["315"] = function(e)
+        --
+        -- Disabled. Since 352 (RPL_WHOREPLY) is the only reply we get
+        -- from a WHO query, this message is unnecessary.
+        --
+        -- Also, printing it may generate confusion, as $fields[3] is the
+        -- text the *user* sent as an argument to /who, not the nick/username
+        -- the server interpreted that argument as... so the "nick" printed
+        -- by 352 and the nick printed here won't always match.
+        --
+        --prin_irc(0, buf_cur(), "WHO", "[%s] End of WHO info.",
+        --    hcol(e.fields[3]))
+    end,
+
     -- WHOIS: <nick> has been idle for 45345 seconds, and has been online since 4534534534
     ["317"] = function(e)
         prin_irc(0, buf_cur(), "WHOIS", "[%s] has been idle for %s",
@@ -596,6 +611,14 @@ local irchand = {
     -- invited <nick> to <chan> (response to /invite)
     ["341"] = function(e)
         prin_irc(0, e.msg, "--", "Invited %s to %s", hcol(e.fields[3]), e.msg)
+    end,
+
+    -- WHO: RPL_WHOREPLY (WHO information)
+    -- <channel> <user> <host> <server> <nick> <H|G>[*][@|+] :<hopcount> <real>
+    ["352"] = function(e)
+        prin_irc(0, buf_cur(), "WHO", "[%s] is %s (%s!%s@%s): (%s) %s",
+            hcol(e.fields[7]), mirc.bold(e.fields[4]), e.fields[7], e.fields[4],
+            e.fields[5], hcol(e.fields[3]), e.msg)
     end,
 
     -- Reply to /names
