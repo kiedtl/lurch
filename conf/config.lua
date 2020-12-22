@@ -140,7 +140,11 @@ local alias_to = function(text)
     return {
         help = { format("An alias to '%s'", text) },
         fn = function(a, args, _)
-            parsecmd(format("%s %s %s", text, a, args))
+            if not a then
+                parsecmd(text)
+            else
+                parsecmd(format("%s %s %s", text, a, args))
+            end
         end,
     }
 end
