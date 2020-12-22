@@ -83,8 +83,8 @@ function M.format_line(timestr, left, right, timew, leftw, rightw)
     -- Generate a cursor right sequence based on the length of
     -- the above "raw" word. The nick column is a fixed width
     -- of LEFT_PADDING so it's simply 'LEFT_PADDING - word_len'
-    local left_pad = (leftw + 1) - #raw
-    local time_pad = (timew + 1) - #timestr
+    local left_pad = (leftw + 1) - lurch.utf8_dwidth(raw)
+    local time_pad = (timew + 1) - lurch.utf8_dwidth(timestr)
     if #raw > leftw then left_pad = 0 end
     if #timestr > timew then time_pad = 0 end
 
