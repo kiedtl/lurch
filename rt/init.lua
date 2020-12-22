@@ -345,7 +345,7 @@ local irchand = {
         end
 
         buf_with_nick(e.nick, function(_, buf)
-            prin_irc(0, buf.name, "--", "(Away) %s", msg)
+            prin_irc(0, buf.name, "-<>", "%s", msg)
         end)
     end,
     ["MODE"] = function(e)
@@ -508,14 +508,14 @@ local irchand = {
     -- AWAY: You are no longer marked as being away
     ["305"] = function(e)
         util.ivmap(bufs, function(i, v)
-            prin_irc(0, v.name, "--", "(Away) %s", e.msg)
+            prin_irc(0, v.name, "-<>", "You are no longer marked as being away.")
         end)
     end,
 
     -- AWAY: You have been marked as being away
     ["306"] = function(e)
         util.ivmap(bufs, function(i, v)
-            prin_irc(0, v.name, "--", "(Away) %s", e.msg)
+            prin_irc(0, v.name, "-<>", "You have been marked as being away.")
         end)
     end,
 
