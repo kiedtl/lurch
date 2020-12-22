@@ -483,21 +483,13 @@ local irchand = {
     -- Anyway, I don't think anyone is interested in seeing this info.
     ["005"] = none,
 
-    -- There are x users online
-    ["251"] = default,
-
-    -- There are x operators online
-    ["252"] = default2,
-
-    -- There are x unknown connections
-    ["253"] = default2,
-
-    -- There are x channels formed
-    ["254"] = default2,
-
-    -- Some junk sent by freenode.
-    ["255"] = none, ["265"] = none,
-    ["266"] = none, ["250"] = none,
+    -- 251: There are x users online
+    -- 252: There are x operators online
+    -- 253: There are x unknown connections
+    -- 254: There are x channels formed
+    -- 250, 255, 265, 266: Some junk
+    ["251"] = default, ["252"] = default2, ["253"] = default2, ["254"] = default2,
+    ["255"] = none,    ["265"] = none,     ["266"] = none,     ["250"] = none,
 
     -- WHOIS: <nick> has TLS cert fingerprint of sdflsd453lkd8
     ["276"] = function(e)
