@@ -150,25 +150,25 @@ local alias_to = function(text)
 end
 
 M.commands = {
-    ["/shr"] = alias_to("/shrug"),
-    ["/j"] = alias_to("/join"),
-    ["/p"] = alias_to("/part"),
-    ["/l"] = alias_to("/leave"),
-    ["/afk"] = alias_to("/away Away"),
-    ["/back"] = alias_to("/away"),
-    ["/ns"] = alias_to("/msg NickServ"),
-    ["/cs"] = alias_to("/msg ChanServ"),
+    ["/shr"]     = alias_to("/shrug"),
+    ["/j"]       = alias_to("/join"),
+    ["/p"]       = alias_to("/part"),
+    ["/l"]       = alias_to("/leave"),
+    ["/afk"]     = alias_to("/away Away"),
+    ["/back"]    = alias_to("/away"),
+    ["/ns"]      = alias_to("/msg NickServ"),
+    ["/cs"]      = alias_to("/msg ChanServ"),
 
-    ["/op"] = alias_to("/mode +o"),
-    ["/deop"] = alias_to("/mode -o"),
-    ["/hop"] = alias_to("/mode +h"),
-    ["/dehop"] = alias_to("/mode -h"),
-    ["/voice"] = alias_to("/mode +v"),
+    ["/op"]      = alias_to("/mode +o"),
+    ["/deop"]    = alias_to("/mode -o"),
+    ["/hop"]     = alias_to("/mode +h"),
+    ["/dehop"]   = alias_to("/mode -h"),
+    ["/voice"]   = alias_to("/mode +v"),
     ["/devoice"] = alias_to("/mode -v"),
-    ["/ban"] = alias_to("/mode +b"),
-    ["/unban"] = alias_to("/mode -b"),
+    ["/ban"]     = alias_to("/mode +b"),
+    ["/unban"]   = alias_to("/mode -b"),
 
-    ["/invex"] = alias_to("/mode +I"),
+    ["/invex"]   = alias_to("/mode +I"),
     ["/deinvex"] = alias_to("/mode -I"),
 
     ["/kickban"] = {
