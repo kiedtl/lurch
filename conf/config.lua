@@ -130,6 +130,21 @@ M.linefmt = function(time_pad, left_pad, time, left, right)
         --left, left_pad, right)
 end
 
+-- Values used for the left column (excluding channel messages).
+--
+-- error:  value used for error messages (e.g. "Cannot join: invite-only channel")
+-- normal: value normally used for messages.
+-- away:   value used for messages pertaining to a user's away status (e.g.:
+--      "<nick> is now away" or "<nick> is back")
+-- nick:   value used for messages pertaining to a nickname (e.g.: nick changes,
+--      "That nickname is in use", etc)
+M.leftfmt = {
+    error = "×",
+    normal = "--",
+    away = "-<>",
+    nick = "--@",
+}
+
 -- words that will generate a notification if they appear in a message
 M.pingwords = { "kiedtl" }
 
