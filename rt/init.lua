@@ -777,7 +777,8 @@ local irchand = {
 
     -- WHOIS: <nick> is using a secure connection (response to /whois)
     ["671"] = function(e)
-        prin_irc(0, buf_cur(), "WHOIS", "[%s] uses a secure connection", hcol(e.fields[3]))
+        prin_irc(0, buf_cur(), "WHOIS", "[%s] uses a secure connection",
+            hcol(e.fields[3]))
     end,
 
     -- You are now logged in as xyz
