@@ -544,6 +544,14 @@ local irchand = {
         prin_irc(0, buf_cur(), "WHOIS", "[%s] %s (%s)", hcol(e.fields[3]), e.fields[4], e.msg)
     end,
 
+    -- WHOWAS: RPL_WHOWASUSER
+    -- <nick> <user> <host> * :<Real name>
+    ["314"] = function(e)
+        local nic = e.fields[3]
+        prin_irc(0, buf_cur(), "WHOWAS", "[%s] (%s!%s@%s): %s",
+            hcol(nic), nic, e.fields[4], e.fields[5], e.msg)
+    end,
+
     -- WHO: RPL_ENDOFWHO
     ["315"] = function(e)
         --
@@ -698,6 +706,13 @@ local irchand = {
         txt = format("%s denizens of %s (%s)", total, hcol(dest), txt)
 
         prin_irc(0, dest, "NAMES", "%s", txt)
+    end,
+
+    -- WHOWAS: RPL_ENDOFWHOWAS
+    -- <nick> :End of WHOWAS
+    ["369"] = function(e)
+        prin_irc(0, buf_cur(), "WHOWAS", "[%s] End of WHO info.",
+            hcol(e.fields[3]))
     end,
 
     -- MOTD message
