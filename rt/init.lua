@@ -361,8 +361,10 @@ local irchand = {
             if not e.fields[3] then panic(inspect(e)) end
             local mode = util.join(" ", e.fields, 3)
             prin_irc(0, e.dest, "--", "Mode [%s] by %s", mode, hcol(e.nick))
-        else
+        elseif e.nick == nick then
             prin_irc(0, MAINBUF, "--", "Mode %s", e.msg)
+        else
+            prin_irc(0, MAINBUF, "--", "Mode %s by %s", e.msg, hcol(e.nick))
         end
     end,
     ["NOTICE"] = function(e)
