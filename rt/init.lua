@@ -307,8 +307,15 @@ function prin(priority, time, dest, left, right)
 end
 
 local function none(_) end
-local function default2(e) prin_irc(0, MAINBUF, "--", "There are %s %s", e.fields[3], e.msg) end
+local function default2(e)
+    prin_irc(0, MAINBUF, "--", "There are %s %s", e.fields[3], e.msg)
+end
 local function default(e) prin_irc(0, e.dest, "--", "%s", e.msg) end
+local function hndfact_err(m)
+    return function(e)
+        prin_irc(1, e.dest, L_ERR, "%s", m or e.msg)
+    end
+end
 
 local irchand = {
     ["PING"] = function(e)   send("PONG :%s", e.dest or e.msg) end,
@@ -769,11 +776,17 @@ local irchand = {
             e.fields[4])
     end,
 
-    -- cannot join channel (you are banned)
-    ["474"] = function(e)
-        local ch = e.fields[3]
-        prin_irc(2, ch, L_ERR, "cannot join %s (you're banned creep)", ch)
-    end,
+    -- 464: Incorrect server password
+    -- 465: You have been banned from the server
+    -- 472: Unknown MODE character
+    -- 473: Cannot join channel (invite-only)
+    -- 474: Cannot join channel (you are banned)
+    -- 475: Cannot join channel (bad channel key)
+    -- 482: Permission denied (you're not a channel operator)
+    -- 502: Cannot change mode for other users
+    ["464"] = hndfact_err(), ["465"] = hndfact_err("You're banned creep"),
+    ["472"] = hndfact_err(), ["473"] = hndfact_err(), ["474"] = hndfact_err(),
+    ["475"] = hndfact_err(), ["482"] = hndfact_err(), ["502"] = hndfact_err(),
 
     -- WHOIS: <nick> is using a secure connection (response to /whois)
     ["671"] = function(e)
