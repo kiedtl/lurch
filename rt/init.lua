@@ -718,8 +718,8 @@ local irchand = {
     ["433"] = function(e)
         assert(e.fields[3] == nick)
         local newnick = e.fields[3] .. "_" -- sprout a tail
-        prin_irc(2, MAINBUF, L_ERR, "Nickname %s already in use; using %s",
-            e.fields[3], newnick)
+        prin_irc(2, MAINBUF, "--@", "Nickname %s already in use; using %s",
+            hcol(e.fields[3]), hcol(newnick))
         send("NICK %s", newnick)
         nick = newnick
     end,
