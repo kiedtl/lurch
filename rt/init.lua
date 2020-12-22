@@ -505,6 +505,13 @@ local irchand = {
         prin_irc(0, buf_cur(), "WHOIS", "[%s] %s", hcol(e.fields[3]), e.msg)
     end,
 
+    -- AWAY: otinuikaj10 is away: "Away message"
+    -- Sent when you message a user that is marked as being away.
+    ["301"] = function(e)
+        prin_irc(1, e.fields[3], "-<>", "%s is away: %s",
+            hcol(e.fields[3]), e.msg)
+    end,
+
     -- AWAY: You are no longer marked as being away
     ["305"] = function(e)
         util.ivmap(bufs, function(i, v)
