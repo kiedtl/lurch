@@ -315,7 +315,7 @@ end
 local function default(e) prin_irc(0, e.dest, L_NORM, "%s", e.msg) end
 local function hndfact_err(m)
     return function(e)
-        prin_irc(1, e.dest, L_ERR, "%s", m or e.msg)
+        prin_irc(1, e.dest or MAINBUF, L_ERR, "%s", m or e.msg)
     end
 end
 
