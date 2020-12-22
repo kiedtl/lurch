@@ -366,7 +366,8 @@ local irchand = {
         elseif e.nick == nick then
             prin_irc(0, MAINBUF, L_NORM, "Mode %s", e.msg)
         else
-            prin_irc(0, MAINBUF, L_NORM, "Mode %s by %s", e.msg, hcol(e.nick))
+            prin_irc(0, MAINBUF, L_NORM, "Mode %s by %s", e.msg,
+                hcol(e.nick or e.from))
         end
     end,
     ["NOTICE"] = function(e)
