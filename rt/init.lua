@@ -803,8 +803,10 @@ local irchand = {
             hcol(e.fields[3]))
     end,
 
-    -- You are now logged in as xyz
-    ["900"] = function(e) prin_irc(0, MAINBUF, "--", "%s", e.msg) end,
+    -- 900: You are now logged in as xyz
+    -- 901: You are now logged out
+    ["900"] = function(e) prin_irc(0, MAINBUF, L_NRM, "%s", e.msg) end,
+    ["901"] = function(e) prin_irc(0, MAINBUF, L_NRM, "%s", e.msg) end,
 
     -- CTCP stuff.
     ["CTCP_ACTION"] = function(e)
