@@ -795,6 +795,24 @@ local irchand = {
             hcol(e.fields[3]))
     end,
 
+    -- 716: <nick> has mode +g (server-side ignore)
+    -- 717: <nick> has been informed that you messaged them.
+    -- 718: joaquinito01 is messaging you, please run /ACCEPT +joaquinito01
+    --      to begin the process of clogging your IRC logs.
+    ["716"] = function(e)
+        prin_irc(1, e.fields[3], L_ERR, "%s has mode +g (server-side ignore).",
+            hcol(e.fields[3]))
+    end,
+    ["717"] = function(e)
+        prin_irc(1, e.fields[3], L_ERR,
+            "%s has been informed that you messaged them.", hcol(e.fields[3]))
+    end,
+    ["718"] = function(e)
+        prin_irc(1, e.fields[3], L_ERR,
+            "%s (%s) has messaged you, but you have mode +g set. Run /accept +%s to add them to your allow list.",
+            hcol(e.fields[3]), e.fields[4], e.fields[3])
+    end,
+
     -- 900: You are now logged in as xyz
     -- 901: You are now logged out
     ["900"] = function(e) prin_irc(0, MAINBUF, L_NORM, "%s", e.msg) end,
@@ -1105,6 +1123,12 @@ cmdhand = {
         fn = function(a, args, _)
             send("PRIVMSG %s :\1%s\1", a, args)
         end
+    },
+    ["/accept"] = {
+        REQUIRE_ARG = true,
+        help = { "If you have mode +g (server ignore) set, this command will put a nickname on your ACCEPT list, allowing them to message you." },
+        usage = "<user>",
+        fn = function(a, _, _) send("ACCEPT :%s", a) end,
     },
     ["/mode"] = {
         REQUIRE_ARG = true,
