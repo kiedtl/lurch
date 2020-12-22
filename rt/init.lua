@@ -770,6 +770,15 @@ local irchand = {
         nick = newnick
     end,
 
+    -- 441: <User> is not on that channel
+    ["441"] = function(e)
+        prin_irc(0, e.fields[4], L_ERR, "%s is not in %s", hcol(e.fields[3]),
+            e.fields[4])
+    end,
+
+    -- 442: You're not on that channel
+    ["442"] = hndfact_err(),
+
     -- <nick> is already in channel (response to /invite)
     ["443"] = function(e)
         prin_irc(0, e.fields[4], L_ERR, "%s is already in %s", hcol(e.fields[3]),
