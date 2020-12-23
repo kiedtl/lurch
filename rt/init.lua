@@ -1182,16 +1182,16 @@ cmdhand = {
     },
     ["/join"] = {
         REQUIRE_ARG = true,
-        help = { "Join a channel; if already joined, focus that buffer." },
-        usage = "[channel]",
+        help = { "Join channels; if already joined, focus that buffer." },
+        usage = "<channel>[,channel...]",
         fn = function(a, _, _)
-            send(":%s JOIN %s", nick, a)
+            for channel in a:gmatch("([^,]+),?") do
+                send(":%s JOIN %s", nick, channel)
+                local bufidx = buf_idx_or_add(channel)
 
-            local bufidx = buf_idx_or_add(a)
-
-            -- draw the new buffer
-            tui.statusline()
-            buf_switch(bufidx)
+                -- draw the new buffer
+                buf_switch(bufidx); tui.statusline()
+            end
         end
     },
     ["/part"] = {
