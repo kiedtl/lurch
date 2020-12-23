@@ -211,9 +211,9 @@ function prin_irc(prio, dest, left, right_fmt, ...)
 
     local ignlvl = nil
     for pat, lvl in pairs(config.ignores) do
-        if (last_ircevent.from):match(pat) then
-            ignlvl = lvl
-            break
+        local sndr = last_ircevent.from
+        if sndr and (sndr):match(pat) then
+            ignlvl = lvl; break
         end
     end
 
@@ -1654,8 +1654,7 @@ function rt.on_signal(sig)
     end
 end
 
-function rt.on_lerror(err)
-    local bt = debug.traceback(err, 0)
+function rt.on_lerror(bt)
     bt = bt:gsub("\t", "    ")
     prin_cmd(MAINBUF, L_ERR, "Lua error!: %s", bt)
 end

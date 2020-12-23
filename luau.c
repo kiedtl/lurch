@@ -69,6 +69,8 @@ llua_call(lua_State *pL, const char *fnname, size_t nargs, size_t nret)
 
 	if (lua_pcall(pL, nargs, nret, 0) != 0) {
 		char *err = (char *) lua_tostring(pL, -1);
+		luaL_traceback(pL, pL, err, 0);
+		char *btr = (char *) lua_tostring(pL, -1);
 
 		lua_getglobal(pL, "rt");
 		if (lua_type(pL, -1) == LUA_TNIL)
@@ -76,7 +78,7 @@ llua_call(lua_State *pL, const char *fnname, size_t nargs, size_t nret)
 
 		lua_getfield(pL, -1, "on_lerror");
 		lua_remove(pL, -2);
-		lua_pushstring(pL, err);
+		lua_pushstring(pL, btr);
 		lua_call(pL, 1, 0);
 	}
 }
