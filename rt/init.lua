@@ -1654,9 +1654,10 @@ function rt.on_signal(sig)
     end
 end
 
-function rt.on_lerror(_)
-    send("QUIT :%s", "*poof*")
-    lurch.cleanup()
+function rt.on_lerror(err)
+    local bt = debug.traceback(err, 0)
+    bt = bt:gsub("\t", "    ")
+    prin_cmd(MAINBUF, L_ERR, "Lua error!: %s", bt)
 end
 
 function rt.on_reply(reply)

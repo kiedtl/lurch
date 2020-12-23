@@ -14,31 +14,11 @@ extern _Bool tb_active;
 int
 llua_panic(lua_State *pL)
 {
-	if (tb_active) {
-		tb_shutdown();
-		tb_active = false;
-	}
-
 	char *err = (char *) lua_tostring(pL, -1);
-
-	/* run error handler */
-	lua_getglobal(pL, "rt");
-	if (lua_type(pL, -1) != LUA_TNIL) {
-		lua_getfield(pL, -1, "on_lerror");
-		lua_remove(pL, -2);
-		int ret = lua_pcall(pL, 0, 0, 0);
-
-		if (ret != 0) {
-			/* if the call to rt.on_lerror failed, just ignore
-			 * the error message and pop it. */
-			lua_pop(pL, 1);
-		}
-	} else {
-		lua_pop(pL, 1);
-	}
 
 	/* print the error, dump the lua stack, print lua traceback,
 	 * and exit. */
+	cleanup();
 	fprintf(stderr, "lua_call error: %s\n", err);
 
 	char *debug = getenv("LURCH_DEBUG");
@@ -87,5 +67,16 @@ llua_call(lua_State *pL, const char *fnname, size_t nargs, size_t nret)
 	/* move function before args. */
 	lua_insert(pL, -nargs - 1);
 
-	lua_call(pL, nargs, nret);
+	if (lua_pcall(pL, nargs, nret, 0) != 0) {
+		char *err = (char *) lua_tostring(pL, -1);
+
+		lua_getglobal(pL, "rt");
+		if (lua_type(pL, -1) == LUA_TNIL)
+			llua_panic(pL);
+
+		lua_getfield(pL, -1, "on_lerror");
+		lua_remove(pL, -2);
+		lua_pushstring(pL, err);
+		lua_call(pL, 1, 0);
+	}
 }
