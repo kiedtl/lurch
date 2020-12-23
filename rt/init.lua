@@ -959,11 +959,11 @@ end
 
 cmdhand = {
     ["/close"] = {
-        REQUIRE_CHANBUF_OR_ARG = true,
         help = { "Close a buffer. The buffers after the one being closed are shifted left." },
         usage = "[buffer]",
         fn = function(a, _, _)
             local buf = a or cbuf
+
             if not tonumber(buf) then
                 if not buf_idx(buf) then
                     prin_cmd(buf_cur(), L_ERR, "%s is not an open buffer.", a)
