@@ -423,6 +423,7 @@ local irchand = {
             prin_irc(0, buf.name, "<--", "%s has quit (%s)", hcol(e.nick), e.msg)
             bufs[i].names[e.nick] = false
         end)
+        bufs[MAINBUF].names[e.nick] = false
     end,
     ["JOIN"] = function(e)
         -- sometimes the channel joined is contained in the message.
