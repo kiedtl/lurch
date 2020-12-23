@@ -436,7 +436,7 @@ local irchand = {
         buf_addname(bufidx, e.nick)
 
         -- if we are the ones joining, then switch to that buffer.
-        if e.nick == nick then buf_switch(#bufs) end
+        if e.nick == nick then buf_switch(bufidx) end
 
         prin_irc(0, e.dest, "-->", "%s has joined %s", hcol(e.nick), e.dest)
     end,
