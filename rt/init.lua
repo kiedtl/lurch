@@ -858,6 +858,8 @@ local irchand = {
     -- IRCv3 capability negotiation
     ["CAP"] = function(e)
         local subcmd = (e.fields[3]):lower()
+        e.msg = (e.msg):match("(.-)%s*$") -- remove trailing whitespace
+
         if subcmd == "ls" then
             -- list of all capabilities supported by the server.
             server.caps = {}
