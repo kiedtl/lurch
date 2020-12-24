@@ -1042,7 +1042,10 @@ cmdhand = {
     },
     ["/redraw"] = {
         help = { "Redraw the screen. Ctrl+L may also be used." },
-        fn = function(_, _, _) redraw() end,
+        fn = function(_, _, _)
+            -- forcibly clear the screen
+            lurch.tb_clear(); redraw()
+        end,
     },
     ["/next"] = {
         help = { "Switch to the next buffer. Ctrl+N may also be used." },
