@@ -207,6 +207,7 @@ api_tb_writeline(lua_State *pL)
 	int32_t charbuf = 0;
 	ssize_t runelen = 0;
 
+	/* clear line. */
 	do tb_put_cell(col, line, &c); while (++col < width);
 	col = 0;
 
