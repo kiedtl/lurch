@@ -127,20 +127,27 @@ function M.buffer_text(timew, leftw, rightw)
             -- Reset the colors before drawing the line
             lurch.tb_writeline(line, mirc.RESET)
 
-            -- since we're drawing bottom-up, we need to iterate
-            -- backwards.
-            util.revgmatch(out, "([^\n]+)\n?", function(_, tline)
-                lurch.tb_writeline(line, tline)
-                line = line - 1
-                if line == linestart then
-                    return util.MAP_BREAK
+            -- Get the lines in the message as a table, and move
+            -- up.
+            local lines = util.collect(out:gmatch("([^\n]+)\n?"))
+            line = line - #lines
+
+            -- Print each line and move down.
+            for _, msgline in ipairs(lines) do
+                line = line + 1
+                if line >= linestart then
+                    lurch.tb_writeline(line, msgline[1])
                 end
-            end)
+            end
+
+            -- Move back up.
+            line = line - #lines
+            if line <= linestart then break end
         else
             line = line - 1
         end
 
-        if line == linestart then break end
+        if line <= linestart then break end
     end
 end
 

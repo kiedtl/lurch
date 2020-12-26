@@ -16,6 +16,16 @@ function util.last_gmatch(s, pat)
     return last
 end
 
+function util.collect(iter)
+    local results = {}
+    while true do
+        local values = { iter() }
+        if #values == 0 then break end
+        results[#results + 1] = values
+    end
+    return results
+end
+
 function util.capture(cmd)
     local cmd = io.popen(cmd, 'r')
     if not cmd then return nil end
