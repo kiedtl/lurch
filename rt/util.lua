@@ -110,23 +110,6 @@ function util.fold(text, width)
     return res
 end
 
--- This hash function was stolen from the QBE project.
--- git://c9x.me/qbe.git, ./minic/minic.y:104
-local HASH_BEG = 42
-local HASH_MOD = 512
-function util.hash(value, max)
-    assert(value ~= "",
-        format("value is an empty string"))
-    assert(type(value) == "string",
-        format("value of type %s, not string", type(value)))
-
-    local h = HASH_BEG
-    for char in value:gmatch(".") do
-        h = h + (11 * h + utf8.codepoint(char))
-    end
-    return h % (max or HASH_MOD)
-end
-
 -- parse an UTC timezone offset of the format UTC[+-]<offset>
 function util.parse_offset(str)
     local sign, offset_h, offset_m = str:match("UTC([+-])(.-):(.+)")

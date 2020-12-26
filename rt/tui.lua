@@ -28,7 +28,7 @@ function M.highlight(text, text_as, no_bold)
     -- calculate the text's hash each time
     if not M.set_colors[text_as] then
         -- add one to the hash value, as the hash value may be 0
-        M.set_colors[text_as] = util.hash(text_as, #M.colors - 1)
+        M.set_colors[text_as] = lurch.hash(text_as) % (#M.colors - 1)
         M.set_colors[text_as] = M.set_colors[text_as] + 1
         M.set_colors[text_as] = M.colors[M.set_colors[text_as]]
     end
