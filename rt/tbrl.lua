@@ -46,7 +46,10 @@ local function _up()
     end
 end
 local function _down()
-    if M.hist < #M.bufin then M.hist = M.hist + 1; M.cursor = 0 end
+    if M.hist < #M.bufin then
+        M.hist = M.hist + 1
+        M.cursor = _ulen(M.bufin[M.hist])
+    end
 end
 
 -- TODO: Ctrl-_ undo
