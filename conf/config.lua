@@ -31,7 +31,8 @@ M.nick = "inebriate|lurch"
 -- equivalent pass command (or whatever your password manager is).
 --
 -- [0]: https://github.com/dylanaraps/pash
-M.pass = "pash show irc"
+M.pass_command = "pash show irc"
+M.pass = util.capture(M.pass_command)
 
 -- If this is nil, it defaults to M.nick
 M.user = nil

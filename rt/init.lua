@@ -58,7 +58,7 @@ function connect()
     local _nick = config.nick or os.getenv("IRCNICK") or os.getenv("USER")
     local user  = config.user or os.getenv("IRCUSER") or os.getenv("USER")
     local name  = config.name or _nick
-    local pass  = util.capture(config.pass)
+    local pass  = config.pass
 
     nick = _nick
 
