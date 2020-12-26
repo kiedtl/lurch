@@ -11,7 +11,7 @@ local M = {}
 -- lurch *might* try to reconnect even in those scenarios (though
 -- this hasn't been confirmed, as the author of lurch has never
 -- been K-lined before).
-M.reconn = 4
+M.reconn = 25
 
 M.tls  = true
 M.host = "irc.tilde.chat"
