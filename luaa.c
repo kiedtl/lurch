@@ -202,8 +202,7 @@ api_tb_writeline(lua_State *pL)
 	int width = tb_width();
 	struct tb_cell c = { '\0', 0, 0 };
 
-	char colorbuf[4];
-	colorbuf[3] = '\0';
+	char colorbuf[4] = { '\0', '\0', '\0', '\0' };
 	size_t chwidth;
 	int32_t charbuf = 0;
 	ssize_t runelen = 0;
@@ -293,7 +292,12 @@ api_tb_setcursor(lua_State *pL)
 	return 0;
 }
 
-/* impl of mkdir -p */
+/*
+ * impl of mkdir -p
+ *
+ * TEMP: will be removed once litterbox logging is
+ * implemented.
+ */
 int
 api_mkdir_p(lua_State *pL)
 {
