@@ -3,6 +3,7 @@
 ;; TODO: unit tests
 
 (local format string.format)
+(local F (require :fun))
 
 (var M {})
 
@@ -48,7 +49,6 @@
 
 ;; make IRC mirc sequences visible in text.
 (lambda M.show [text]
-  (var buf "")
   (var fmt {
     M.BOLD      :B
     M.UNDERLINE :U
@@ -59,12 +59,14 @@
     M.COLOR     :C
   })
 
-  (for [i 1 (length text)]
-    (let [byte (text:sub i i)]
-      (if (. fmt byte)
+  (var buf "")
+  (-?> (F.iter text)
+    (F.map (lambda [_ char]
+      (if (. fmt char)
         (set buf (format "%s%s%s%s%s%s" buf M.RESET
-          M.INVERT (. fmt byte) M.RESET byte))
-        (set buf (.. buf byte)))))
+          M.INVERT (. fmt char) M.RESET char))
+        (set buf (.. buf char))))))
+
   buf)
 
 M
