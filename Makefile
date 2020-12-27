@@ -26,7 +26,7 @@ FNLC     = fennel
 FFLAGS   = --indent "    " --correlate
 
 .PHONY: all
-all: $(NAME)
+all: $(LUASRC) $(NAME)
 
 .PHONY: run
 run: $(NAME)
@@ -40,9 +40,9 @@ run: $(NAME)
 	@printf "    %-8s%s\n" "CC" $@
 	$(CMD)$(CC) -c $< -o $(<:.c=.o) $(CFLAGS)
 
-$(NAME): $(UTF8PROC) $(TERMBOX) $(OBJ) $(LUASRC)
+$(NAME): $(OBJ) $(UTF8PROC) $(TERMBOX)
 	@printf "    %-8s%s\n" "CCLD" $@
-	$(CMD)$(CC) -o $@ $(OBJ) $(UTF8PROC) $(TERMBOX) $(CFLAGS) $(LDFLAGS)
+	$(CMD)$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS)
 
 $(TERMBOX):
 	@printf "    %-8s%s\n" "MAKE" $@
