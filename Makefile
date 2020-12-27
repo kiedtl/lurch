@@ -23,7 +23,7 @@ CFLAGS   = -Og -ggdb $(DEF) $(INCL) $(WARNING) -funsigned-char
 LD       = bfd
 LDFLAGS  = -fuse-ld=$(LD) -L/usr/include -lm -ltls -l$(LUA)
 FNLC     = fennel
-FFLAGS   = --indent "    " --correlate
+FFLAGS   = --indent "    "
 
 .PHONY: all
 all: $(LUASRC) $(NAME)
