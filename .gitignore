@@ -1,3 +1,5 @@
 logs
 lurch
 **/*.o
+
+rt/mirc.lua

@@ -4,6 +4,8 @@ VERSION  = 0.1.0
 NAME     = lurch
 SRC      = main.c luau.c luaa.c util.c tool/dwidth.c mirc.c
 OBJ      = $(SRC:.c=.o)
+FNLSRC   = rt/mirc.fnl
+LUASRC   = $(FNLSRC:.fnl=.lua)
 
 TERMBOX  = tb/bin/termbox.a
 LUA      = lua5.3
@@ -20,19 +22,27 @@ CC       = clang
 CFLAGS   = -Og -ggdb $(DEF) $(INCL) $(WARNING) -funsigned-char
 LD       = bfd
 LDFLAGS  = -fuse-ld=$(LD) -L/usr/include -lm -ltls -l$(LUA)
+FNLC     = fennel
+FFLAGS   = --indent "    " --correlate
 
+.PHONY: all
 all: $(NAME)
 
+.PHONY: run
 run: $(NAME)
 	$(CMD)./$(NAME)
+
+%.lua: %.fnl
+	@printf "    %-8s%s\n" "FNLC" $@
+	$(CMD)$(FNLC) $(FFLAGS) --compile $< > $@
 
 .c.o: $(HDR)
 	@printf "    %-8s%s\n" "CC" $@
 	$(CMD)$(CC) -c $< -o $(<:.c=.o) $(CFLAGS)
 
-$(NAME): $(UTF8PROC) $(TERMBOX) $(OBJ)
+$(NAME): $(UTF8PROC) $(TERMBOX) $(OBJ) $(LUASRC)
 	@printf "    %-8s%s\n" "CCLD" $@
-	$(CMD)$(CC) -o $@ $(OBJ) $(UTF8PROC) $(TERMBOX) $(CFLAGS) $(LDFLAGS) 
+	$(CMD)$(CC) -o $@ $(OBJ) $(UTF8PROC) $(TERMBOX) $(CFLAGS) $(LDFLAGS)
 
 $(TERMBOX):
 	@printf "    %-8s%s\n" "MAKE" $@
