@@ -1265,7 +1265,12 @@ cmdhand = {
         help = { "Privately message a user. Opens a new buffer." },
         usage = "<user> <message...>",
         fn = function(a, args, _)
-            send_both(":%s PRIVMSG %s :%s", nick, a, args or "")
+            local bufidx = buf_idx_or_add(a)
+            buf_switch(bufidx); tui.statusline()
+
+            if args and args ~= "" then
+                send_both(":%s PRIVMSG %s :%s", nick, a, args)
+            end
         end
     },
     ["/note"] = {
