@@ -72,18 +72,6 @@ main(int argc, char **argv)
 	sigaction(SIGUSR2,  &lhand, NULL);
 	sigaction(SIGWINCH, &lhand, NULL);
 
-	/* init termbox */
-	char *errstrs[] = {
-		NULL,
-		"termbox: unsupported terminal",
-		"termbox: cannot open terminal",
-		"termbox: pipe trap error"
-	};
-	char *err = errstrs[-(tb_init())];
-	if (err) die(err);
-	tb_active = true;
-	tb_select_output_mode(TB_OUTPUT_256);
-
 	/* init lua */
 	L = luaL_newstate();
 	assert(L);
@@ -129,6 +117,18 @@ main(int argc, char **argv)
 
 	!luaL_dofile(L, "./rt/init.lua") || llua_panic(L);
 	lua_setglobal(L, "rt");
+
+	/* init termbox */
+	char *errstrs[] = {
+		NULL,
+		"termbox: unsupported terminal",
+		"termbox: cannot open terminal",
+		"termbox: pipe trap error"
+	};
+	char *err = errstrs[-(tb_init())];
+	if (err) die(err);
+	tb_active = true;
+	tb_select_output_mode(TB_OUTPUT_256);
 
 	/* run init function */
 	lua_settop(L, 0);
