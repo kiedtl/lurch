@@ -63,7 +63,20 @@ end
 
 function M.map(fun, iter)
     local r = _map_helper({}, fun, table.unpack(iter))
-    if r and #r > 0 then return r end
+    if r and #r > 0 then return M.iter(r) end
+end
+
+function _collect_helper(vals, fun, i_f, i_s, i_v)
+    local values = { i_f(i_s, i_v) }
+    i_v = values[1]
+    if not i_v then return vals end
+
+    vals[#vals + 1] = fun(table.unpack(values))
+    return _collect_helper(vals, fun, i_f, i_s, i_v)
+end
+
+function M.collect(fun, iter)
+    return _collect_helper({}, fun, table.unpack(iter))
 end
 
 return M

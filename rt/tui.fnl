@@ -135,7 +135,7 @@
       (lurch.tb_writeline line mirc.RESET)
 
       ; Get the lines in the message, and move the cursor up.
-      (var msglines (-?>> [(out:gmatch "([^\n]+)\n?")] (F.map #$)))
+      (var msglines (-?>> [(out:gmatch "([^\n]+)\n?")] (F.collect #$)))
       (set line (- line (length msglines)))
 
       ; Print each line and move down.

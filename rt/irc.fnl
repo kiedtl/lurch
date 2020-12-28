@@ -95,7 +95,7 @@
   (tset event :msg (or msg ""))
 
   (tset event :fields
-    (-?>> [(data:gmatch "([^%s]+)%s?")] (F.map #$)))
+    (-?>> [(data:gmatch "([^%s]+)%s?")] (F.collect #$)))
 
   ; if the message contains no whitespace, add it to the fields.
   (when (not (msg:find :%s))
