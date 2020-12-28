@@ -42,7 +42,6 @@ const struct luaL_Reg lurch_lib[] = {
 	{ "mkdirp",        api_mkdir_p        },
 	{ "utf8_insert",   api_utf8_insert    },
 	{ "utf8_dwidth",   api_utf8_dwidth    },
-	{ "hash",          api_hash           },
 	{ NULL, NULL },
 };
 
@@ -385,26 +384,5 @@ api_utf8_dwidth(lua_State *pL)
 	}
 
 	lua_pushinteger(pL, (lua_Integer) accm);
-	return 1;
-}
-
-int
-api_hash(lua_State *pL)
-{
-	char *s = (char *) luaL_checkstring(pL, 1);
-	size_t h = 0;
-
-	do {
-		h ^= *s;
-		h *= 0x5be7413b;
-		h ^= h >> 15;
-	} while (*(++s));
-
-	/* avalanche */
-	h += h <<  3;
-	h ^= h >> 23;
-	h += h << 15;
-
-	lua_pushinteger(pL, (lua_Integer) h);
 	return 1;
 }

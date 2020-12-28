@@ -16,7 +16,6 @@ int api_tb_setcursor(lua_State *pL);
 int api_mkdir_p(lua_State *pL);
 int api_utf8_insert(lua_State *pL);
 int api_utf8_dwidth(lua_State *pL);
-int api_hash(lua_State *pL);
 
 extern const struct luaL_Reg lurch_lib[];
 
