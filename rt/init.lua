@@ -1663,7 +1663,8 @@ function rt.on_lerror(err)
         bt = bt:gsub("\t", "    ")
         prin_cmd(MAINBUF, L_ERR, "Lua error!: %s", bt)
     end, function(ohno)
-        panic(ohno .. "\n")
+        panic("While trying to handle error: %s\nAnother error occurred: %s",
+            bt, ohno)
     end)
 end
 
