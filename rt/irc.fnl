@@ -116,14 +116,14 @@
   ; If the message itself contains text with surrounding '\x01',
   ; we're dealing with CTCP. Simply set the type to that text so
   ; we may specially deal with it later.
+  ;
+  ; prepend CTCP_ to the command to distinguish it from other
+  ; non-CTCP commands (e.g. PING vs CTCP PING)
   (when (string.find event.msg "\1[A-Z]+%s?([^\1]*)\1")
     (tset event :fields 1 (string.match event.msg "\1([A-Z]+)%s?"))
-    (tset event :msg (string.gsub event.msg "\1[A-Z]+%s?"))
-    (tset event :msg (string.gsub event.msg "\1"))
-
-    ; prepend CTCP_ to the command to distinguish it from other
-    ; non-CTCP commands (e.g. PING vs CTCP PING)
-    (tset event :fields 1 (.. "CTCP_" (. event.fields 1))))
+    (tset event :fields 1 (.. "CTCP_" (. event.fields 1)))
+    (tset event :msg (string.gsub event.msg "\1[A-Z]+%s?" ""))
+    (tset event :msg (string.gsub event.msg "\1" "")))
 
   event)
 

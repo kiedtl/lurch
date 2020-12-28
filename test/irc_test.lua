@@ -50,4 +50,13 @@ function M.test_sender_parsing()
     assert_false(e2.nick)
 end
 
+function M.test_ctcp_parsing()
+    local e1 = irc.parse(":k!i@e.dtl PRIVMSG #meat :\1ACTION cries\1")
+    assert_equal(e1.fields[1], "CTCP_ACTION")
+    assert_equal(e1.msg, "cries")
+    local e2 = irc.parse(":k!i@e.dtl PRIVMSG #meat :\1VERSION\1")
+    assert_equal(e2.fields[1], "CTCP_VERSION")
+    assert_equal(e2.msg, "")
+end
+
 return M
