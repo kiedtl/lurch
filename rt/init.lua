@@ -31,7 +31,7 @@ MAINBUF = config.host
 
 reconn      = config.reconn  -- Number of times we've reconnected.
 reconn_wait = 5              -- Seconds to wait before reconnecting.
-nick        = config.nick    -- The current nickname
+nick        = nil            -- The current nickname
 cbuf        = nil            -- The current buffer
 bufs        = {}             -- List of all opened buffers
 server      = { caps = {} }  -- Server information
@@ -55,7 +55,7 @@ server      = { caps = {} }  -- Server information
 function connect()
     server.last_reconn = os.time()
 
-    local _nick = config.nick or os.getenv("IRCNICK") or os.getenv("USER")
+    local _nick = nick or config.nick or os.getenv("IRCNICK") or os.getenv("USER")
     local user  = config.user or os.getenv("IRCUSER") or os.getenv("USER")
     local name  = config.name or _nick
     local pass  = config.pass
