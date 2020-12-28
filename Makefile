@@ -4,7 +4,7 @@ VERSION  = 0.1.0
 NAME     = lurch
 SRC      = main.c luau.c luaa.c util.c tool/dwidth.c mirc.c
 OBJ      = $(SRC:.c=.o)
-FNLSRC   = rt/mirc.fnl
+	FNLSRC   = rt/irc.fnl rt/mirc.fnl
 LUASRC   = $(FNLSRC:.fnl=.lua)
 
 TERMBOX  = tb/bin/termbox.a

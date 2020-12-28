@@ -1,5 +1,15 @@
 local M = {}
 
+function M.foldl(iter, init, func)
+    local accm = init
+    while true do
+        local values = { iter() }
+        if #values == 0 then break end
+        accm = func(accm, table.unpack(values))
+    end
+    return accm
+end
+
 function M.iter(val)
     local n = 0
     local i = 0

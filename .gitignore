@@ -3,3 +3,4 @@ lurch
 **/*.o
 
 rt/mirc.lua
+rt/irc.lua

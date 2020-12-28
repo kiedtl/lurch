@@ -1,4 +1,5 @@
 local inspect  = require('inspect')
+local F        = require('fun')
 local mirc     = require('mirc')
 local tb       = require('tb')
 local util     = require('util')
@@ -129,14 +130,16 @@ function M.buffer_text(timew, leftw, rightw)
 
             -- Get the lines in the message as a table, and move
             -- up.
-            local lines = util.collect(out:gmatch("([^\n]+)\n?"))
+            local lines = F.foldl(out:gmatch("([^\n]+)\n?"), {}, function(a, v)
+                table.insert(a, v); return a
+            end)
             line = line - #lines
 
             -- Print each line and move down.
             for _, msgline in ipairs(lines) do
                 line = line + 1
                 if line >= linestart then
-                    lurch.tb_writeline(line, msgline[1])
+                    lurch.tb_writeline(line, msgline)
                 end
             end
 

@@ -287,8 +287,8 @@ function prin(priority, time, dest, left, right)
 
     -- if the buffer we're writing to is focused and is not scrolled up,
     -- draw the text; otherwise, add to the list of unread notifications
-    local cbuf = bufs[cbuf]
-    if dest == cbuf.name and cbuf.scroll ==  0 then
+    local cb = bufs[cbuf]
+    if dest == cb.name and cb.scroll == 0 then
         tui.buffer_text(config.time_col_width, config.left_col_width,
             config.right_col_width)
     else
@@ -1660,9 +1660,15 @@ function rt.on_signal(sig)
     end
 end
 
-function rt.on_lerror(bt)
-    bt = bt:gsub("\t", "    ")
-    prin_cmd(MAINBUF, L_ERR, "Lua error!: %s", bt)
+function rt.on_lerror(err)
+    local bt = debug.traceback(err, 2)
+    xpcall(function()
+        bt = bt:gsub("\t", "    ")
+        panic(bt)
+        prin_cmd(MAINBUF, L_ERR, "Lua error!: %s", bt)
+    end, function(ohno)
+        panic(ohno .. "\n")
+    end)
 end
 
 function rt.on_reply(reply)

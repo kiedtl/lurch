@@ -16,16 +16,6 @@ function util.last_gmatch(s, pat)
     return last
 end
 
-function util.collect(iter)
-    local results = {}
-    while true do
-        local values = { iter() }
-        if #values == 0 then break end
-        results[#results + 1] = values
-    end
-    return results
-end
-
 function util.capture(cmd)
     local cmd = io.popen(cmd, 'r')
     if not cmd then return nil end
@@ -88,7 +78,9 @@ end
 -- FIXME: this may occasionally split unicode characters
 function util.fold(text, width)
     local _raw_len = function(data)
-        return lurch.utf8_dwidth(mirc.remove(data))
+        local sz = lurch.utf8_dwidth(mirc.remove(data))
+        if not sz then sz = utf8.len(mirc.remove(data)) end
+        return sz
     end
 
     local res = ""

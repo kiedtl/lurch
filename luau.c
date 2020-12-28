@@ -67,18 +67,20 @@ llua_call(lua_State *pL, const char *fnname, size_t nargs, size_t nret)
 	/* move function before args. */
 	lua_insert(pL, -nargs - 1);
 
-	if (lua_pcall(pL, nargs, nret, 0) != 0) {
-		char *err = (char *) lua_tostring(pL, -1);
-		luaL_traceback(pL, pL, err, 0);
-		char *btr = (char *) lua_tostring(pL, -1);
+	/* get error function. */
+	lua_getglobal(pL, "rt");
+	if (lua_type(pL, -1) == LUA_TNIL)
+		llua_panic(pL);
+	lua_getfield(pL, -1, "on_lerror");
+	lua_remove(pL, -2);
 
-		lua_getglobal(pL, "rt");
-		if (lua_type(pL, -1) == LUA_TNIL)
-			llua_panic(pL);
+	/* move error func before function and args. */
+	size_t errfn_pos = (size_t) lua_gettop(pL) - nargs - 1;
+	lua_insert(pL, -nargs - 2);
 
-		lua_getfield(pL, -1, "on_lerror");
-		lua_remove(pL, -2);
-		lua_pushstring(pL, btr);
-		lua_call(pL, 1, 0);
+	if (lua_pcall(pL, nargs, nret, -nargs - 2)) {
+		llua_panic(pL);
+	} else {
+		lua_remove(pL, errfn_pos);
 	}
 }
