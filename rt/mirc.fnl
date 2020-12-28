@@ -60,12 +60,12 @@
   })
 
   (var buf "")
-  (-?> (F.iter text)
-    (F.map (lambda [_ char]
-      (if (. fmt char)
-        (set buf (format "%s%s%s%s%s%s" buf M.RESET
-          M.INVERT (. fmt char) M.RESET char))
-        (set buf (.. buf char))))))
+  (-?>> [(F.iter text)]
+        (F.map (lambda [_ char]
+          (if (. fmt char)
+            (set buf (format "%s%s%s%s%s%s" buf M.RESET
+              M.INVERT (. fmt char) M.RESET char))
+            (set buf (.. buf char))))))
 
   buf)
 

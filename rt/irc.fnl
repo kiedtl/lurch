@@ -16,8 +16,8 @@
     ; for now; they will be processed later on.
     (when caps
       (M.send "CAP LS")
-      (-?> (F.iter caps)
-           (F.map  #(irc.send "CAP REQ :%s" $2)))
+      (-?>> [(F.iter caps)]
+            (F.map  #(irc.send "CAP REQ :%s" $2)))
       (M.send "CAP END"))
 
     ; FIXME: ...are there servers that close the connection before
@@ -56,12 +56,12 @@
     (local tags (rawmsg:match "@(.-)%s"))
     (assert tags)
 
-    (-?> (tags:gmatch "([^;]+);?")
-         (F.map (lambda [tag]
-           ; the tag may or may not have a value...
-           (let [key (tag:match "([^=]+)=?")
-                 val (or (tag:match "[^=]+=([^;]+);?") "")]
-             (tset event :tags key val)))))
+    (-?>> [(tags:gmatch "([^;]+);?")]
+          (F.map (lambda [tag]
+            ; the tag may or may not have a value...
+            (let [key (tag:match "([^=]+)=?")
+                  val (or (tag:match "[^=]+=([^;]+);?") "")]
+              (tset event :tags key val)))))
 
     ; since the first word and only the first word can be
     ; an IRC tag(s), we can just strip off the first word to
@@ -95,8 +95,7 @@
   (tset event :msg (or msg ""))
 
   (tset event :fields
-    (-?> (data:gmatch "([^%s]+)%s?")
-         (F.foldl {} #(do (table.insert $1 $2) $1))))
+    (-?>> [(data:gmatch "([^%s]+)%s?")] (F.map #$)))
 
   ; if the message contains no whitespace, add it to the fields.
   (when (not (msg:find :%s))
