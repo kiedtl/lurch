@@ -1,166 +1,178 @@
-local inspect  = require('inspect')
-local F        = require('fun')
-local mirc     = require('mirc')
-local tb       = require('tb')
-local util     = require('util')
-local format   = string.format
+local inspect = require("inspect")
+local F = require("fun")
+local mirc = require("mirc")
+local tb = require("tb")
+local util = require("util")
+local format = string.format
 local assert_t = util.assert_t
-
 local M = {}
-
-M.linefmt_func    = nil
-M.prompt_func     = nil
-M.statusline_func = nil
-M.termtitle_func  = nil
-M.set_colors      = {}
-M.colors          = {}
-M.tty_height      = 80
-M.tty_width       = 24
-
-function M.refresh()
-    M.tty_height, M.tty_width = lurch.tb_size()
+M["linefmt_func"] = nil
+M["prompt_func"] = nil
+M["statusline_func"] = nil
+M["termtitle_func"] = nil
+M["set_colors"] = {}
+M["colors"] = {}
+M["tty_height"] = 80
+M["tty_width"] = 24
+M.refresh = function()
+    local y, x = lurch.tb_size()
+    M["tty_height"] = y
+    M["tty_width"] = x
+    return nil
 end
-
-function M.highlight(text, text_as, no_bold)
-    assert_t({text, "string", "text"})
-    if not text_as then text_as = text end
-
-    -- store nickname highlight color, so that we don't have to
-    -- calculate the text's hash each time
-    if not M.set_colors[text_as] then
-        -- add one to the hash value, as the hash value may be 0
-        M.set_colors[text_as] = lurch.hash(text_as) % (#M.colors - 1)
-        M.set_colors[text_as] = M.set_colors[text_as] + 1
-        M.set_colors[text_as] = M.colors[M.set_colors[text_as]]
+local function _hash(str)
+    assert((nil ~= str), string.format("Missing argument %s on %s:%s", "str", "rt/tui.fnl", 26))
+    local function _hash_fn(hsh, _, char)
+        local hsh0 = hsh
+        hsh0 = (hsh0 ~ utf8.codepoint(char))
+        hsh0 = (hsh0 * 1541882171)
+        hsh0 = (hsh0 ~ (hsh0 >> 15))
+        return hsh0
     end
-
-    local color = M.set_colors[text_as]
-    local esc = "\x02"
-    if no_bold then esc = "" end
-
-    if color then
-        esc = esc .. format("\x04%003d", color)
-    end
-
-    return format("%s%s\x0f", esc, text)
-end
-
-function M.prompt(inp, cursor)
-    assert_t({inp, "string", "inp"}, {cursor, "number", "cursor"})
-
-    -- if we've scrolled up, don't draw the input.
-    if bufs[cbuf].scroll ~= 0 then
-        lurch.tb_writeline(M.tty_height - 1, "\x16\x02 -- more -- \x0f")
-        lurch.tb_setcursor(tb.TB_HIDE_CURSOR, tb.TB_HIDE_CURSOR)
+    local _0_0 = {F.iter(str)}
+    if _0_0 then
+        return F.foldl(0, _hash_fn, _0_0)
     else
-        M.prompt_func(inp, cursor)
+        return _0_0
     end
 end
-
-function M.statusline()
+M.highlight = function(text, _3ftext_as, _3fno_bold_3f)
+    assert((nil ~= text), string.format("Missing argument %s on %s:%s", "text", "rt/tui.fnl", 36))
+    assert_t({text, "string", "text"})
+    local text0 = text
+    local text_as = text_as
+    local no_bold_3f = __fnl_global__no_5fbold_3f
+    if not text_as then
+        text_as = text0
+    end
+    if not M.set_colors[text_as] then
+        local hash = (_hash(text_as) % (#M.colors - 1))
+        hash = (hash + 1)
+        local color = M.colors[hash]
+        M["set_colors"][text_as] = color
+    end
+    local esc = mirc.BOLD
+    if no_bold_3f then
+        esc = ""
+    end
+    do
+        local color = M.set_colors[text_as]
+        if color then
+            esc = (esc .. format("%s%003d", mirc._256COLOR, color))
+        end
+    end
+    return format("%s%s%s", esc, text0, mirc.RESET)
+end
+M.prompt = function(inp, cursor)
+    assert((nil ~= cursor), string.format("Missing argument %s on %s:%s", "cursor", "rt/tui.fnl", 61))
+    assert((nil ~= inp), string.format("Missing argument %s on %s:%s", "inp", "rt/tui.fnl", 61))
+    assert_t({inp, "string", "inp"}, {cursor, "number", "cursor"})
+    if (bufs[cbuf].scroll ~= 0) then
+        lurch.tb_writeline((M.tty_height - 1), "\22\2 -- more -- \15")
+        return lurch.tb_setcursor(tb.TB_HIDE_CURSOR, tb.TB_HIDE_CURSOR)
+    else
+        return M.prompt_func(inp, cursor)
+    end
+end
+M.statusline = function()
     M.statusline_func()
-    M.termtitle_func()
+    return M.termtitle_func()
 end
-
-function M.format_line(timestr, left, right, timew, leftw, rightw)
-    -- rightw can be nil
-    assert_t(
-        { timestr, "string", "timestr" }, { timew, "number", "timew" },
-        { left, "string", "left" },   { right, "string", "right" },
-        { leftw, "number", "leftw" }  --{ rightw, "number", "rightw" }
-    )
-
-    -- fold message to width (see /bin/fold)
-    local infow = leftw + timew
-    local width = (rightw or M.tty_width - infow)
-    right = util.fold(right, width - 4)
-    right = right:gsub("\n", format("\n%s", (" "):rep(infow + 4)))
-
-    -- Strip escape sequences from the left column so that
-    -- we can calculate how much padding to add for alignment, and
-    -- not get confused by the invisible escape sequences.
+M.format_line = function(timestr, left, right, timew, leftw, _3frightw)
+    assert((nil ~= leftw), string.format("Missing argument %s on %s:%s", "leftw", "rt/tui.fnl", 75))
+    assert((nil ~= timew), string.format("Missing argument %s on %s:%s", "timew", "rt/tui.fnl", 75))
+    assert((nil ~= right), string.format("Missing argument %s on %s:%s", "right", "rt/tui.fnl", 75))
+    assert((nil ~= left), string.format("Missing argument %s on %s:%s", "left", "rt/tui.fnl", 75))
+    assert((nil ~= timestr), string.format("Missing argument %s on %s:%s", "timestr", "rt/tui.fnl", 75))
+    assert_t({timestr, "string", "timestr"}, {timew, "number", "timew"}, {left, "string", "left"}, {right, "string", "right"}, {leftw, "number", "leftw"})
+    local right0 = right
+    do
+        local infow = (leftw + timew)
+        local width = ((rightw or M.tty_width) - infow)
+        local rpadd = string.rep(" ", (infow + 4))
+        right0 = util.fold(right0, (width - 4))
+        right0 = right0:gsub("\n", ("%1" .. rpadd))
+    end
     local raw = mirc.remove(left)
-
-    -- Generate a cursor right sequence based on the length of
-    -- the above "raw" word. The nick column is a fixed width
-    -- of LEFT_PADDING so it's simply 'LEFT_PADDING - word_len'
-    local left_pad = (leftw + 1) - lurch.utf8_dwidth(raw)
-    local time_pad = (timew + 1) - lurch.utf8_dwidth(timestr)
-    if #raw > leftw then left_pad = 0 end
-    if #timestr > timew then time_pad = 0 end
-
-    return M.linefmt_func(time_pad, left_pad, timestr, left, right)
+    local left_pad = ((leftw + 1) - lurch.utf8_dwidth(raw))
+    local time_pad = ((timew + 1) - lurch.utf8_dwidth(timestr))
+    if (#raw > leftw) then
+        left_pad = 0
+    end
+    if (#timestr > timew) then
+        time_pad = 0
+    end
+    return M.linefmt_func(time_pad, left_pad, timestr, left, right0)
 end
-
-function M.buffer_text(timew, leftw, rightw)
-    if not bufs[cbuf].history then return end
-
-    -- keep one blank line in between statusline and text,
-    -- and don't overwrite the prompt/inputline.
+M.buffer_text = function(timew, leftw, _3frightw)
+    assert((nil ~= leftw), string.format("Missing argument %s on %s:%s", "leftw", "rt/tui.fnl", 105))
+    assert((nil ~= timew), string.format("Missing argument %s on %s:%s", "timew", "rt/tui.fnl", 105))
     local linestart = 1
-    local lineend = M.tty_height - 2
-    local line = lineend
-
-    -- beginning at the bottom of the terminal, draw each line
-    -- of text from that buffer's history, then move up.
-    -- If there is nothing to draw, just clear the line and
-    -- move on.
-    --
-    -- this bottom-up approach is used because we don't know in
-    -- advance how many lines a particular history entry will take
-    -- up, and thus don't know how many history events will fit
-    -- on the screen.
-    local h_st  = #bufs[cbuf].history - (M.tty_height-4)
+    local lineend = (M.tty_height - 2)
+    local h_st = (#bufs[cbuf].history - (M.tty_height - 4))
     local h_end = #bufs[cbuf].history
-    local scr   = bufs[cbuf].scroll
-
-    for i = (h_end - scr), (h_st - scr), -1 do
-        local msg = bufs[cbuf].history[i]
-
-        if msg then
-            -- fold the text to width. this is done now, instead
-            -- of when prin_*() is called, so that when the terminal
-            -- size changes we can fold text according to the new
-            -- terminal width when the screen is redrawn.
-            local out = M.format_line(msg[1], msg[2], msg[3],
-                timew, leftw, rightw)
-
-            -- Reset the colors before drawing the line
-            lurch.tb_writeline(line, mirc.RESET)
-
-            -- Get the lines in the message as a table, and move
-            -- up.
-            local lines = F.foldl(out:gmatch("([^\n]+)\n?"), {}, function(a, v)
-                table.insert(a, v); return a
-            end)
-            line = line - #lines
-
-            -- Print each line and move down.
-            for _, msgline in ipairs(lines) do
-                line = line + 1
-                if line >= linestart then
-                    lurch.tb_writeline(line, msgline)
+    local scr = bufs[cbuf].scroll
+    local line = lineend
+    local function _process_msg(msg)
+        assert((nil ~= msg), string.format("Missing argument %s on %s:%s", "msg", "rt/tui.fnl", 126))
+        local out = M.format_line(msg[1], msg[2], msg[3], timew, leftw, rightw)
+        lurch.tb_writeline(line, mirc.RESET)
+        local msglines = nil
+        do
+            local _0_0 = {out:gmatch("([^\n]+)\n?")}
+            if _0_0 then
+                local function _1_(_241)
+                    return _241
+                end
+                msglines = F.map(_1_, _0_0)
+            else
+                msglines = _0_0
+            end
+        end
+        line = (line - #msglines)
+        do
+            local _1_0 = {F.iter(msglines)}
+            if _1_0 then
+                local function _2_(_241, _242)
+                    line = (line + 1)
+                    if (line > linestart) then
+                        return lurch.tb_writeline(line, _242)
+                    end
+                end
+                F.map(_2_, _1_0)
+            else
+            end
+        end
+        line = (line - #msglines)
+        return nil
+    end
+    local _0_0 = {F.range((h_end - scr), (h_st - scr), -1)}
+    if _0_0 then
+        local function _1_(_241)
+            if (line > linestart) then
+                local msg = bufs[cbuf].history[_241]
+                if msg then
+                    return _process_msg(msg)
+                else
+                    line = (line - 1)
+                    return nil
                 end
             end
-
-            -- Move back up.
-            line = line - #lines
-            if line <= linestart then break end
-        else
-            line = line - 1
         end
-
-        if line <= linestart then break end
+        return F.map(_1_, _0_0)
+    else
+        return _0_0
     end
 end
-
-function M.redraw(inbuf, incurs, timew, leftw, rightw)
+M.redraw = function(inbuf, incurs, timew, leftw, _3frightw)
+    assert((nil ~= leftw), string.format("Missing argument %s on %s:%s", "leftw", "rt/tui.fnl", 158))
+    assert((nil ~= timew), string.format("Missing argument %s on %s:%s", "timew", "rt/tui.fnl", 158))
+    assert((nil ~= incurs), string.format("Missing argument %s on %s:%s", "incurs", "rt/tui.fnl", 158))
+    assert((nil ~= inbuf), string.format("Missing argument %s on %s:%s", "inbuf", "rt/tui.fnl", 158))
     M.refresh()
     lurch.tb_clear()
-
     M.statusline()
     M.buffer_text(timew, leftw, rightw)
-    M.prompt(inbuf, incurs)
+    return M.prompt(inbuf, incurs)
 end
-
 return M

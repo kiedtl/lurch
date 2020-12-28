@@ -5,3 +5,4 @@ lurch
 rt/mirc.lua
 rt/irc.lua
 rt/tb.lua
+rt/tui.lua
