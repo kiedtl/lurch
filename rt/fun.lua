@@ -1,3 +1,5 @@
+-- TODO: Get some unit tests for heaven's sake
+
 local M = {}
 
 function M.range(start, _end, step)
