@@ -34,7 +34,10 @@ reconn_wait = 5              -- Seconds to wait before reconnecting.
 nick        = config.nick    -- The current nickname
 cbuf        = nil            -- The current buffer
 bufs        = {}             -- List of all opened buffers
-server      = { caps = {} }  -- Server information
+server      = {}             -- Server information
+
+server.caps = {}
+server.last_reconn = os.time()
 
 --local buf_add
 --local buf_idx
