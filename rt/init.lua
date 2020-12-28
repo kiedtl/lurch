@@ -55,8 +55,8 @@ server      = { caps = {} }  -- Server information
 function connect()
     server.last_reconn = os.time()
 
-    local _nick = nick or config.nick or os.getenv("IRCNICK") or os.getenv("USER")
-    local user  = config.user or os.getenv("IRCUSER") or os.getenv("USER")
+    local _nick = nick or config.nick or os.getenv("USER")
+    local user  = config.user or os.getenv("USER")
     local name  = config.name or _nick
     local pass  = config.pass
 
