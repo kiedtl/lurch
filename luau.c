@@ -78,7 +78,7 @@ llua_call(lua_State *pL, const char *fnname, size_t nargs, size_t nret)
 	size_t errfn_pos = (size_t) lua_gettop(pL) - nargs - 1;
 	lua_insert(pL, -nargs - 2);
 
-	if (lua_pcall(pL, nargs, nret, -nargs - 2)) {
+	if (lua_pcall(pL, nargs, nret, -nargs - 2) == LUA_ERRERR) {
 		llua_panic(pL);
 	} else {
 		lua_remove(pL, errfn_pos);
