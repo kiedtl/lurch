@@ -29,7 +29,7 @@ FFLAGS   = --indent "    "
 all: $(LUASRC) $(NAME)
 
 .PHONY: run
-run: $(NAME)
+run: $(LUASRC) $(NAME)
 	$(CMD)./$(NAME)
 
 %.lua: %.fnl
@@ -58,5 +58,5 @@ tool/gendwidth: $(UTF8PROC)
 
 .PHONY: clean
 clean:
-	rm -f $(NAME) $(OBJ) $(TERMBOX) tool/gendwidth tool/dwidth.c
+	rm -f $(NAME) $(OBJ) $(LUASRC) tool/gendwidth tool/dwidth.c
 
