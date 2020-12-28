@@ -63,7 +63,7 @@ function connect()
     nick = _nick
 
     local r, e = irc.connect(config.host, config.port, config.tls,
-        _nick, user, name, pass, config.caps)
+        _nick, user, name, pass, config.caps, config.no_ident)
     return r, e
 end
 

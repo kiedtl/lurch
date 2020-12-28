@@ -1,4 +1,3 @@
-(local config (require :config))
 (local F (require :fun))
 (local util (require :util))
 
@@ -9,7 +8,7 @@
         (when (not r)
           (util.panic "error: %s\n" e))))
 
-(lambda M.connect [host port tls nick user name ?pass ?caps]
+(lambda M.connect [host port tls nick user name ?pass ?caps ?no_ident?]
   (var (success err) (lurch.conn_init host port tls))
 
   (when success
@@ -24,7 +23,7 @@
     ; FIXME: ...are there servers that close the connection before
     ; 10 seconds? th eones I know close only after 10 seconds
     ; TODO: file that InspirCD bug and remove this code.
-    (when config.no_ident (util.sleep 9))
+    (when no_ident? (util.sleep 9))
 
     ; send PASS before NICK/USER, as when USER+NICK is sent the
     ; user is registered and our chance to send the password is gone.
