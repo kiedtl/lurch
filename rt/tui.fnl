@@ -114,7 +114,7 @@
   ; don't overwrite the prompt/inputline.
 
   (let [linestart 1
-        lineend   (- M.tty_height 3)
+        lineend   (- M.tty_height 2)
         h_st      (- (length (. bufs cbuf :history)) (- M.tty_height 4))
         h_end     (length (. bufs cbuf :history))
         scr       (. bufs cbuf :scroll)]
