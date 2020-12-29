@@ -140,8 +140,9 @@ end
 
 function buf_with_nick(name, fn, mainbuf)
     for i, buf in ipairs(bufs) do
-        if buf.names[nick] then
-            if not mainbuf and buf.name == MAINBUF then
+        if buf.names[name] then
+            if not mainbuf and i == 1 then
+                -- skip
             else
                 fn(i, buf)
             end
@@ -444,8 +445,8 @@ local irchand = {
         -- copy across nick information (this preserves nick highlighting across
         -- nickname changes), and display the nick change for all bufs that
         -- have that user
-        for _, buf in ipairs(bufs) do
-            if buf.names[e.nick] or e.nick == nick then
+        for i, buf in ipairs(bufs) do
+            if buf.names[e.nick] or e.nick == nick and i ~= 1 then
                 prin_irc(0, buf.name, L_NICK, "%s is now known as %s",
                     hcol(e.nick), hcol(e.msg))
                 buf.names[e.nick] = nil; buf.names[e.msg] = true
