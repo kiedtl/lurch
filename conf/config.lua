@@ -249,7 +249,7 @@ M.handlers = {
 }
 
 -- what timezone to display times in. (format: "UTC[+-]<offset>")
-M.tz = "UTC-3:00"
+M.tz = "UTC-5:00"
 
 -- Attempt to prevent the ident from being received.
 -- This is done by delaying the registration of the user after connecting to the
