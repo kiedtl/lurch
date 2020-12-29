@@ -183,11 +183,6 @@ function util.fmt_duration(secs)
     return dur_str:gsub("%s$", "")
 end
 
--- set the title of the terminal
-function util.settitle(fmt, ...)
-    util.printf("\x1b]0;%s\a\r\x1b[K\r", fmt:format(...))
-end
-
 -- remove an item at idx from an array table
 -- stolen from stack overflow, of course
 function util.remove(tbl, idx)

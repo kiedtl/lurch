@@ -15,6 +15,11 @@ function M.test_last_gmatch()
     assert_eq(util.last_gmatch("God Save the King", "([Gg])"), "g")
 end
 
+function M.test_capture()
+    assert_eq(util.capture("echo hi"), "hi\n")
+    assert_eq(util.capture("printf hi"), "hi")
+end
+
 function M.test_parse_offset()
     assert_eq(util.parse_offset("UTC+7:30"),    7.5)
     assert_eq(util.parse_offset("UTC+3:00"),    3.0)
@@ -64,6 +69,11 @@ function M.test_remove()
     local r
     r = util.remove({"test", 2, 2, 5, {"table2", 4}, 3}, 5)
     _assert_table_eq(r, {"test", 2, 2, 5, 3})
+end
+
+function M.test_join()
+    assert_eq(util.join(", ", {"John", "Peter", "Dylan"}), "John, Peter, Dylan")
+    assert_eq(util.join("|", {"Java", "Ruby", "Cobol"}), "Java|Ruby|Cobol")
 end
 
 return M
