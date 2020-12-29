@@ -101,12 +101,12 @@
   (when (not (msg:find :%s))
     (tset event :fields (+ (length event.fields) 1) msg))
 
+  (tset event :dest (. event.fields 2))
+
   ; If the field after the typical dest is a channel, use it in
   ; place of the regular field. This correctly catches MOTD, JOIN,
   ; and NAMES messages.
-  (tset event :dest (. event.fields 2))
-
-  (when (. event.fields 3)
+  (when (and (. event.fields 3) (not (event.dest:find "^#")))
     (if (string.find (. event.fields 3) "^[*#]")
       (tset event :dest (. event.fields 3))
       (string.find (. event.fields 3) "^[@=]")
