@@ -185,7 +185,7 @@ end
 
 -- set the title of the terminal
 function util.settitle(fmt, ...)
-    util.printf("\x1b]0;%s\a", fmt:format(...))
+    util.printf("\x1b]0;%s\a\r\x[K\r", fmt:format(...))
 end
 
 -- remove an item at idx from an array table
@@ -265,18 +265,6 @@ function util.assert_t(...)
 
         assert(type(v) == t, format("%s: expected %s, got %s",
             c or "parameter", t, type(v)))
-    end
-end
-
-function util.revgmatch(str, pat, fn)
-    local buf = {}
-    for item in str:gmatch(pat) do
-        buf[#buf + 1] = item
-    end
-    for i = #buf, 1, -1 do
-        if fn(i, buf[i]) == util.MAP_BREAK then
-            break
-        end
     end
 end
 
