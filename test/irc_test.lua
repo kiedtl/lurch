@@ -59,4 +59,13 @@ function M.test_ctcp_parsing()
     assert_equal(e2.msg, "")
 end
 
+function M.test_misc()
+    local e1 = irc.parse(":jihuu!~jihuu@minete.st PRIVMSG #niam :#whoosh")
+    assert_equal(e1.dest, "#niam")
+    assert_equal(e1.msg, "#whoosh")
+    local e2 = irc.parse(":chet!nikah@tilde.team PRIVMSG #meat :*was")
+    assert_equal(e2.dest, "#meat")
+    assert_equal(e2.msg, "*was")
+end
+
 return M
