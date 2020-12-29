@@ -1546,7 +1546,6 @@ function rt.init(args)
     tui.linefmt_func    = config.linefmt
     tui.prompt_func     = callbacks.prompt
     tui.statusline_func = callbacks.statusline
-    tui.termtitle_func  = callbacks.set_title
 
     tui.refresh()
     tui.colors = config.colors()

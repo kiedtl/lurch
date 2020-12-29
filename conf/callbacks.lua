@@ -249,15 +249,6 @@ end
 -- example above.
 M.statusline = M.fancy_statusline
 
--- This is called every time the statusline is called. It should set the
--- terminals title. This is extremely useful when using terminal tabs or
--- a terminal multiplexer (e.g. tmux) to mimic multi-server functionality.
---
--- By default, the title is "[<SERVER>] <CHANNEL>"
-function M.set_title()
-    util.settitle("[%s] %s", config.host, bufs[cbuf].name)
-end
-
 -- called whenever there is a new unread message/event in a buffer.
 --
 -- type: the type of notification. A low-priority notification (e.g.

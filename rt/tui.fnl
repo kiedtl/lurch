@@ -12,7 +12,6 @@
 (tset M :linefmt_func     nil)
 (tset M :prompt_func      nil)
 (tset M :statusline_func  nil)
-(tset M :termtitle_func   nil)
 (tset M :set_colors        {})
 (tset M :colors            {})
 (tset M :tty_height        80)
@@ -68,8 +67,7 @@
     (M.prompt_func inp cursor)))
 
 (lambda M.statusline []
-  (M.statusline_func)
-  (M.termtitle_func))
+  (M.statusline_func))
 
 (lambda M.format_line [timestr left right timew leftw ?rightw]
   (assert_t [timestr :string :timestr] [timew :number :timew]
@@ -116,7 +114,7 @@
   ; don't overwrite the prompt/inputline.
 
   (let [linestart 1
-        lineend   (- M.tty_height 2)
+        lineend   (- M.tty_height 3)
         h_st      (- (length (. bufs cbuf :history)) (- M.tty_height 4))
         h_end     (length (. bufs cbuf :history))
         scr       (. bufs cbuf :scroll)]
