@@ -36,8 +36,7 @@
 (lambda M.highlight [text ?text_as ?no_bold?]
   (assert_t [text :string :text])
 
-  (var text text) (var text_as text_as)
-  (var no_bold? no_bold?)
+  (var text_as text_as)
   (when (not text_as) (set text_as text))
 
   ; store nickname highlight color, so that we don't have to
@@ -51,8 +50,8 @@
     (let [color (. M :colors hash)]
       (tset M :set_colors text_as color)))
 
-  (var esc mirc.BOLD)
-  (when no_bold? (set esc ""))
+  (var esc (if no_bold? "" mirc.BOLD))
+
   (let [color (. M :set_colors text_as)]
     (when color
       (set esc (.. esc (format "%s%003d" mirc._256COLOR color)))))
