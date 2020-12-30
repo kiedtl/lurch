@@ -241,10 +241,21 @@ M.handlers = {
                 if (e.msg):match("^>") then
                     e.msg = mirc.COLOR .. "08" .. e.msg .. mirc.RESET
                 end
-
                 return CFGHND_CONTINUE
             end
         },
+
+        -- highlight nicknames mentioned in messages.
+        ["colornicks"] = {
+            fn = function(e)
+                local idx = buf_idx(e.dest)
+                if not e.dest or not idx then return CFHND_CONTINUE end
+                for nick, _ in pairs(bufs[idx].names) do
+                    e.msg = (e.msg):gsub(nick, tui.highlight(nick))
+                end
+                return CFHND_CONTINUE
+            end
+        }
     },
 }
 
