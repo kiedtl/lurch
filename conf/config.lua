@@ -48,7 +48,7 @@ M.mode = "+i"
 
 -- default kick/quit/part message. (defaults to an empty string)
 M.quit_msg = "*thud*"
-M.kick_msg = "your presence is no longer desired"
+M.kick_msg = "your presence in this community is no longer desirable"
 M.part_msg = "*confused shouting*"
 
 -- Default replies for CTCP queries from users/server.
