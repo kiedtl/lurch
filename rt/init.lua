@@ -41,21 +41,6 @@ server      = {}             -- Server information
 server.caps = {}
 server.last_reconn = os.time()
 
---local buf_add
---local buf_idx
---local buf_cur
---local buf_idx_or_add
---local buf_with_nick
---local buf_addname
---local msg_pings
---local writelog
---local buf_switch
---local prin_irc
---local prin_cmd
---local prin
---local parseirc
---local parsecmd
-
 -- a simple wrapper around irc.connect.
 function connect()
     server.last_reconn = os.time()
