@@ -12,16 +12,18 @@
 #include "util.h"
 
 extern int conn_fd;
-extern _Bool tb_active;
 extern struct tls *client;
 extern _Bool tls_active;
+
+extern size_t tb_status;
+extern size_t TB_ACTIVE;
 
 _Noreturn void __attribute__((format(printf, 1, 2)))
 die(const char *fmt, ...)
 {
-	if (tb_active) {
+	if ((tb_status & TB_ACTIVE) == TB_ACTIVE) {
 		tb_shutdown();
-		tb_active = false;
+		tb_status ^= TB_ACTIVE;
 	}
 
 	fprintf(stderr, "fatal: ");
@@ -73,9 +75,9 @@ format(const char *fmt, ...)
 void
 cleanup(void)
 {
-	if (tb_active) {
+	if ((tb_status & TB_ACTIVE) == TB_ACTIVE) {
 		tb_shutdown();
-		tb_active = false;
+		tb_status ^= TB_ACTIVE;
 	}
 
 	if (tls_active && client) {

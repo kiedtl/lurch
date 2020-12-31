@@ -9,8 +9,6 @@
 #include "termbox.h"
 #include "util.h"
 
-extern _Bool tb_active;
-
 int
 llua_panic(lua_State *pL)
 {

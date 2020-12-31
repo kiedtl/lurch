@@ -16,7 +16,8 @@ WARNING  = -Wall -Wpedantic -Wextra -Wold-style-definition \
 	   -Wmissing-prototypes -Winit-self -Wfloat-equal -Wstrict-prototypes \
 	   -Wredundant-decls -Wendif-labels -Wstrict-aliasing=2 -Woverflow \
 	   -Wformat=2 -Wmissing-include-dirs -Wtrigraphs -Wno-format-nonliteral \
-	   -Wincompatible-pointer-types -Wunused-parameter
+	   -Wincompatible-pointer-types -Wunused-parameter \
+	   -Werror=extern-initializer
 DEF      = -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200112L -D_XOPEN_SOURCE -D_GNU_SOURCE
 INCL     = -Itb/src/ -I/usr/include/$(LUA) -I ~/local/include -Itool/
 CC       = clang

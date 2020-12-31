@@ -25,22 +25,24 @@
 #include "util.h"
 
 /* maximum rate at which the screen is refreshed */
-const struct timeval REFRESH = { 0, 2046 };
+const struct timeval REFRESH = { 0, 1024 };
 
 #define TIMEOUT 4096
 
 /*
  * keep track of termbox's state, so
- * that we know if tb_shutdown() is safe to call.
+ * that we know if tb_shutdown() is safe to call,
+ * and whether we can redraw the screen.
  *
  * calling tb_shutdown twice, or before tb_init,
  * results in a call to abort().
  */
-_Bool tb_active = false;
+size_t tb_status = 0;
+const size_t TB_ACTIVE   = 0x01000000;
+const size_t TB_MODIFIED = 0x02000000;
 
 lua_State *L = NULL;
 int conn_fd = 0;
-//FILE *conn = NULL;
 _Bool reconn = false;
 
 _Bool tls_active = false;
@@ -127,7 +129,7 @@ main(int argc, char **argv)
 	};
 	char *err = errstrs[-(tb_init())];
 	if (err) die(err);
-	tb_active = true;
+	tb_status |= TB_ACTIVE;
 	tb_select_output_mode(TB_OUTPUT_256);
 
 	/* run init function */
@@ -201,7 +203,7 @@ main(int argc, char **argv)
 			else
 				r = read(conn_fd, &bufsrv[rc], max);
 
-			if (tb_active && (r == TLS_WANT_POLLIN || r == TLS_WANT_POLLOUT)) {
+			if (tls_active && (r == TLS_WANT_POLLIN || r == TLS_WANT_POLLOUT)) {
 				; /* do nothing */
 			} else if (r < 0) {
 				if (errno != EINTR)
@@ -256,9 +258,6 @@ main(int argc, char **argv)
 
 // utility functions
 
-static struct tb_cell *last_tb_buf;
-static size_t last_tb_size;
-
 /* check if (a) REFRESH time has passed, and (b) if the termbox
  * buffer has been modified; if both those conditions are met, refresh
  * the screen. */
@@ -269,23 +268,10 @@ try_present(struct timeval *tcur, struct timeval *tpre)
 	struct timeval diff;
 	timersub(tcur, tpre, &diff);
 
-	if (!timercmp(&diff, &REFRESH, >=)) {
-		/*assert(gettimeofday(tpre, NULL) == 0);
-		tb_present();*/
+	if (!timercmp(&diff, &REFRESH, >=))
 		return;
-	}
-
-	size_t size = (tb_width() * tb_height());
-	size = size * sizeof(struct tb_cell);
-	size = size > last_tb_size ? last_tb_size : size;
-
-	struct tb_cell *tb_buf = tb_cell_buffer();
-
-	if (memcmp(last_tb_buf, tb_buf, size) == 0) {
+	if ((tb_status & TB_MODIFIED) == TB_MODIFIED)
 		tb_present();
-		last_tb_buf = tb_buf;
-		last_tb_size = size;
-	}
 }
 
 void
