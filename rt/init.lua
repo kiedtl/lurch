@@ -985,9 +985,11 @@ cmdhand = {
             end
 
             bufs = util.remove(bufs, buf)
-            while not bufs[cbuf] do
-                cbuf = cbuf - 1
+            local newcbuf = cbuf
+            while not bufs[newcbuf] do
+                newcbuf = newcbuf - 1
             end
+            buf_switch(newcbuf)
 
             -- redraw, as the current buffer may have changed,
             -- and the statusline needs to be redrawn anyway.
