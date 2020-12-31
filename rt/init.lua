@@ -970,9 +970,9 @@ cmdhand = {
                 if not buf_idx(buf) then
                     prin_cmd(buf_cur(), L_ERR, "%s is not an open buffer.", a)
                     return
-                else
-                    buf = buf_idx(buf)
                 end
+
+                buf = buf_idx(buf)
             else
                 buf = tonumber(buf)
             end
