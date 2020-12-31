@@ -1498,16 +1498,13 @@ function parsecmd(inp)
     end
 end
 
-local keyseq_cmd_handler = {
-    [tb.TB_KEY_CTRL_N] = "/next",
-    [tb.TB_KEY_CTRL_P] = "/prev",
-    [tb.TB_KEY_PGUP]   = "/scroll +10",
-    [tb.TB_KEY_PGDN]   = "/scroll -10",
-    [tb.TB_KEY_CTRL_L] = "/redraw",
-    [tb.TB_KEY_CTRL_C] = "/quit",
-}
-
-local keyseq_func_handler = {
+local keyseq_handler = {
+    [tb.TB_KEY_CTRL_N] = function() parsecmd("/next") end,
+    [tb.TB_KEY_CTRL_P] = function() parsecmd("/prev") end,
+    [tb.TB_KEY_PGUP]   = function() parsecmd("/scroll +10") end,
+    [tb.TB_KEY_PGDN]   = function() parsecmd("/scroll -10") end,
+    [tb.TB_KEY_CTRL_L] = function() parsecmd("/redraw") end,
+    [tb.TB_KEY_CTRL_C] = function() parsecmd("/quit") end,
     [tb.TB_KEY_CTRL_B] = function() tbrl.insert_at_curs(mirc.BOLD) end,
     [tb.TB_KEY_CTRL_U] = function() tbrl.insert_at_curs(mirc.UNDERLINE) end,
     [tb.TB_KEY_CTRL_T] = function() tbrl.insert_at_curs(mirc.ITALIC) end,
@@ -1516,11 +1513,7 @@ local keyseq_func_handler = {
 }
 
 function rt.on_keyseq(key)
-    if keyseq_func_handler[key] then
-        (keyseq_func_handler[key])()
-    elseif keyseq_cmd_handler[key] then
-        parsecmd(keyseq_cmd_handler[key])
-    end
+    if keyseq_handler[key] then (keyseq_handler[key])() end
 end
 
 function rt.init(args)
