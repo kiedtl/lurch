@@ -173,7 +173,7 @@ M.leftfmt = {
 }
 
 -- words that will generate a notification if they appear in a message
-M.pingwords = { "kiedtl" }
+M.pingwords = { "kiedtl", "spacehare" }
 
 -- user-defined commands. These take the place of aliases; the alias_to()
 -- function below is a convenience function that can be used to quickly
