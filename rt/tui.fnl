@@ -35,23 +35,23 @@
 (lambda M.highlight [text ?text_as ?no_bold?]
   (assert_t [text :string :text])
 
-  (var text_as text_as)
-  (when (not text_as) (set text_as text))
+  (var ?text_as ?text_as)
+  (when (not ?text_as) (set ?text_as text))
 
   ; store nickname highlight color, so that we don't have to
-  ; calculate the text's has each time.
-  (when (not (. M :set_colors text_as))
+  ; calculate the text's hash each time.
+  (when (not (. M :set_colors ?text_as))
     ; Add one to the hash, as it could be zero. This could cause
-    ; problems since we use the hash as the index for the color array.
-    (var hash (% (_hash text_as) (- (length M.colors) 1)))
+    ; problems because we use the hash as the index for the color table.
+    (var hash (% (_hash ?text_as) (- (length M.colors) 1)))
     (set hash (+ hash 1))
 
     (let [color (. M :colors hash)]
-      (tset M :set_colors text_as color)))
+      (tset M :set_colors ?text_as color)))
 
-  (var esc (if no_bold? "" mirc.BOLD))
+  (var esc (if ?no_bold? "" mirc.BOLD))
 
-  (let [color (. M :set_colors text_as)]
+  (let [color (. M :set_colors ?text_as)]
     (when color
       (set esc (.. esc (format "%s%003d" mirc._256COLOR color)))))
   (format "%s%s%s" esc text mirc.RESET))
@@ -78,7 +78,7 @@
 
   ; fold message to width, like /bin/fold
   (let [infow (+ leftw timew)
-        width (- (or rightw M.tty_width) infow)
+        width (- (or ?rightw M.tty_width) infow)
         rpadd (string.rep " " (+ infow 4))]
     (set right (util.fold right (- width 4)))
     (set right (right:gsub "\n" (.. "%1" rpadd))))
@@ -126,7 +126,7 @@
       ; size changes we can fold text according to the new
       ; terminal width when the screen is redrawn.
       (var out (M.format_line (. msg 1) (. msg 2) (. msg 3)
-                              timew leftw rightw))
+                              timew leftw ?rightw))
 
       ; Reset colors/attributes before drawing the line.
       (lurch.tb_writeline line mirc.RESET)
@@ -156,7 +156,7 @@
     (M.refresh)
     (lurch.tb_clear)
     (M.statusline)
-    (M.buffer_text timew leftw rightw)
+    (M.buffer_text timew leftw ?rightw)
     (M.prompt inbuf incurs))
 
 M
