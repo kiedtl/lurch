@@ -48,8 +48,22 @@ _Bool reconn = false;
 _Bool tls_active = false;
 struct tls *client = NULL;
 
-void signal_lhand(int sig);
-void signal_fatal(int sig);
+static void
+signal_lhand(int sig)
+{
+	lua_pushinteger(L, (lua_Integer) sig);
+	llua_call(L, "on_signal", 1, 0);
+}
+
+static const char *sigstrs[] = { [SIGILL]  = "SIGILL", [SIGSEGV] = "SIGSEGV",
+	[SIGFPE]  = "SIGFPE", [SIGBUS]  = "SIGBUS", };
+
+static void
+signal_fatal(int sig)
+{
+	die("received signal %s (%d); aborting.",
+		sigstrs[sig] ? sigstrs[sig] : "???", sig);
+}
 
 /*
  * check if (a) REFRESH time has passed, and (b) if the termbox
@@ -271,24 +285,4 @@ main(int argc, char **argv)
 
 	cleanup();
 	return 0;
-}
-
-// utility functions
-
-void
-signal_lhand(int sig)
-{
-	/* run signal handler */
-	lua_pushinteger(L, (lua_Integer) sig);
-	llua_call(L, "on_signal", 1, 0);
-}
-
-static const char *sigstrs[] = { [SIGILL]  = "SIGILL", [SIGSEGV] = "SIGSEGV",
-	[SIGFPE]  = "SIGFPE", [SIGBUS]  = "SIGBUS", };
-
-void
-signal_fatal(int sig)
-{
-	die("received signal %s (%d); aborting.",
-		sigstrs[sig] ? sigstrs[sig] : "???", sig);
 }
