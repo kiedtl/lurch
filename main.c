@@ -48,9 +48,26 @@ _Bool reconn = false;
 _Bool tls_active = false;
 struct tls *client = NULL;
 
-void try_present(struct timeval *tcur, struct timeval *tpre);
 void signal_lhand(int sig);
 void signal_fatal(int sig);
+
+/*
+ * check if (a) REFRESH time has passed, and (b) if the termbox
+ * buffer has been modified; if both those conditions are met, "present"
+ * the termbox screen.
+ */
+static inline void
+tb_try_present(struct timeval *tcur, struct timeval *tpre)
+{
+	assert(gettimeofday(tcur, NULL) == 0);
+	struct timeval diff;
+	timersub(tcur, tpre, &diff);
+
+	if (!timercmp(&diff, &REFRESH, >=))
+		return;
+	if ((tb_status & TB_MODIFIED) == TB_MODIFIED)
+		tb_present();
+}
 
 int
 main(int argc, char **argv)
@@ -176,7 +193,7 @@ main(int argc, char **argv)
 	struct tb_event ev;
 
 	while ("pigs fly") {
-		try_present(&tcurrent, &tpresent);
+		tb_try_present(&tcurrent, &tpresent);
 
 		FD_ZERO(&rd);
 		FD_SET(STDIN_FILENO, &rd);
@@ -258,22 +275,6 @@ main(int argc, char **argv)
 
 // utility functions
 
-/* check if (a) REFRESH time has passed, and (b) if the termbox
- * buffer has been modified; if both those conditions are met, refresh
- * the screen. */
-void
-try_present(struct timeval *tcur, struct timeval *tpre)
-{
-	assert(gettimeofday(tcur, NULL) == 0);
-	struct timeval diff;
-	timersub(tcur, tpre, &diff);
-
-	if (!timercmp(&diff, &REFRESH, >=))
-		return;
-	if ((tb_status & TB_MODIFIED) == TB_MODIFIED)
-		tb_present();
-}
-
 void
 signal_lhand(int sig)
 {
@@ -282,16 +283,12 @@ signal_lhand(int sig)
 	llua_call(L, "on_signal", 1, 0);
 }
 
+static const char *sigstrs[] = { [SIGILL]  = "SIGILL", [SIGSEGV] = "SIGSEGV",
+	[SIGFPE]  = "SIGFPE", [SIGBUS]  = "SIGBUS", };
+
 void
 signal_fatal(int sig)
 {
-	char *sigstrs[] = {
-		[SIGILL]  = "SIGILL",
-		[SIGSEGV] = "SIGSEGV",
-		[SIGFPE]  = "SIGFPE",
-		[SIGBUS]  = "SIGBUS",
-	};
-
 	die("received signal %s (%d); aborting.",
 		sigstrs[sig] ? sigstrs[sig] : "???", sig);
 }
