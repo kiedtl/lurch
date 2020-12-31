@@ -1,5 +1,6 @@
 local mirc   = require('mirc')
 local tui    = require('tui')
+local tb     = require('tb')
 local util   = require('util')
 local format = string.format
 local M = {}
@@ -222,6 +223,14 @@ M.commands = {
             parsecmd(format("/ban %s", a))
         end,
     },
+}
+
+-- user-bound keys. See tb.fnl (or tb.lua) for a list of key constants.
+M.keyseqs = {
+    -- A simple example that runs the command '/read all' when Ctrl+Z
+    -- is pressed.
+    --
+    --[tb.TB_KEY_CTRL_Z] = function() parsecmd("/read all") end,
 }
 
 -- user-defined handlers for IRC commands (not to be confused with lurch's

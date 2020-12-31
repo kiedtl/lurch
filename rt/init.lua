@@ -1513,7 +1513,11 @@ local keyseq_handler = {
 }
 
 function rt.on_keyseq(key)
-    if keyseq_handler[key] then (keyseq_handler[key])() end
+    if config.keyseqs[key] then
+        (config.keyseqs[key])()
+    elseif keyseq_handler[key] then
+        (keyseq_handler[key])()
+    end
 end
 
 function rt.init(args)
@@ -1567,22 +1571,12 @@ function rt.init(args)
     -- This means we'll have to implement common features such as
     -- input history (DONE), completion (TODO), and undo/redo (TODO).
     --
-    -- Bind keys used to move across buffers and scroll text. When these
-    -- bound keys are entered by the user, the rt.on_keyseq function will
-    -- be called.
-    tbrl.bindings[tb.TB_KEY_CTRL_N] = rt.on_keyseq
-    tbrl.bindings[tb.TB_KEY_CTRL_P] = rt.on_keyseq
-    tbrl.bindings[tb.TB_KEY_PGUP]   = rt.on_keyseq
-    tbrl.bindings[tb.TB_KEY_PGDN]   = rt.on_keyseq
-    tbrl.bindings[tb.TB_KEY_CTRL_L] = rt.on_keyseq
-    tbrl.bindings[tb.TB_KEY_CTRL_C] = rt.on_keyseq
-
-    -- Bind keys used to insert IRC formatting escape sequences.
-    tbrl.bindings[tb.TB_KEY_CTRL_B] = rt.on_keyseq
-    tbrl.bindings[tb.TB_KEY_CTRL_U] = rt.on_keyseq
-    tbrl.bindings[tb.TB_KEY_CTRL_T] = rt.on_keyseq
-    tbrl.bindings[tb.TB_KEY_CTRL_R] = rt.on_keyseq
-    tbrl.bindings[tb.TB_KEY_CTRL_O] = rt.on_keyseq
+    for key, _ in pairs(keyseq_handler) do
+        tbrl.bindings[key] = rt.on_keyseq
+    end
+    for key, _ in pairs(config.keyseqs) do
+        tbrl.bindings[key] = rt.on_keyseq
+    end
 
     -- Set the functions to be called when <enter> is pressed, or when
     -- the screen is resized.
