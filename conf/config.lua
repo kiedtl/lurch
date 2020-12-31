@@ -134,6 +134,8 @@ end
 
 -- Values used for the left column (excluding channel messages).
 --
+-- names:   used when listing nicknames in a channel.
+-- topic:   used when displaying the current topic, or a topic change.
 -- error:   value used for error messages (e.g. "Cannot join: invite-only channel")
 -- normal:  value normally used for messages.
 -- away:    value used for messages pertaining to a user's away status (e.g.:
@@ -143,6 +145,8 @@ end
 -- action:  value used from CTCP ACTIONs (/me)
 -- message: function that's called to format the sender of a message.
 M.leftfmt = {
+    names = "NAMES",
+    topic = "TOPIC",
     error = "-!-",
     normal = "--",
     away = "-<>",

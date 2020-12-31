@@ -21,10 +21,12 @@ local format    = string.format
 local hcol      = tui.highlight
 local assert_t  = util.assert_t
 
-L_ERR  = config.leftfmt.error
-L_NORM = config.leftfmt.normal
-L_AWAY = config.leftfmt.away
-L_NICK = config.leftfmt.nick
+L_NAME  = config.leftfmt.names
+L_TOPIC = config.leftfmt.topic
+L_ERR   = config.leftfmt.error
+L_NORM  = config.leftfmt.normal
+L_AWAY  = config.leftfmt.away
+L_NICK  = config.leftfmt.nick
 
 DBGFILE = "/tmp/lurch_debug"
 MAINBUF = config.host
@@ -385,7 +387,7 @@ local irchand = {
         end
     end,
     ["TOPIC"] = function(e)
-        prin_irc(0, e.dest, "TOPIC", "%s changed the topic to \"%s\"", hcol(e.nick), e.msg)
+        prin_irc(0, e.dest, L_TOPIC, "%s changed the topic to \"%s\"", hcol(e.nick), e.msg)
     end,
     ["PART"] = function(e)
         prin_irc(0, e.dest, "<--", "%s has left %s (%s)",
@@ -597,7 +599,7 @@ local irchand = {
     ["331"] = function(e) prin_irc(0, e.dest, L_ERR, "No topic set for %s", e.dest) end,
 
     -- TOPIC for channel
-    ["332"] = function(e) prin_irc(0, e.dest, "TOPIC", "%s", e.msg) end,
+    ["332"] = function(e) prin_irc(0, e.dest, L_TOPIC, "%s", e.msg) end,
 
     -- TOPIC last set by nick!user@host
     ["333"] = function(e)
@@ -646,7 +648,7 @@ local irchand = {
             bufs[bufidx].access[_nick] = access
         end
 
-        prin_irc(0, e.dest, "NAMES", "%s", nicklist)
+        prin_irc(0, e.dest, L_NAME, "%s", nicklist)
     end,
 
     -- End of /names
@@ -660,7 +662,7 @@ local irchand = {
         -- loudmouths: those with +v (voices)
         -- halfwits:   those with +h (halfops)
         -- operators:  those with +o
-        -- founders:   those with +q
+        -- founders:   those with +q (XXX: on InspirCD. isn't +q == 'quiet' with other IRCDs?)
         -- irccops:    those with +Y (server admins)
         local peasants,  loudmouths, halfwits
         local operators, founders,   irccops
@@ -700,7 +702,7 @@ local irchand = {
         txt = txt:sub(1, #txt - 2) -- trim comma
         txt = format("%s denizens of %s (%s)", total, hcol(dest), txt)
 
-        prin_irc(0, dest, "NAMES", "%s", txt)
+        prin_irc(0, dest, L_NAME, "%s", txt)
     end,
 
     -- WHOWAS: RPL_ENDOFWHOWAS
