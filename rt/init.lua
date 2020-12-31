@@ -106,6 +106,19 @@ function buf_read(idx)
     callbacks.on_cleared_unread(idx)
 end
 
+function buf_scroll(idx, rel, abs)
+    assert(bufs[idx])
+
+    if rel then
+        bufs[idx].scroll = bufs[idx].scroll + rel
+    elseif abs then
+        bufs[idx].scroll = abs
+    end
+
+    if bufs[cbuf].scroll < 0 then bufs[idx].scroll = 0 end
+    if bufs[cbuf].scroll == 0 then buf_read(idx) end
+end
+
 -- check if a buffer exists, and if so, return the index
 -- for that buffer.
 function buf_idx(name)
@@ -149,7 +162,7 @@ function buf_switch(ch)
 
         -- reset scroll, unread notifications
         buf_read(ch)
-        bufs[ch].scroll  = 0
+        buf_scroll(ch, nil, 0)
 
         redraw()
     end
@@ -981,20 +994,24 @@ cmdhand = {
             redraw()
         end,
     },
-    ["/up"] = {
-        help = {},
-        fn = function(_, _, _)
-            local scr = math.floor(tui.tty_height / 3)
-            bufs[cbuf].scroll = bufs[cbuf].scroll + scr
-            redraw()
-        end
-    },
-    ["/down"] = {
-        help = {},
-        fn = function(_, _, _)
-            local scr = math.floor(tui.tty_height / 3)
-            bufs[cbuf].scroll = bufs[cbuf].scroll - scr
-            if bufs[cbuf].scroll < 0 then bufs[cbuf].scroll = 0 end
+    ["/scroll"] = {
+        REQUIRE_ARG = true,
+        help = {
+            "Scroll the current buffer.",
+            "Examples:\n" ..
+                "/scroll 0      Scroll to the bottom of the buffer.\n" ..
+                "/scroll +12    Scroll up by 12 lines.\n" ..
+                "/scroll -23    Scroll down by 23 lines.\n"
+        },
+        fn = function(a, _, _)
+            local ps = bufs[cbuf].scroll
+            if a:match("^%-") and tonumber(a) then
+                buf_scroll(cbuf, -(tonumber(a:sub(2, #a))), nil)
+            elseif a:match("^%+") and tonumber(a) then
+                buf_scroll(cbuf, tonumber(a:sub(2, #a)), nil)
+            elseif tonumber(a) then
+                buf_scroll(cbuf, nil, tonumber(a))
+            end
             redraw()
         end
     },
@@ -1484,8 +1501,8 @@ end
 local keyseq_cmd_handler = {
     [tb.TB_KEY_CTRL_N] = "/next",
     [tb.TB_KEY_CTRL_P] = "/prev",
-    [tb.TB_KEY_PGUP]   = "/up",
-    [tb.TB_KEY_PGDN]   = "/down",
+    [tb.TB_KEY_PGUP]   = "/scroll +10",
+    [tb.TB_KEY_PGDN]   = "/scroll -10",
     [tb.TB_KEY_CTRL_L] = "/redraw",
     [tb.TB_KEY_CTRL_C] = "/quit",
 }
