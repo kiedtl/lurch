@@ -255,7 +255,13 @@ M.handlers = {
                 local idx = buf_idx(e.dest)
                 if not e.dest or not idx then return CFHND_CONTINUE end
                 for nick, _ in pairs(bufs[idx].names) do
-                    e.msg = (e.msg):gsub(nick, tui.highlight(nick))
+                    -- We only want to highlight nicknames if they appear
+                    -- just before something that can't be part of a nickname.
+                    --
+                    -- e.g. We should highlight the "wdca" in "wdca: hi", but
+                    -- we should not highlight the "wdca" in "wdca11".
+                    local pat = format("%s%s", nick, "[^a-zA-Z0-9%-_%[%]{}%^`%|]")
+                    e.msg = (e.msg):gsub(pat, tui.highlight(nick))
                 end
                 return CFHND_CONTINUE
             end
