@@ -36,15 +36,9 @@ reconn_wait = 5              -- Seconds to wait before reconnecting.
 nick        = config.nick    -- The current nickname
 cbuf        = nil            -- The current buffer
 bufs        = {}             -- List of all opened buffers
-server      = {}             -- Server information
-
-server.caps = {}
-server.last_reconn = os.time()
 
 -- a simple wrapper around irc.connect.
 function connect()
-    server.last_reconn = os.time()
-
     local user  = config.user or os.getenv("USER")
     local name  = config.name or _nick
     local pass  = config.pass
@@ -223,7 +217,7 @@ function prin_irc(prio, dest, left, right_fmt, ...)
 
     -- if server-time is available, use that time instead of the
     -- local time.
-    if server.caps["server-time"] and last_ircevent.tags.time then
+    if irc.server.caps["server-time"] and last_ircevent.tags.time then
         -- the server-time is stored as a tag in the IRC message, in the
         -- format yyyy-mm-ddThh:mm:ss.sssZ, but is in the UTC timezone.
         -- convert it to the timezone the user wants.
@@ -323,7 +317,7 @@ end
 local irchand = {
     ["PING"] = function(e)   send("PONG :%s", e.dest or e.msg) end,
     ["ACCOUNT"] = function(e)
-        assert(server.caps["account-notify"])
+        assert(irc.server.caps["account-notify"])
 
         -- account-notify is enabled, and the server is notifying
         -- us that one user has logged in/out of an account
@@ -340,7 +334,7 @@ local irchand = {
         end)
     end,
     ["AWAY"] = function(e)
-        assert(server.caps["away-notify"])
+        assert(irc.server.caps["away-notify"])
 
         -- away notify is enabled, and the server is giving us the
         -- status of a user in a channel.
@@ -863,22 +857,10 @@ local irchand = {
         e.msg = (e.msg):match("(.-)%s*$") -- remove trailing whitespace
 
         if subcmd == "ls" then
-            -- list of all capabilities supported by the server.
-            server.caps = {}
-            for cap in (e.msg):gmatch("([^%s]+)%s?") do
-                server.caps[cap] = false
-            end
+            prin_irc(0, MAINBUF, L_NORM, "Supported IRCv3 capabilities: %s", e.msg)
         elseif subcmd == "ack" then
-            -- the server has a capability we requested.
-            server.caps[e.msg] = true
             prin_irc(0, MAINBUF, L_NORM, "Enabling IRCv3 capability: %s", e.msg)
         elseif subcmd == "nak" then
-            -- the server does not have a capability we requested.
-            --
-            -- since all caps are set to false/nil by default we don't really
-            -- need to do this...
-            server.caps[e.msg] = false
-
             prin_irc(0, MAINBUF, L_NORM, "Disabling IRCv3 capability: %s", e.msg)
         end
     end,
@@ -914,6 +896,9 @@ function parseirc(reply)
     if event.dest == nick and event.nick == nick then
         event.dest = MAINBUF
     end
+
+    -- Allow the IRC module to do its bookkeeping stuff.
+    irc.handle(event)
 
     -- run each user handler, if it's not disabled.
     if config.handlers[CFGHND_ALL] then
@@ -954,7 +939,7 @@ function send_both(fmt, ...)
     send(fmt, ...)
 
     -- don't send to the terminal if echo-message is enabled.
-    if not server.caps["echo-message"] then
+    if not irc.server.caps["echo-message"] then
         parseirc(format(fmt, ...))
     end
 end
@@ -1402,7 +1387,7 @@ cmdhand = {
             end
 
             local state = {
-                server = server,
+                server = irc.server,
                 nick = nick, cbuf = cbuf,
                 bufs = bufs,
 
@@ -1631,7 +1616,7 @@ function rt.on_disconnect(_err)
     end
 
     -- Wait for an increasing amount of time before reconnecting.
-    if (os.time() - reconn_wait) < server.last_reconn then
+    if (os.time() - reconn_wait) < irc.server.connected then
         return false
     end
 

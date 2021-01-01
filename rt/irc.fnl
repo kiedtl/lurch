@@ -2,32 +2,35 @@
 (local util (require :util))
 
 (var M {})
+(tset M :_handlers {})
 
-(lambda M.send [fmt ...]
-  (let [(r e) (lurch.conn_send (fmt:format ...))]
-        (when (not r)
-          (util.panic "error: %s\n" e))))
+; Bookkeeping
+(tset M :server {})
+(tset M :server :connected (os.time))  ; last time we tried to connect
+(tset M :server :caps {:all {}         ; IRCv3 caps the server ack'd/nak'd
+                       :requested {}}) ; IRCv3 caps we'd requested
 
 (lambda M.connect [host port tls nick user name ?pass ?caps ?no_ident?]
+  (tset M :server :connected (os.time))
   (var (success err) (lurch.conn_init host port tls))
 
   (when success
     ; list and request IRCv3 capabilities. The responses are ignored
     ; for now; they will be processed later on.
-    (when caps
+    (when ?caps
       (M.send "CAP LS")
-      (-?>> [(F.iter caps)]
-            (F.map  #(irc.send "CAP REQ :%s" $2)))
+      (-?>> [(F.iter ?caps)]
+            (F.map #(M.send "CAP REQ :%s" $2)))
       (M.send "CAP END"))
 
     ; FIXME: ...are there servers that close the connection before
     ; 10 seconds? th eones I know close only after 10 seconds
     ; TODO: file that InspirCD bug and remove this code.
-    (when no_ident? (util.sleep 9))
+    (when ?no_ident? (util.sleep 9))
 
     ; send PASS before NICK/USER, as when USER+NICK is sent the
     ; user is registered and our chance to send the password is gone.
-    (when pass (M.send "PASS :%s" pass))
+    (when ?pass (M.send "PASS :%s" ?pass))
 
     (M.send "USER %s localhost * :%s" user name)
     (M.send "NICK :%s" nick))
@@ -125,5 +128,30 @@
     (tset event :msg (string.gsub event.msg "\1" "")))
 
   event)
+
+(lambda M.send [fmt ...]
+  (let [(r e) (lurch.conn_send (fmt:format ...))]
+        (when (not r)
+          (util.panic "error: %s\n" e))))
+
+; ---
+
+(fn M._handlers.CAP [e]
+  (let [subcmd (string.lower (. e :fields 3))
+        msg    (string.match (. e :msg) "(.-)%s*$")] ; remove trailing whitespace
+    (if (= subcmd :ls)
+      ; the server is listing capabilities they support.
+      (-?>> [(msg:gmatch "([^%s]+)%s?")]
+            (F.t_map #(tset M :server :caps $1 false)))
+      (= subcmd :ack) ; the server supports a capability we requested.
+      (tset M :server :caps msg true)
+      (= subcmd :nak) ; the server doesn't support a requested capability.
+      (tset M :server :caps msg false))))
+
+; ---
+
+(lambda M.handle [event]
+  (let [hnd (. M :_handlers (. event :fields 1))]
+    (when hnd (hnd event))))
 
 M
