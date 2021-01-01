@@ -1,3 +1,4 @@
+(local format string.format)
 (local F (require :fun))
 (local util (require :util))
 
@@ -54,17 +55,18 @@
   (if (not rawmsg) (return nil))
 
   (tset event :tags {})
+  (tset event :tagn  0)
   (when (= (rawmsg:match :.) "@")
     ; grab everything until the next space
     (local tags (rawmsg:match "@(.-)%s"))
     (assert tags)
 
     (-?>> [(tags:gmatch "([^;]+);?")]
-          (F.map (lambda [tag]
-            ; the tag may or may not have a value...
+          (F.map (fn [tag]
             (let [key (tag:match "([^=]+)=?")
                   val (or (tag:match "[^=]+=([^;]+);?") "")]
-              (tset event :tags key val)))))
+              (tset event :tags key val)
+              (tset event :tagn (+ event.tagn 1))))))
 
     ; since the first word and only the first word can be
     ; an IRC tag(s), we can just strip off the first word to
@@ -100,10 +102,6 @@
   (tset event :fields
     (-?>> [(data:gmatch "([^%s]+)%s?")] (F.collect #$)))
 
-  ; if the message contains no whitespace, add it to the fields.
-  (when (not (msg:find :%s))
-    (tset event :fields (+ (length event.fields) 1) msg))
-
   (tset event :dest (. event.fields 2))
 
   ; If the field after the typical dest is a channel, use it in
@@ -128,6 +126,36 @@
     (tset event :msg (string.gsub event.msg "\1" "")))
 
   event)
+
+(lambda M.construct [event]
+  (var buf "")
+  (when (> event.tagn 0)
+    (set buf "@")
+    (each [tag_k tag_v (pairs event.tags)]
+      (if (not= buf "@")
+        (set buf (.. buf ";")))
+      (if tag_v
+        (set buf (format "%s%s=%s" buf tag_k tag_v))
+        (set buf (format "%s%s" buf tag_k))))
+    (set buf (.. buf " ")))
+
+  (when event.from
+    (set buf (.. buf ":" event.from " ")))
+
+  (when
+    (string.match (. event.fields 1) "^CTCP_")
+    (let [ctcp (string.gsub (. event.fields 1) "CTCP_" "")]
+      (tset event :fields 1 :PRIVMSG)
+      (if (not= event.msg "")
+        (tset event :msg (format "\1%s %s\1" ctcp event.msg))
+        (tset event :msg (format "\1%s\1" ctcp)))))
+
+  (each [_ field (ipairs event.fields)]
+    (set buf (.. buf field " ")))
+
+  (when event.msg
+    (set buf (.. buf ":" event.msg)))
+  buf)
 
 (lambda M.send [fmt ...]
   (let [(r e) (lurch.conn_send (fmt:format ...))]
