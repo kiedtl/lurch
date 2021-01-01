@@ -161,6 +161,7 @@ main(int argc, char **argv)
 	char *err = errstrs[-(tb_init())];
 	if (err) die(err);
 	tb_status |= TB_ACTIVE;
+	tb_select_input_mode(TB_INPUT_ALT|TB_INPUT_MOUSE);
 	tb_select_output_mode(TB_OUTPUT_256);
 
 	/* run init function */

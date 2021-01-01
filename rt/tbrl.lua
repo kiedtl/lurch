@@ -124,23 +124,24 @@ M.bindings = {
     end
 }
 
-function M.on_event(event, enter_callback)
-    if event.type == tb.TB_EVENT_KEY then
-        M.on_key_event(event, enter_callback, keyseq_callback)
+function M.on_event(event)
+    if event.type == tb.TB_EVENT_KEY
+    or event.type == tb.TB_EVENT_MOUSE then
+        -- The key event could be a key combo or a char.
+        if event.ch ~= 0 and event.mod == 0 then
+            M.insert_at_curs(utf8.char(event.ch))
+        elseif event.ch ~= 0 and event.mod ~= 0 then
+            if M.bindings[event.mod] then
+                (M.bindings[event.mod])(event)
+            end
+        elseif event.key ~= 0 then
+            if M.bindings[event.key] then
+                (M.bindings[event.key])(event)
+            end
+        end
     elseif event.type == tb.TB_EVENT_RESIZE then
         if M.resize_callback then
             M.resize_callback()
-        end
-    end
-end
-
-function M.on_key_event(event, enter_callback)
-    -- The key event could be a key combo or an entered character.
-    if event.ch ~= 0 then
-        M.insert_at_curs(utf8.char(event.ch))
-    elseif event.key ~= 0 then
-        if M.bindings[event.key] then
-            (M.bindings[event.key])(event.key)
         end
     end
 end
