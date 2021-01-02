@@ -193,6 +193,8 @@ local alias_to = function(text)
 end
 
 M.commands = {
+    ["/wc"]      = alias_to("/close"),
+
     ["/shr"]     = alias_to("/shrug"),
     ["/j"]       = alias_to("/join"),
     ["/p"]       = alias_to("/part"),
