@@ -38,6 +38,9 @@
 (lambda M.bold [text]
   (.. (.. M.BOLD text) M.RESET))
 
+(lambda M.remove_nonstandard [text]
+  (text:gsub "\x04[0-9][0-9][0-9]" ""))
+
 (lambda M.remove [text]
   (var text text)
   (set text (text:gsub "[\x02\x1f\x1d\x16\x06\x0f]"  ""))

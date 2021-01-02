@@ -28,6 +28,7 @@ function M.append(dest, event)
         event.tags.time = os.date("!%Y-%m-%dT%H:%M:%S.000Z")
     end
 
+    event.msg = mirc.remove_nonstandard(event.msg)
     util.append(logfile, irc.construct(event) .. "\n")
 end
 
