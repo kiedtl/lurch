@@ -339,9 +339,9 @@ local irchand = {
     ["MODE"] = function(e)
         if not e.dest then e.dest = e.msg end
         if (e.dest):find("#") then
-            if not e.fields[3] then panic(inspect(e)) end
+            local by   = e.nick or e.from
             local mode = util.join(" ", e.fields, 3)
-            prin_irc(0, e.dest, L_NORM, "Mode [%s] by %s", mode, hcol(e.nick))
+            prin_irc(0, e.dest, L_NORM, "Mode [%s] by %s", mode, hcol(by))
             logs.append(e.dest, e)
         elseif e.nick == nick then
             prin_irc(0, MAINBUF, L_NORM, "Mode %s", e.msg)
