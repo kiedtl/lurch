@@ -8,6 +8,7 @@ local inspect = require('inspect')
 local irc       = require('irc')
 local callbacks = require('callbacks')
 local config    = require('config')
+local logs      = require('logs')
 local mirc      = require('mirc')
 local util      = require('util')
 local tui       = require('tui')
@@ -182,18 +183,6 @@ function msg_pings(sender, msg)
     return false
 end
 
-function writelog(time, dest, left, right_fmt, ...)
-    local logdir  = format("%s/logs/%s", __LURCH_EXEDIR, dest)
-    local logfile = format("%s/%s.txt", logdir, os.date("%Y-%m-%d", time))
-
-    lurch.mkdirp(logdir)
-
-    local logentry = format("%s\t%s\t\t%s\n",
-        os.date("%Y-%m-%dT%H:%M:%SZ", time), left, right_fmt:format(...))
-
-    util.append(logfile, mirc.remove(logentry))
-end
-
 -- print a response to an irc message.
 local last_ircevent = nil
 function prin_irc(prio, dest, left, right_fmt, ...)
@@ -239,11 +228,6 @@ function prin_irc(prio, dest, left, right_fmt, ...)
     -- If the user is filtered, skip printing.
     if ignlvl ~= "F" then
         prin(prio, time, dest, left, right)
-    end
-
-    -- don't log batch messages.
-    if not last_ircevent.tags.batch then
-        writelog(time, dest, left, right_fmt, ...)
     end
 end
 
@@ -358,6 +342,7 @@ local irchand = {
             if not e.fields[3] then panic(inspect(e)) end
             local mode = util.join(" ", e.fields, 3)
             prin_irc(0, e.dest, L_NORM, "Mode [%s] by %s", mode, hcol(e.nick))
+            logs.append(e.dest, e)
         elseif e.nick == nick then
             prin_irc(0, MAINBUF, L_NORM, "Mode %s", e.msg)
         else
@@ -377,21 +362,26 @@ local irchand = {
         else
             prin_irc(1, dest, "NOTE", "%s", e.msg)
         end
+
+        logs.append(dest, e)
     end,
     ["TOPIC"] = function(e)
         prin_irc(0, e.dest, L_TOPIC, "%s changed the topic to \"%s\"", hcol(e.nick), e.msg)
+        logs.append(e.dest, e)
     end,
     ["PART"] = function(e)
-        prin_irc(0, e.dest, "<--", "%s has left %s (%s)",
-            hcol(e.nick), e.dest, e.msg)
         local idx = buf_idx_or_add(e.dest)
         bufs[idx].names[e.nick] = false
+        prin_irc(0, e.dest, "<--", "%s has left %s (%s)",
+            hcol(e.nick), e.dest, e.msg)
+        logs.append(e.dest, e)
     end,
     ["KICK"] = function(e)
         local p = 0
         if e.fields == nick then p = 2 end -- if the user was kicked, ping them
         prin_irc(p, e.dest, "<--", "%s has kicked %s (%s)", hcol(e.nick),
             hcol(e.fields[3]), e.msg)
+        logs.append(e.dest, e)
     end,
     ["INVITE"] = function(e)
         -- TODO: auto-join on invite?
@@ -410,6 +400,7 @@ local irchand = {
         if not config.mirc then e.msg = mirc.remove(e.msg) end
 
         prin_irc(prio, e.dest, sndfmt, "%s", e.msg)
+        logs.append(e.dest, e)
     end,
     ["QUIT"] = function(e)
         -- display quit message for all buffers that user has joined,
@@ -417,6 +408,7 @@ local irchand = {
         buf_with_nick(e.nick, function(i, buf)
             prin_irc(0, buf.name, "<--", "%s has quit (%s)", hcol(e.nick), e.msg)
             bufs[i].names[e.nick] = false
+            logs.append(buf.name, e)
         end)
         bufs[1].names[e.nick] = false
     end,
@@ -434,6 +426,7 @@ local irchand = {
         if e.nick == nick then buf_switch(bufidx) end
 
         prin_irc(0, e.dest, "-->", "%s has joined %s", hcol(e.nick), e.dest)
+        logs.append(e.dest, e)
     end,
     ["NICK"] = function(e)
         -- copy across nick information (this preserves nick highlighting across
@@ -445,6 +438,7 @@ local irchand = {
                 prin_irc(0, buf.name, L_NICK, "%s is now known as %s",
                     hcol(e.nick), hcol(e.msg))
                 buf.names[e.nick] = nil; buf.names[e.msg] = true
+                logs.append(buf.name, e)
             end
         end
         tui.set_colors[e.msg]  = tui.set_colors[e.nick]
@@ -1562,6 +1556,9 @@ function rt.init(args)
             lastarg = nil
         end
     end
+
+    -- Get the IRC log directory and create it if necessary.
+    logs.setup(config.host)
 
     -- Set up the TUI. Retrieve the column width, set the prompt,
     -- line format, and statusline functions, and load the highlight
