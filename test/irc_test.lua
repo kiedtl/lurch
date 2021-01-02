@@ -2,11 +2,17 @@ local lunatest = package.loaded.lunatest
 local assert_true = lunatest.assert_true
 local assert_false = lunatest.assert_false
 local assert_equal = lunatest.assert_equal
+local format = string.format
 
 local irc = require("irc")
 local inspect = require("inspect")
 local util = require("util")
 local M = {}
+
+local function _assert_table_eq(a, b)
+    assert_true(util.table_eq(a, b),
+        format("Expected \n\t%s, got \n\t%s", inspect(a), inspect(b)))
+end
 
 function M.test_tags_value()
     local e = irc.parse("@batch=1 :team.tilde.chat NOTICE * :Bye")
@@ -38,6 +44,22 @@ function M.test_multi_tags_mixed_value()
     assert_equal(e.tags.tag3, "dsaf"); assert_equal(e.tags.tag4, "")
 end
 
+function M.test_field_parsing()
+    local cases = {
+        { ":meacha!~meacha@215.67.742.16 PRIVMSG #kisslinux :hey ", { "PRIVMSG", "#kisslinux" }, "hey" },
+        { ":rms!~rms@eewf.erawfots JOIN #team", { "JOIN", "#team" }, "" },
+        { ":team.tilde.chat 314 nsa nak ~nak 2601:100:151:3dbc:96ff:a11:e34b:2f1c * :nak", { "314", "nsa", "nak", "~nak", "2601:100:151:3dbc:96ff:a11:e34b:2f1c", "*" }, "nak" },
+        { ":jihuu!~jihuu@minete.st PRIVMSG #niam :#whoosh", { "PRIVMSG", "#niam" }, "#whoosh" },
+        { ":chet!nikah@tilde.team PRIVMSG #meat :*was", { "PRIVMSG", "#meat" }, "*was" },
+    }
+
+    for _, case in ipairs(cases) do
+        local parsed = irc.parse(case[1])
+        if case[3] then assert_equal(case[3], parsed.msg) end
+        _assert_table_eq(case[2], parsed.fields)
+    end
+end
+
 function M.test_sender_parsing()
     local e1 = irc.parse(":yellor73!gabtish@host.com PRIVMSG #atem :CKUUUUUF")
     assert_equal(e1.from, "yellor73!gabtish@host.com")
@@ -59,15 +81,6 @@ function M.test_ctcp_parsing()
     local e2 = irc.parse(":k!i@e.dtl PRIVMSG #meat :\1VERSION\1")
     assert_equal(e2.fields[1], "CTCP_VERSION")
     assert_equal(e2.msg, "")
-end
-
-function M.test_misc()
-    local e1 = irc.parse(":jihuu!~jihuu@minete.st PRIVMSG #niam :#whoosh")
-    assert_equal(e1.dest, "#niam")
-    assert_equal(e1.msg, "#whoosh")
-    local e2 = irc.parse(":chet!nikah@tilde.team PRIVMSG #meat :*was")
-    assert_equal(e2.dest, "#meat")
-    assert_equal(e2.msg, "*was")
 end
 
 function M.test_construct()

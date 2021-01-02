@@ -96,9 +96,21 @@
 
   ; Grab all the stuff before the next ':' and stuff it into
   ; a table for later. Anything after the ':' is the message.
-  (var (data msg _) (rawmsg:match "([^:]+):?(.*)([%s]*)"))
-  (tset event :msg (or msg ""))
+  ;
+  ; NOTE: the colon must be preceded by a space, as fields are
+  ; allowed to have a ':' in them. (e.g. 314, MODE, etc)
+  ;
+  (var (data msg lastch) (values "" "" ""))
+  (each [i char (F.iter rawmsg)]
+    (if (or (not= char ":") (not= lastch " "))
+      (set data (.. data char))
+      (do
+        (set msg (rawmsg:sub (+ i 1) (length rawmsg)))
+        (lua :break))) ; yuck
+    (set lastch char))
+  (tset event :msg (or (msg:gsub "%s*$" "") ""))
 
+  (assert data "IRC event fields == nil")
   (tset event :fields
     (-?>> [(data:gmatch "([^%s]+)%s?")] (F.collect #$)))
 
