@@ -124,12 +124,12 @@ M.linefmt = function(time_pad, left_pad, time, left, right)
     --      the color.
     -- %s %s%s %s: print the left padding, the left column, and the right
     --      column.
-    return format("\x0f\x0314%s\x0f%s %s%s %s", time, time_pad,
+    return format("\x0f\x0314%s\x0f%s%s%s %s", time, time_pad,
         left_pad, left, right)
 
     -- Uncommenting this will cause the left column to be aligned to the left
     -- instead of to the right.
-    --return format("\x0f\x0314%s\x0f%s %s%s %s", time, time_pad,
+    --return format("\x0f\x0314%s\x0f%s%s%s %s", time, time_pad,
         --left, left_pad, right)
 end
 
