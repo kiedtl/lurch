@@ -42,7 +42,6 @@ const struct luaL_Reg lurch_lib[] = {
 	{ "tb_clear",      api_tb_clear       },
 	{ "tb_writeline",  api_tb_writeline   },
 	{ "tb_setcursor",  api_tb_setcursor   },
-	{ "mkdirp",        api_mkdir_p        },
 	{ "utf8_insert",   api_utf8_insert    },
 	{ "utf8_dwidth",   api_utf8_dwidth    },
 	{ NULL, NULL },
@@ -296,53 +295,6 @@ api_tb_setcursor(lua_State *pL)
 	tb_set_cursor(x, y);
 	tb_status |= TB_MODIFIED;
 	return 0;
-}
-
-/*
- * impl of mkdir -p
- *
- * TEMP: will be removed once litterbox logging is
- * implemented.
- */
-int
-api_mkdir_p(lua_State *pL)
-{
-	char *path   = (char *) luaL_checkstring(pL, 1);
-
-	mode_t mask  = umask(0);
-	mode_t pmode = 0777 & (~mask | 0300);
-	mode_t mode  = 0777 & ~mask;
-
-	char tmp[4096], *p;
-	struct stat st;
-	size_t created = 0;
-
-	if (stat(path, &st) == 0) {
-		if (S_ISDIR(st.st_mode))
-			return 0; /* path exists */
-		LLUA_ERR(pL, "Path exists and is not directory");
-	}
-
-	strncpy((char *) &tmp, path, sizeof(tmp));
-	for (p = tmp + (tmp[0] == '/'); *p; ++p) {
-		if (*p != '/')
-			continue;
-
-		*p = '\0';
-		if (mkdir(tmp, pmode) < 0 && errno != EEXIST) {
-			LLUA_ERR(pL, strerror(errno));
-		}
-
-		*p = '/';
-		++created;
-	}
-
-	if (mkdir(tmp, mode) < 0 && errno != EEXIST) {
-		LLUA_ERR(pL, strerror(errno));
-	}
-
-	lua_pushinteger(pL, (lua_Integer) ++created);
-	return 1;
 }
 
 /* insert some text after <x> utf8 characters */

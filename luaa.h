@@ -13,7 +13,6 @@ int api_tb_size(lua_State *pL);
 int api_tb_clear(lua_State *pL);
 int api_tb_writeline(lua_State *pL);
 int api_tb_setcursor(lua_State *pL);
-int api_mkdir_p(lua_State *pL);
 int api_utf8_insert(lua_State *pL);
 int api_utf8_dwidth(lua_State *pL);
 
