@@ -1494,41 +1494,45 @@ function parsecmd(inp)
 end
 
 local keyseq_handler = {
-    [tb.TB_KEY_CTRL_N] = function(_) parsecmd("/next") end,
-    [tb.TB_KEY_CTRL_P] = function(_) parsecmd("/prev") end,
-    [tb.TB_KEY_PGUP]   = function(_) parsecmd("/scroll +10") end,
-    [tb.TB_KEY_PGDN]   = function(_) parsecmd("/scroll -10") end,
-    [tb.TB_KEY_CTRL_L] = function(_) parsecmd("/redraw") end,
-    [tb.TB_KEY_CTRL_C] = function(_) parsecmd("/quit") end,
-    [tb.TB_KEY_CTRL_B] = function(_) tbrl.insert_at_curs(mirc.BOLD) end,
-    [tb.TB_KEY_CTRL_U] = function(_) tbrl.insert_at_curs(mirc.UNDERLINE) end,
-    [tb.TB_KEY_CTRL_T] = function(_) tbrl.insert_at_curs(mirc.ITALIC) end,
-    [tb.TB_KEY_CTRL_R] = function(_) tbrl.insert_at_curs(mirc.INVERT) end,
-    [tb.TB_KEY_CTRL_O] = function(_) tbrl.insert_at_curs(mirc.RESET) end,
+    keys = {
+        [tb.TB_KEY_CTRL_N] = function(_) parsecmd("/next") end,
+        [tb.TB_KEY_CTRL_P] = function(_) parsecmd("/prev") end,
+        [tb.TB_KEY_PGUP]   = function(_) parsecmd("/scroll +10") end,
+        [tb.TB_KEY_PGDN]   = function(_) parsecmd("/scroll -10") end,
+        [tb.TB_KEY_CTRL_L] = function(_) parsecmd("/redraw") end,
+        [tb.TB_KEY_CTRL_C] = function(_) parsecmd("/quit") end,
+        [tb.TB_KEY_CTRL_B] = function(_) tbrl.insert_at_curs(mirc.BOLD) end,
+        [tb.TB_KEY_CTRL_U] = function(_) tbrl.insert_at_curs(mirc.UNDERLINE) end,
+        [tb.TB_KEY_CTRL_T] = function(_) tbrl.insert_at_curs(mirc.ITALIC) end,
+        [tb.TB_KEY_CTRL_R] = function(_) tbrl.insert_at_curs(mirc.INVERT) end,
+        [tb.TB_KEY_CTRL_O] = function(_) tbrl.insert_at_curs(mirc.RESET) end,
+    },
 
-    [tb.TB_MOD_ALT] = {
-        -- Alt+a
-        [97] = function() parsecmd("/unread") end,
+    mods = {
+        [tb.TB_MOD_ALT] = {
+            -- Alt+a
+            [97] = function() parsecmd("/unread") end,
+        }
     }
 }
 
 function rt.on_keyseq(event)
-    if event.key ~= 0 then
-        if config.keyseqs[event.key] then
-            (config.keyseqs[event.key])(event)
-        elseif keyseq_handler[event.key] then
-            (keyseq_handler[event.key])(event)
-        end
-    elseif event.mod ~= 0 then
+    if event.mod ~= 0 then
         local ev_key = event.ch
         if ev_key == 0 then ev_key = event.key end
 
-        if config.keyseqs[event.mod]
-        and config.keyseqs[event.mod][ev_key] then
-            (config.keyseqs[event.mod][ev_key])(event)
-        elseif keyseq_handler[event.mod]
-        and keyseq_handler[event.mod][ev_key] then
-            (keyseq_handler[event.mod][ev_key])(event)
+        if config.keyseqs.mods[event.mod]
+        and config.keyseqs.mods[event.mod][ev_key] then
+            (config.keyseqs.mods[event.mod][ev_key])(event)
+        elseif modseq_handler.mods[event.mod]
+        and modseq_handler.mods[event.mod][ev_key] then
+            (modseq_handler.mods[event.mod][ev_key])(event)
+        end
+    elseif event.key ~= 0 then
+        if config.keyseqs.keys[event.key] then
+            (config.keyseqs.keys[event.key])(event)
+        elseif keyseq_handler.keys[event.key] then
+            (keyseq_handler.keys[event.key])(event)
         end
     end
 end
@@ -1587,12 +1591,8 @@ function rt.init(args)
     -- This means we'll have to implement common features such as
     -- input history (DONE), completion (TODO), and undo/redo (TODO).
     --
-    for key, _ in pairs(keyseq_handler) do
-        tbrl.bindings[key] = rt.on_keyseq
-    end
-    for key, _ in pairs(config.keyseqs) do
-        tbrl.bindings[key] = rt.on_keyseq
-    end
+    tbrl.bind_keys(config.keyseqs)
+    tbrl.bind_keys(keyseq_handler)
 
     -- Set the functions to be called when <enter> is pressed, or when
     -- the screen is resized.

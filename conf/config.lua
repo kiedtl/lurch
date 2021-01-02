@@ -229,10 +229,20 @@ M.commands = {
 
 -- user-bound keys. See tb.fnl (or tb.lua) for a list of key constants.
 M.keyseqs = {
-    -- A simple example that runs the command '/read all' when Ctrl+Z
-    -- is pressed.
-    --
-    --[tb.TB_KEY_CTRL_Z] = function() parsecmd("/read all") end,
+    keys = {
+        -- A simple example that runs the command '/read all' when Ctrl+Z
+        -- is pressed.
+        --
+        --[tb.TB_KEY_CTRL_Z] = function() parsecmd("/read all") end,
+    },
+
+    mods = {
+        -- Another example: bind Alt+b to '/msg NickServ logout'
+        --
+        --[tb.TB_MOD_ALT] = {
+        --    [98] = function() parsecmd("/msg NickServ logout") end,
+        --}
+    }
 }
 
 -- user-defined handlers for IRC commands (not to be confused with lurch's
