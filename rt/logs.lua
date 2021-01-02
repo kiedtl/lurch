@@ -1,5 +1,6 @@
 local format = string.format
 local irc = require("irc")
+local mirc = require("mirc")
 local util = require("util")
 
 local M = { }
