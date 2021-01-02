@@ -79,7 +79,7 @@
   ; fold message to width, like /bin/fold
   (let [infow (+ leftw timew)
         width (- (or ?rightw M.tty_width) infow)
-        rpadd (string.rep " " (+ infow 4))]
+        rpadd (string.rep " " (+ infow 3))]
     (set right (util.fold right (- width 4)))
     (set right (right:gsub "\n" (.. "%1" rpadd))))
 
