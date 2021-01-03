@@ -133,8 +133,12 @@
   ; prepend CTCP_ to the command to distinguish it from other
   ; non-CTCP commands (e.g. PING vs CTCP PING)
   (when (string.find event.msg "\1[A-Z]+%s?([^\1]*)\1")
-    (tset event :fields 1 (string.match event.msg "\1([A-Z]+)%s?"))
-    (tset event :fields 1 (.. "CTCP_" (. event.fields 1)))
+    (let [ctcptype (string.match event.msg "\1([A-Z]+)%s?")]
+      (if
+        (= (. event :fields 1) :PRIVMSG)
+        (tset event :fields 1 (.. "CTCPQ_" ctcptype))
+        (= (. event :fields 1) :NOTICE)
+        (tset event :fields 1 (.. "CTCPR_" ctcptype))))
     (tset event :msg (string.gsub event.msg "\1[A-Z]+%s?" ""))
     (tset event :msg (string.gsub event.msg "\1" "")))
 
@@ -156,8 +160,8 @@
     (set buf (.. buf ":" event.from " ")))
 
   (when
-    (string.match (. event.fields 1) "^CTCP_")
-    (let [ctcp (string.gsub (. event.fields 1) "CTCP_" "")]
+    (string.match (. event.fields 1) "^CTCP[QR]_")
+    (let [ctcp (string.gsub (. event.fields 1) "CTCP[QR]_" "")]
       (tset event :fields 1 :PRIVMSG)
       (if (not= event.msg "")
         (tset event :msg (format "\1%s %s\1" ctcp event.msg))

@@ -78,12 +78,17 @@ function M.test_sender_parsing()
 end
 
 function M.test_ctcp_parsing()
-    local e1 = irc.parse(":k!i@e.dtl PRIVMSG #meat :\1ACTION cries\1")
-    assert_equal(e1.fields[1], "CTCP_ACTION")
-    assert_equal(e1.msg, "cries")
-    local e2 = irc.parse(":k!i@e.dtl PRIVMSG #meat :\1VERSION\1")
-    assert_equal(e2.fields[1], "CTCP_VERSION")
-    assert_equal(e2.msg, "")
+    local cases = {
+        { ":k!i@e.dtl PRIVMSG #meat :\1ACTION cries\1", { "CTCPQ_ACTION", "#meat" }, "cries" },
+        { ":k!i@e.dtl PRIVMSG nsa :\1VERSION\1", { "CTCPQ_VERSION", "nsa" }, "" },
+        { ":tildebot!nib@tilde.chat NOTICE nsa :\1PING \1", { "CTCPR_PING", "nsa" }, "" },
+    }
+
+    for _, case in ipairs(cases) do
+        local parsed = irc.parse(case[1])
+        if case[3] then assert_equal(case[3], parsed.msg) end
+        _assert_table_eq(case[2], parsed.fields)
+    end
 end
 
 function M.test_construct()
@@ -104,8 +109,8 @@ function M.test_construct()
 
     for _, case in ipairs(cases) do
         local consd = irc.construct(irc.parse(case))
+        _assert_table_eq(irc.parse(consd), irc.parse(case))
         assert_equal(consd, case)
-        assert_true(util.table_eq(irc.parse(consd), irc.parse(case)))
     end
 end
 

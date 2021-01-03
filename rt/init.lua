@@ -836,24 +836,27 @@ local irchand = {
         prin_irc(prio, e.dest, config.leftfmt.action, "%s %s",
             sender_fmt, e.msg)
     end,
-    ["CTCP_VERSION"] = function(e)
+
+    ["CTCPQ_VERSION"] = function(e)
         if config.ctcp_version then
             prin_irc(1, MAINBUF, "CTCP", "%s requested VERSION (reply: %s)", e.nick, config.ctcp_version)
             send("NOTICE %s :\1VERSION %s\1", e.nick, config.ctcp_version)
         end
     end,
-    ["CTCP_SOURCE"] = function(e)
+    ["CTCPQ_SOURCE"] = function(e)
         if config.ctcp_source then
             prin_irc(1, MAINBUF, "CTCP", "%s requested SOURCE (reply: %s)", e.nick, config.ctcp_source)
             send("NOTICE %s :\1SOURCE %s\1", e.nick, config.ctcp_source)
         end
     end,
-    ["CTCP_PING"] = function(e)
+    ["CTCPQ_PING"] = function(e)
         if config.ctcp_ping then
             prin_irc(1, MAINBUF, "CTCP", "PING from %s", e.nick)
-            send("NOTICE %s :%s", e.nick, e.fields[2])
+            send("NOTICE %s :\1PING %s\1", e.nick, e.msg)
         end
     end,
+
+    ["CTCPR_VERSION"] = none, ["CTCPR_PING"] = none, ["CTCPR_SOURCE"] = none,
 
     -- IRCv3 capability negotiation
     ["CAP"] = function(e)
