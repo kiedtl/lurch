@@ -35,6 +35,9 @@
 (tset M :LIGHTCYAN     11)
 (tset M :WHITE         00)
 
+(lambda M.l_grey [text]
+  (.. M.COLOR M.LIGHTGREY text M.RESET))
+
 (lambda M.bold [text]
   (.. (.. M.BOLD text) M.RESET))
 

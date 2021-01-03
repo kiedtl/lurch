@@ -372,8 +372,9 @@ local irchand = {
     ["PART"] = function(e)
         local idx = buf_idx_or_add(e.dest)
         bufs[idx].names[e.nick] = false
-        prin_irc(0, e.dest, "<--", "%s has left %s (%s)",
-            hcol(e.nick), e.dest, e.msg)
+        local userhost = e.user .. "@" .. e.host
+        prin_irc(0, e.dest, "<--", "%s (%s) has left %s (%s)",
+            hcol(e.nick), mirc.l_grey(userhost), hcol(e.dest), e.msg)
         logs.append(e.dest, e)
     end,
     ["KICK"] = function(e)
@@ -405,8 +406,10 @@ local irchand = {
     ["QUIT"] = function(e)
         -- display quit message for all buffers that user has joined,
         -- except the main buffer.
+        local userhost = e.user .. "@" .. e.host
         buf_with_nick(e.nick, function(i, buf)
-            prin_irc(0, buf.name, "<--", "%s has quit (%s)", hcol(e.nick), e.msg)
+            prin_irc(0, buf.name, "<--", "%s (%s) quit (%s)",
+                hcol(e.nick), mirc.l_grey(userhost), e.msg)
             bufs[i].names[e.nick] = false
             logs.append(buf.name, e)
         end)
@@ -425,7 +428,9 @@ local irchand = {
         -- if we are the ones joining, then switch to that buffer.
         if e.nick == nick then buf_switch(bufidx) end
 
-        prin_irc(0, e.dest, "-->", "%s has joined %s", hcol(e.nick), e.dest)
+        local userhost = e.user .. "@" .. e.host
+        prin_irc(0, e.dest, "-->", "%s (%s) joined %s",
+            hcol(e.nick), mirc.l_grey(userhost), hcol(e.dest))
         logs.append(e.dest, e)
     end,
     ["NICK"] = function(e)
@@ -591,12 +596,14 @@ local irchand = {
     -- TOPIC last set by nick!user@host
     ["333"] = function(e)
         -- sometimes, the nick is in the fields
-        local n = (e.fields[4]):gmatch("(.-)!")()
+        local n, userhost = (e.fields[4]):gmatch("(.-)!(.*)")()
         if n then
-            prin_irc(0, e.dest, L_NORM, "Topic last set by %s (%s)", hcol(n), e.fields[4])
+            prin_irc(0, e.dest, L_NORM, "Topic last set by %s (%s)",
+                hcol(n), mirc.l_grey(e.fields[4]))
         else
             local datetime = os.date("%Y-%m-%d %H:%M:%S", tonumber(e.msg))
-            prin_irc(0, e.dest, L_NORM, "Topic last set by %s on %s", hcol(e.fields[4]), datetime)
+            prin_irc(0, e.dest, L_NORM, "Topic last set by %s on %s",
+                hcol(e.fields[4]), datetime)
         end
     end,
 
