@@ -186,9 +186,9 @@ main(int argc, char **argv)
 	 * loop continues, and the on_disconnect() handler doesn't
 	 * get called).
 	 */
-	struct timeval ttimeout = { 0, 0 };
-	struct timeval tpresent = { 0, 0 };
-	struct timeval tcurrent = { 0, 0 };
+	struct timeval ttimeout = { 5, 500 };
+	struct timeval tpresent = { 0,   0 };
+	struct timeval tcurrent = { 0,   0 };
 
 	assert(gettimeofday(&tpresent, NULL) == 0);
 	tb_present();
