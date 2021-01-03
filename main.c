@@ -210,6 +210,9 @@ main(int argc, char **argv)
 	while ("pigs fly") {
 		tb_try_present(&tcurrent, &tpresent);
 
+		ttimeout.tv_sec  =   5;
+		ttimeout.tv_usec = 500;
+
 		FD_ZERO(&rd);
 		FD_SET(STDIN_FILENO, &rd);
 		if (!reconn) FD_SET(conn_fd, &rd);
