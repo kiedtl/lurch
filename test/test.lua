@@ -10,5 +10,6 @@ local lunatest = require("lunatest")
 lunatest.suite("irc_test")
 lunatest.suite("fun_test")
 lunatest.suite("util_test")
+lunatest.suite("mirc_test")
 
 lunatest.run()
