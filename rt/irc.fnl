@@ -9,7 +9,7 @@
 (tset M :server {})
 (tset M :server :connected (os.time))  ; last time we tried to connect
 (tset M :server :caps {:all {}         ; IRCv3 caps the server ack'd/nak'd
-                       :requested {}}) ; IRCv3 caps we'd requested
+                       :requested []}) ; IRCv3 caps we'd requested
 
 (lambda M.connect [host port tls nick user name ?pass ?caps ?no_ident?]
   (tset M :server :connected (os.time))
@@ -19,6 +19,7 @@
     ; list and request IRCv3 capabilities. The responses are ignored
     ; for now; they will be processed later on.
     (when ?caps
+      (tset M :server :caps :requested ?caps)
       (M.send "CAP LS")
       (-?>> [(F.iter ?caps)]
             (F.map #(M.send "CAP REQ :%s" $2)))
