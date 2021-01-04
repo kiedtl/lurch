@@ -446,7 +446,8 @@ local irchand = {
         -- have that user
         for i = 2, #bufs do
             local buf = bufs[i]
-            if buf.names[e.nick] or e.nick == nick then
+            if buf.names[e.nick]
+            or buf.name == e.nick or e.nick == nick then
                 prin_irc(0, buf.name, L_NICK, "%s is now known as %s",
                     hncol(e.nick), hncol(e.msg))
                 buf.names[e.nick] = nil; buf.names[e.msg] = true
