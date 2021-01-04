@@ -1,3 +1,4 @@
+local irc    = require('irc')
 local mirc   = require('mirc')
 local tui    = require('tui')
 local tb     = require('tb')
@@ -165,7 +166,13 @@ M.leftfmt = {
             sndfmt = sndfmt .. format("\x0f\x0314+\x0f")
         end
 
-        sndfmt = tui.highlight(sndfmt, sender)
+        -- "Normalise" nicknames by remove trailing "|<client>",
+        -- underscores, or the "matrix marker" (i.e. "[m]"). This
+        -- ensures that "solanum|irssi", "solanum|weechat", "solanum_",
+        -- "solanum[m]", and "solanum" appear the same.
+        local nrm_sender = irc.normalise_nick(sender)
+
+        sndfmt = tui.highlight(sndfmt, nrm_sender)
         if pings then sndfmt = "\x16" .. sndfmt .. "\x0f" end
         sndfmt = "<" .. sndfmt .. ">"
 

@@ -38,6 +38,10 @@ nick        = config.nick    -- The current nickname
 cbuf        = nil            -- The current buffer
 bufs        = {}             -- List of all opened buffers
 
+function hncol(_nick)
+    return tui.highlight(_nick, irc.normalise_nick(_nick))
+end
+
 -- a simple wrapper around irc.connect.
 function connect()
     local user  = config.user or os.getenv("USER")
@@ -308,9 +312,9 @@ local irchand = {
         local msg
         local account = e.fields[2] or e.msg
         if not account then
-            msg = format("%s has unidentified", hcol(e.nick))
+            msg = format("%s has unidentified", hncol(e.nick))
         else
-            msg = format("%s has identified as %s", hcol(e.nick), account)
+            msg = format("%s has identified as %s", hncol(e.nick), account)
         end
 
         buf_with_nick(e.nick, function(_, buf)
@@ -327,9 +331,9 @@ local irchand = {
         -- come back, set the message to "<nick> is back (gone <time>)"
         local msg
         if not e.msg or e.msg == "" then
-            msg = format("%s is back", hcol(e.nick))
+            msg = format("%s is back", hncol(e.nick))
         else
-            msg = format("%s is away: %s", hcol(e.nick), e.msg)
+            msg = format("%s is away: %s", hncol(e.nick), e.msg)
         end
 
         buf_with_nick(e.nick, function(_, buf)
@@ -344,12 +348,12 @@ local irchand = {
             e.fields[#e.fields + 1] = e.msg
             local by   = e.nick or e.from
             local mode = util.join(" ", e.fields, 3)
-            prin_irc(0, e.dest, L_NORM, "Mode [%s] by %s", mode, hcol(by))
+            prin_irc(0, e.dest, L_NORM, "Mode [%s] by %s", mode, hncol(by))
         elseif e.nick == nick then
             prin_irc(0, MAINBUF, L_NORM, "Mode %s", e.msg)
         else
             prin_irc(0, MAINBUF, L_NORM, "Mode %s by %s", e.msg,
-                hcol(e.nick or e.from))
+                hncol(e.nick or e.from))
         end
     end,
     ["NOTICE"] = function(e)
@@ -360,7 +364,7 @@ local irchand = {
         if dest == "*" or not dest then dest = MAINBUF end
 
         if e.nick then
-            prin_irc(1, dest, "NOTE", "<%s> %s", hcol(e.nick), e.msg)
+            prin_irc(1, dest, "NOTE", "<%s> %s", hncol(e.nick), e.msg)
         else
             prin_irc(1, dest, "NOTE", "%s", e.msg)
         end
@@ -368,7 +372,8 @@ local irchand = {
         logs.append(dest, e)
     end,
     ["TOPIC"] = function(e)
-        prin_irc(0, e.dest, L_TOPIC, "%s changed the topic to \"%s\"", hcol(e.nick), e.msg)
+        prin_irc(0, e.dest, L_TOPIC, "%s changed the topic to \"%s\"",
+            hncol(e.nick), e.msg)
         logs.append(e.dest, e)
     end,
     ["PART"] = function(e)
@@ -376,20 +381,20 @@ local irchand = {
         bufs[idx].names[e.nick] = false
         local userhost = e.user .. "@" .. e.host
         prin_irc(0, e.dest, "<--", "%s (%s) has left %s (%s)",
-            hcol(e.nick), mirc.l_grey(userhost), hcol(e.dest), e.msg)
+            hncol(e.nick), mirc.l_grey(userhost), hcol(e.dest), e.msg)
         logs.append(e.dest, e)
     end,
     ["KICK"] = function(e)
         local p = 0
         if e.fields == nick then p = 2 end -- if the user was kicked, ping them
-        prin_irc(p, e.dest, "<--", "%s has kicked %s (%s)", hcol(e.nick),
-            hcol(e.fields[3]), e.msg)
+        prin_irc(p, e.dest, "<--", "%s has kicked %s (%s)", hncol(e.nick),
+            hncol(e.fields[3]), e.msg)
         logs.append(e.dest, e)
     end,
     ["INVITE"] = function(e)
         -- TODO: auto-join on invite?
         prin_irc(2, MAINBUF, L_NORM, "%s invited you to %s",
-            hcol(e.nick), hcol(e.fields[3] or e.msg))
+            hncol(e.nick), hcol(e.fields[3] or e.msg))
     end,
     ["PRIVMSG"] = function(e)
         local pings = msg_pings(rsender, e.msg)
@@ -411,7 +416,7 @@ local irchand = {
         local userhost = e.user .. "@" .. e.host
         buf_with_nick(e.nick, function(i, buf)
             prin_irc(0, buf.name, "<--", "%s (%s) quit (%s)",
-                hcol(e.nick), mirc.l_grey(userhost), e.msg)
+                hncol(e.nick), mirc.l_grey(userhost), e.msg)
             bufs[i].names[e.nick] = false
             logs.append(buf.name, e)
         end)
@@ -432,7 +437,7 @@ local irchand = {
 
         local userhost = e.user .. "@" .. e.host
         prin_irc(0, e.dest, "-->", "%s (%s) joined %s",
-            hcol(e.nick), mirc.l_grey(userhost), hcol(e.dest))
+            hncol(e.nick), mirc.l_grey(userhost), hcol(e.dest))
         logs.append(e.dest, e)
     end,
     ["NICK"] = function(e)
@@ -443,7 +448,7 @@ local irchand = {
             local buf = bufs[i]
             if buf.names[e.nick] or e.nick == nick then
                 prin_irc(0, buf.name, L_NICK, "%s is now known as %s",
-                    hcol(e.nick), hcol(e.msg))
+                    hncol(e.nick), hncol(e.msg))
                 buf.names[e.nick] = nil; buf.names[e.msg] = true
                 logs.append(buf.name, e)
             end
@@ -492,14 +497,14 @@ local irchand = {
 
     -- WHOIS: <nick> has TLS cert fingerprint of sdflsd453lkd8
     ["276"] = function(e)
-        prin_irc(0, buf_cur(), "WHOIS", "[%s] %s", hcol(e.fields[3]), e.msg)
+        prin_irc(0, buf_cur(), "WHOIS", "[%s] %s", hncol(e.fields[3]), e.msg)
     end,
 
     -- AWAY: otinuikaj10 is away: "Away message"
     -- Sent when you message a user that is marked as being away.
     ["301"] = function(e)
         prin_irc(1, e.fields[3], L_AWAY, "%s is away: %s",
-            hcol(e.fields[3]), e.msg)
+            hncol(e.fields[3]), e.msg)
     end,
 
     -- AWAY: You are no longer marked as being away
@@ -518,20 +523,20 @@ local irchand = {
 
     -- WHOIS: <nick> is a registered nick
     ["307"] = function(e)
-        prin_irc(0, buf_cur(), "WHOIS", "[%s] %s", hcol(e.fields[3]), e.msg)
+        prin_irc(0, buf_cur(), "WHOIS", "[%s] %s", hncol(e.fields[3]), e.msg)
     end,
 
     -- WHOIS: RPL_WHOISUSER (response to /whois)
     -- <nick> <user> <host> * :realname
     ["311"] = function(e)
-        prin_irc(0, buf_cur(), "WHOIS", "[%s] (%s!%s@%s): %s", hcol(e.fields[3]),
+        prin_irc(0, buf_cur(), "WHOIS", "[%s] (%s!%s@%s): %s", hncol(e.fields[3]),
             e.fields[3], e.fields[4], e.fields[5], e.msg)
     end,
 
     -- WHOIS: RPL_WHOISSERVER (response to /whois)
     -- <nick> <server> :serverinfo
     ["312"] = function(e)
-        prin_irc(0, buf_cur(), "WHOIS", "[%s] %s (%s)", hcol(e.fields[3]), e.fields[4], e.msg)
+        prin_irc(0, buf_cur(), "WHOIS", "[%s] %s (%s)", hncol(e.fields[3]), e.fields[4], e.msg)
     end,
 
     -- WHOWAS: RPL_WHOWASUSER
@@ -539,7 +544,7 @@ local irchand = {
     ["314"] = function(e)
         local nic = e.fields[3]
         prin_irc(0, buf_cur(), "WHOWAS", "[%s] (%s!%s@%s): %s",
-            hcol(nic), nic, e.fields[4], e.fields[5], e.msg)
+            hncol(nic), nic, e.fields[4], e.fields[5], e.msg)
     end,
 
     -- WHO: RPL_ENDOFWHO
@@ -554,30 +559,30 @@ local irchand = {
         -- by 352 and the nick printed here won't always match.
         --
         --prin_irc(0, buf_cur(), "WHO", "[%s] End of WHO info.",
-        --    hcol(e.fields[3]))
+        --    hncol(e.fields[3]))
     end,
 
     -- WHOIS: <nick> has been idle for 45345 seconds, and has been online
     -- since 4534534534
     ["317"] = function(e)
         prin_irc(0, buf_cur(), "WHOIS", "[%s] has been idle for %s",
-            hcol(e.fields[3]), util.fmt_duration(tonumber(e.fields[4])))
+            hncol(e.fields[3]), util.fmt_duration(tonumber(e.fields[4])))
 
         -- not all servers send the "has been online" bit...
         if e.fields[5] then
             prin_irc(0, buf_cur(), "WHOIS", "[%s] has been online since %s",
-                hcol(e.fields[3]), os.date("%Y-%m-%d %H:%M", e.fields[5]))
+                hncol(e.fields[3]), os.date("%Y-%m-%d %H:%M", e.fields[5]))
         end
     end,
 
     -- End of WHOIS
     ["318"] = function(e)
-        prin_irc(0, buf_cur(), "WHOIS", "[%s] End of WHOIS info.", hcol(e.fields[3]))
+        prin_irc(0, buf_cur(), "WHOIS", "[%s] End of WHOIS info.", hncol(e.fields[3]))
     end,
 
     -- WHOIS: <user> has joined #chan1, #chan2, #chan3
     ["319"] = function(e)
-        prin_irc(0, buf_cur(), "WHOIS", "[%s] has joined %s", hcol(e.fields[3]), e.msg)
+        prin_irc(0, buf_cur(), "WHOIS", "[%s] has joined %s", hncol(e.fields[3]), e.msg)
     end,
 
     -- URL for channel
@@ -585,7 +590,7 @@ local irchand = {
 
     -- WHOIS: <nick> is logged in as <user> (response to /whois)
     ["330"] = function(e)
-        prin_irc(0, buf_cur(), "WHOIS", "[%s] is logged in as %s", hcol(e.fields[3]),
+        prin_irc(0, buf_cur(), "WHOIS", "[%s] is logged in as %s", hncol(e.fields[3]),
             hcol(e.fields[4]))
     end,
 
@@ -601,24 +606,25 @@ local irchand = {
         local n, userhost = (e.fields[4]):gmatch("(.-)!(.*)")()
         if n then
             prin_irc(0, e.dest, L_NORM, "Topic last set by %s (%s)",
-                hcol(n), mirc.l_grey(e.fields[4]))
+                hncol(n), mirc.l_grey(e.fields[4]))
         else
             local datetime = os.date("%Y-%m-%d %H:%M:%S", tonumber(e.msg))
             prin_irc(0, e.dest, L_NORM, "Topic last set by %s on %s",
-                hcol(e.fields[4]), datetime)
+                hncol(e.fields[4]), datetime)
         end
     end,
 
     -- invited <nick> to <chan> (response to /invite)
     ["341"] = function(e)
-        prin_irc(0, e.msg, L_NORM, "Invited %s to %s", hcol(e.fields[3]), e.msg)
+        prin_irc(0, e.msg, L_NORM, "Invited %s to %s",
+            hncol(e.fields[3]), hcol(e.msg))
     end,
 
     -- WHO: RPL_WHOREPLY (WHO information)
     -- <channel> <user> <host> <server> <nick> <H|G>[*][@|+] :<hopcount> <real>
     ["352"] = function(e)
         prin_irc(0, buf_cur(), "WHO", "[%s] is %s (%s!%s@%s): (%s) %s",
-            hcol(e.fields[7]), mirc.bold(e.fields[4]), e.fields[7], e.fields[4],
+            hncol(e.fields[7]), mirc.bold(e.fields[4]), e.fields[7], e.fields[4],
             e.fields[5], hcol(e.fields[3]), e.msg)
     end,
 
@@ -636,7 +642,7 @@ local irchand = {
                 _nick = _nick:gsub(access, "")
             end
 
-            nicklist = format("%s%s%s ", nicklist, access, hcol(_nick))
+            nicklist = format("%s%s%s ", nicklist, access, hncol(_nick))
 
             -- TODO: update access with mode changes
             -- TODO: show access in PRIVMSGs
@@ -705,7 +711,7 @@ local irchand = {
     -- <nick> :End of WHOWAS
     ["369"] = function(e)
         prin_irc(0, buf_cur(), "WHOWAS", "[%s] End of WHO info.",
-            hcol(e.fields[3]))
+            hncol(e.fields[3]))
     end,
 
     -- MOTD message
@@ -731,12 +737,12 @@ local irchand = {
 
     -- WHOIS: <nick> is connecting from <host>
     ["378"] = function(e)
-        prin_irc(0, buf_cur(), "WHOIS", "[%s] %s", hcol(e.fields[3]), e.msg)
+        prin_irc(0, buf_cur(), "WHOIS", "[%s] %s", hncol(e.fields[3]), e.msg)
     end,
 
     -- WHOIS: <nick> is using modes +abcd
     ["379"] = function(e)
-        prin_irc(0, buf_cur(), "WHOIS", "[%s] %s", hcol(e.fields[3]), e.msg)
+        prin_irc(0, buf_cur(), "WHOIS", "[%s] %s", hncol(e.fields[3]), e.msg)
     end,
 
     -- "xyz" is now your hidden host (set by foo)
@@ -750,7 +756,7 @@ local irchand = {
     -- Nickname is reserved (being held for registered user)
     ["432"] = function(e)
         prin_irc(1, buf_cur(), L_ERR, "Nickname %s is reserved: %s",
-            hcol(e.fields[3]), e.msg)
+            hncol(e.fields[3]), e.msg)
     end,
 
     -- Nickname is already in use
@@ -758,15 +764,15 @@ local irchand = {
         assert(e.fields[3] == nick)
         local newnick = e.fields[3] .. "_" -- sprout a tail
         prin_irc(2, MAINBUF, L_NICK, "Nickname %s already in use; using %s",
-            hcol(e.fields[3]), hcol(newnick))
+            hncol(e.fields[3]), hncol(newnick))
         send("NICK %s", newnick)
         nick = newnick
     end,
 
     -- 441: <User> is not on that channel
     ["441"] = function(e)
-        prin_irc(0, e.fields[4], L_ERR, "%s is not in %s", hcol(e.fields[3]),
-            e.fields[4])
+        prin_irc(0, e.fields[4], L_ERR, "%s is not in %s", hncol(e.fields[3]),
+            hcol(e.fields[4]))
     end,
 
     -- 442: You're not on that channel
@@ -774,8 +780,8 @@ local irchand = {
 
     -- <nick> is already in channel (response to /invite)
     ["443"] = function(e)
-        prin_irc(0, e.fields[4], L_ERR, "%s is already in %s", hcol(e.fields[3]),
-            e.fields[4])
+        prin_irc(0, e.fields[4], L_ERR, "%s is already in %s", hncol(e.fields[3]),
+            hcol(e.fields[4]))
     end,
 
     -- 464: Incorrect server password
@@ -793,7 +799,7 @@ local irchand = {
     -- WHOIS: <nick> is using a secure connection (response to /whois)
     ["671"] = function(e)
         prin_irc(0, buf_cur(), "WHOIS", "[%s] uses a secure connection",
-            hcol(e.fields[3]))
+            hncol(e.fields[3]))
     end,
 
     -- 716: <nick> has mode +g (server-side ignore)
@@ -802,16 +808,16 @@ local irchand = {
     --      to begin the process of clogging your IRC logs.
     ["716"] = function(e)
         prin_irc(1, e.fields[3], L_ERR, "%s has mode +g (server-side ignore).",
-            hcol(e.fields[3]))
+            hncol(e.fields[3]))
     end,
     ["717"] = function(e)
         prin_irc(1, e.fields[3], L_ERR,
-            "%s has been informed that you messaged them.", hcol(e.fields[3]))
+            "%s has been informed that you messaged them.", hncol(e.fields[3]))
     end,
     ["718"] = function(e)
         prin_irc(1, e.fields[3], L_ERR,
             "%s (%s) has messaged you, but you have mode +g set. Run /accept +%s to add them to your allow list.",
-            hcol(e.fields[3]), e.fields[4], e.fields[3])
+            hcol(e.fields[3]), mirc.l_grey(e.fields[4]), e.fields[3])
     end,
 
     -- 900: You are now logged in as xyz
@@ -821,7 +827,7 @@ local irchand = {
 
     -- CTCP stuff.
     ["CTCP_ACTION"] = function(e)
-        local sender_fmt = hcol(e.nick or nick)
+        local sender_fmt = hncol(e.nick or nick)
         local prio = 1
 
         if msg_pings(e.nick or nick, e.msg) then

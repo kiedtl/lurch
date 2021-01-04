@@ -114,4 +114,24 @@ function M.test_construct()
     end
 end
 
+function M.test_normalise_nick()
+    local cases = {
+        { "Nav|C",                     "Nav|C" },
+        { "|",                             "|" },
+        { "||",                           "||" },
+        { "inebriate|lurch",       "inebriate" },
+        { "inebriate|lurch_",      "inebriate" },
+        { "inebriate_",            "inebriate" },
+        { "inebriate__",           "inebriate" },
+        { "_",                             "_" },
+        { "_DEFAULT_SOURCE", "_DEFAULT_SOURCE" },
+        { "cpcpcm[m]",                "cpcpcm" },
+        { "[m][m]",                      "[m]" }
+    }
+
+    for _, case in ipairs(cases) do
+        assert_equal(case[2], irc.normalise_nick(case[1]))
+    end
+end
+
 return M

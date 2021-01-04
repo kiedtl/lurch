@@ -1,5 +1,6 @@
 local mirc   = require('mirc')
 local config = require('config')
+local irc    = require('irc')
 local tui    = require('tui')
 local util   = require('util')
 local format = string.format
@@ -75,7 +76,7 @@ function M.fancy_promptf(inp, cursor)
     local prompt
 
     -- highlighted nickname.
-    local hnick = tui.highlight(nick)
+    local hnick = tui.highlight(nick, irc.normalise_nick(nick))
 
     if inp:find("/me ") == 1 and cursor >= 4 then
         prompt = format("%s %s ", config.leftfmt.action, hnick)

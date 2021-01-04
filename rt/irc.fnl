@@ -11,6 +11,22 @@
 (tset M :server :caps {:all {}         ; IRCv3 caps the server ack'd/nak'd
                        :requested []}) ; IRCv3 caps we'd requested
 
+; Strip "|<client>", trailing underscores, and the Matrix "marker"
+; from nicknames
+;
+; "hkxumk|weechat" => "hkxumk"; "josh_" => "josh"; "jayd[m]" => "jay"
+;
+; (XXX: This isn't foolproof: "__attribute__" => "__attribute" :/)
+(lambda M.normalise_nick [nick]
+  (var nick nick)
+  (if (nick:match "[^|]+|..+$")
+    (set nick (nick:gsub "|.+$" "")))
+  (if (nick:match "[^_]+_+$")
+    (set nick (nick:gsub "_+$" "")))
+  (if (nick:match ".-%[m%]$")
+    (set nick (nick:gsub "%[m%]$" "")))
+  nick)
+
 (lambda M.connect [host port tls nick user name ?pass ?caps ?no_ident?]
   (tset M :server :connected (os.time))
   (var (success err) (lurch.conn_init host port tls))
