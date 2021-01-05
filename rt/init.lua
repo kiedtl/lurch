@@ -402,8 +402,8 @@ local irchand = {
             hncol(e.nick), hcol(e.fields[3] or e.msg))
     end,
     ["PRIVMSG"] = function(e)
-        local pings = msg_pings(rsender, e.msg)
         local sender = e.nick or e.from
+        local pings = msg_pings(sender, e.msg)
         local sndfmt = config.leftfmt.message(sender, pings)
 
         local prio = 1
