@@ -849,19 +849,23 @@ local irchand = {
     end,
 
     ["CTCPQ_VERSION"] = function(e)
-        if config.ctcp_version then
-            prin_irc(1, MAINBUF, "CTCP", "%s requested VERSION (reply: %s)", e.nick, config.ctcp_version)
-            send("NOTICE %s :\1VERSION %s\1", e.nick, config.ctcp_version)
+        local vers = config.ctcp_version(e)
+        if vers then
+            prin_irc(1, MAINBUF, "CTCP", "%s requested VERSION (reply: %s)",
+                e.nick, vers)
+            send("NOTICE %s :\1VERSION %s\1", e.nick, vers)
         end
     end,
     ["CTCPQ_SOURCE"] = function(e)
-        if config.ctcp_source then
-            prin_irc(1, MAINBUF, "CTCP", "%s requested SOURCE (reply: %s)", e.nick, config.ctcp_source)
-            send("NOTICE %s :\1SOURCE %s\1", e.nick, config.ctcp_source)
+        local src = config.ctcp_source(e)
+        if src then
+            prin_irc(1, MAINBUF, "CTCP", "%s requested SOURCE (reply: %s)",
+                e.nick, src)
+            send("NOTICE %s :\1SOURCE %s\1", e.nick, src)
         end
     end,
     ["CTCPQ_PING"] = function(e)
-        if config.ctcp_ping then
+        if config.ctcp_ping(e) then
             prin_irc(1, MAINBUF, "CTCP", "PING from %s", e.nick)
             send("NOTICE %s :\1PING %s\1", e.nick, e.msg)
         end

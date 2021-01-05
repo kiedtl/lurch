@@ -61,12 +61,19 @@ end
 
 -- Default replies for CTCP queries from users/server.
 --
--- Set these to nil to not respond to CTCP messages. Note that doing so
+-- Return nil to not respond to CTCP messages. Note that doing so
 -- may cause issues if the network you're connected to *requires* users
 -- to respond to, say, VERSION requests from the server.
-M.ctcp_version = "lurch (beta)"
-M.ctcp_source  = "https://github.com/lptstr/lurch"
-M.ctcp_ping    = true
+--
+M.ctcp_source  = function(_event) return "https://github.com/lptstr/lurch" end
+M.ctcp_version = function(_event) return "lurch (https://github.com/lptstr/lurch)" end
+M.ctcp_ping    = function(_event)
+    if _event.nick == "spammer" then
+        return nil
+    else
+        return true
+    end
+end
 
 -- if set to false, will simply filter out mirc colors.
 M.mirc = true
