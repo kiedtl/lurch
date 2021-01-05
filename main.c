@@ -143,10 +143,9 @@ main(int argc, char **argv)
 	);
 
 	/* setup lurch api functions */
-	lua_newtable(L);
-	llua_setfuncs(L, (luaL_Reg *) &lurch_lib);
-	lua_pushvalue(L, -1);
-	lua_setglobal(L, "lurch");
+	luaL_requiref(L, "lurchconn", llua_openlib, false);
+	luaL_requiref(L, "termbox", llua_openlib, false);
+	luaL_requiref(L, "utf8utils", llua_openlib, false);
 
 	!luaL_dofile(L, "./rt/init.lua") || llua_panic(L);
 	lua_setglobal(L, "rt");
@@ -273,7 +272,7 @@ main(int argc, char **argv)
 
 				/* don't push event.w and event.y; the Lua
 				 * code can easily get those values by running
-				 * lurch.tb_size() */
+				 * termbox.size() */
 				lua_settop(L, 0);
 				lua_newtable(L);
 				SETTABLE_INT(L, "type",   ev.type, -3);

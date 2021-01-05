@@ -1,8 +1,10 @@
-(local inspect  (require :inspect))
-(local F        (require :fun))
-(local mirc     (require :mirc))
-(local tb       (require :tb))
-(local util     (require :util))
+(local inspect   (require :inspect))
+(local F         (require :fun))
+(local mirc      (require :mirc))
+(local tb        (require :tb))
+(local termbox   (require :termbox))
+(local utf8utils (require :utf8utils))
+(local util      (require :util))
 
 (local format   string.format)
 (local assert_t util.assert_t)
@@ -18,7 +20,7 @@
 (tset M :tty_width         24)
 
 (lambda M.refresh []
-  (let [(y x) (lurch.tb_size)]
+  (let [(y x) (termbox.size)]
     (tset M :tty_height y)
     (tset M :tty_width  x)))
 
@@ -62,8 +64,8 @@
   ; if the user has scrolled up, don't draw the input field.
   (if (not= (. bufs cbuf :scroll) 0)
     (do
-      (lurch.tb_writeline (- M.tty_height 1) "\x16\x02 -- more -- \x0f")
-      (lurch.tb_setcursor tb.TB_HIDE_CURSOR tb.TB_HIDE_CURSOR))
+      (termbox.writeline (- M.tty_height 1) "\x16\x02 -- more -- \x0f")
+      (termbox.setcursor tb.TB_HIDE_CURSOR tb.TB_HIDE_CURSOR))
     (M.prompt_func inp cursor)))
 
 (lambda M.statusline []
@@ -91,8 +93,8 @@
   ; Generate a cursor right sequence based on the length of
   ; the above "raw" word. The nick column is a fixed width
   ; of LEFT_PADDING so it's simply 'LEFT_PADDING - word_len'
-  (var left_pad (- (+ leftw 1) (lurch.utf8_dwidth raw)))
-  (var time_pad (- (+ timew 1) (lurch.utf8_dwidth timestr)))
+  (var left_pad (- (+ leftw 1) (utf8utils.dwidth raw)))
+  (var time_pad (- (+ timew 1) (utf8utils.dwidth timestr)))
   (when (> (length raw)     leftw) (set left_pad 0))
   (when (> (length timestr) timew) (set time_pad 0))
 
@@ -129,7 +131,7 @@
                               timew leftw ?rightw))
 
       ; Reset colors/attributes before drawing the line.
-      (lurch.tb_writeline line mirc.RESET)
+      (termbox.writeline line mirc.RESET)
 
       ; Get the lines in the message, and move the cursor up.
       (var msglines (-?>> [(out:gmatch "([^\n]+)\n?")] (F.collect #$)))
@@ -140,7 +142,7 @@
             (F.map #(do
                       (set line (+ line 1))
                       (when (> line linestart)
-                        (lurch.tb_writeline line $2)))))
+                        (termbox.writeline line $2)))))
 
       ; Move the cursor back up to prepare to draw the next message.
       (set line (- line (length msglines))))
@@ -154,7 +156,7 @@
 
 (lambda M.redraw [inbuf incurs timew leftw ?rightw]
     (M.refresh)
-    (lurch.tb_clear)
+    (termbox.clear)
     (M.statusline)
     (M.buffer_text timew leftw ?rightw)
     (M.prompt inbuf incurs))

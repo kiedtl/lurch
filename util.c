@@ -21,11 +21,6 @@ extern size_t TB_ACTIVE;
 _Noreturn void __attribute__((format(printf, 1, 2)))
 die(const char *fmt, ...)
 {
-	if ((tb_status & TB_ACTIVE) == TB_ACTIVE) {
-		tb_shutdown();
-		tb_status ^= TB_ACTIVE;
-	}
-
 	fprintf(stderr, "fatal: ");
 
 	va_list ap;
@@ -75,11 +70,6 @@ format(const char *fmt, ...)
 void
 cleanup(void)
 {
-	if ((tb_status & TB_ACTIVE) == TB_ACTIVE) {
-		tb_shutdown();
-		tb_status ^= TB_ACTIVE;
-	}
-
 	if (tls_active && client) {
 		tls_close(client);
 		tls_free(client);
@@ -88,11 +78,8 @@ cleanup(void)
 		conn_fd = 0;
 	}
 
-	/*
-	 * Don't call lua_close, as this function may be
-	 * called by lua itself.
-	 *
-	 * Anyway, the memory will be freed when lurch
-	 * exits.
-	 */
+	if ((tb_status & TB_ACTIVE) == TB_ACTIVE) {
+		tb_shutdown();
+		tb_status ^= TB_ACTIVE;
+	}
 }

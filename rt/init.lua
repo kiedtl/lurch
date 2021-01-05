@@ -13,7 +13,9 @@ local mirc      = require('mirc')
 local util      = require('util')
 local tui       = require('tui')
 local tb        = require('tb')
+local termbox   = require('termbox')
 local tbrl      = require('tbrl')
+local lurchconn = require('lurchconn')
 
 local printf    = util.printf
 local eprintf   = util.eprintf
@@ -61,7 +63,7 @@ end
 
 -- a simple wrapper around irc.send.
 function send(fmt, ...)
-    if not lurch.conn_active() then
+    if not lurchconn.is_active() then
         return
     end
 
@@ -1269,7 +1271,8 @@ cmdhand = {
             end
 
             send("QUIT :%s", msg)
-            lurch.cleanup()
+            lurchconn.close()
+            termbox.shutdown()
             eprintf("[lurch exited]\n")
             os.exit(0)
         end
@@ -1692,7 +1695,8 @@ function rt.on_signal(sig)
     local handler = sighand[sig] or sighand[0]
     if (handler)() then
         send("QUIT :%s", quitmsg)
-        lurch.cleanup()
+        lurchconn.close()
+        termbox.shutdown()
         eprintf("[lurch exited]\n")
         os.exit(0)
     end

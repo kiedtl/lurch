@@ -1,8 +1,11 @@
-local mirc   = require('mirc')
-local config = require('config')
-local irc    = require('irc')
-local tui    = require('tui')
-local util   = require('util')
+local mirc      = require('mirc')
+local config    = require('config')
+local irc       = require('irc')
+local tui       = require('tui')
+local util      = require('util')
+local lurchconn = require('lurchconn')
+local utf8utils = require('utf8utils')
+local termbox   = require('termbox')
 local format = string.format
 
 local M = {}
@@ -48,12 +51,12 @@ end
 function M.simple_promptf(inp, cursor)
     -- strip off stuff from input that can't be shown on the
     -- screen, and show IRC formatting escape sequences nicely.
-    inp = mirc.show(inp:sub(-(tui.tty_width - 1)))
+    inp = mirc.show(inp:sub(-(tui.tty_width -1)))
 
     -- draw the input buffer and move the cursor to the appropriate
     -- position.
-    lurch.tb_writeline(tui.tty_height-1, inp)
-    lurch.tb_setcursor(cursor, tui.tty_height-1)
+    termbox.writeline(tui.tty_height-1, inp)
+    termbox.setcursor(cursor, tui.tty_height-1)
 end
 
 -- A more fully-featured prompt function. This prompt changes
@@ -104,7 +107,7 @@ function M.fancy_promptf(inp, cursor)
 
     -- strip escape sequences so that we may accurately calculate
     -- the prompt's length.
-    local rawprompt_len = lurch.utf8_dwidth(mirc.remove(prompt))
+    local rawprompt_len = utf8utils.dwidth(mirc.remove(prompt))
 
     -- strip off stuff from input that can't be shown on the
     -- screen
@@ -116,8 +119,8 @@ function M.fancy_promptf(inp, cursor)
 
     -- Clear the line, remove any bold/color, draw the input buffer
     -- and move the cursor to the appropriate position.
-    lurch.tb_writeline(tui.tty_height-1, format("\x0f%s%s", prompt, inp))
-    lurch.tb_setcursor(cursor + rawprompt_len, tui.tty_height-1)
+    termbox.writeline(tui.tty_height-1, format("\x0f%s%s", prompt, inp))
+    termbox.setcursor(cursor + rawprompt_len, tui.tty_height-1)
 end
 
 -- The function that is called on every keypress. It should, at the
@@ -149,7 +152,7 @@ function M.simple_statusline()
     local fst = cbuf
 
     while fst > 1 and l < (M.tty_width / 2) do
-        l = l + lurch.utf8_dwidth(bufs[fst].name) + 3
+        l = l + utf8utils.dwidth(bufs[fst].name) + 3
         fst = fst - 1
     end
 
@@ -164,7 +167,7 @@ function M.simple_statusline()
         if ch.pings > 0   then chl = chl .. mirc.BOLD end
 
         chl = chl .. ch.name
-        l = l + lurch.utf8_dwidth(ch.name)
+        l = l + utf8utils.dwidth(ch.name)
 
         if ch.pings > 0   then chl = chl .. mirc.BOLD end
         if ch.unreadh > 0 then chl = chl .. mirc.UNDERLINE end
@@ -180,7 +183,7 @@ function M.simple_statusline()
 
     local padding = M.tty_width - #(mirc.remove(chl))
     chl = format("\x16%s%s\x0f", chl, (" "):rep(padding))
-    lurch.tb_writeline(0, chl)
+    termbox.writeline(0, chl)
 end
 
 -- A more fully-featured statusline, heavily based on catgirl's [0] statusbar.
@@ -240,7 +243,7 @@ function M.fancy_statusline()
         end
     end
 
-    lurch.tb_writeline(0, "\x0f" .. chanlist)
+    termbox.writeline(0, "\x0f" .. chanlist)
 end
 
 -- The statusline function, the purpose of which is to print the list

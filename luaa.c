@@ -22,7 +22,6 @@
 #include "util.h"
 #include "utf8proc.h"
 
-extern FILE *conn;
 extern int conn_fd;
 extern lua_State *L;
 extern struct tls *client;
@@ -33,19 +32,45 @@ extern size_t tb_status;
 extern const size_t TB_ACTIVE;
 extern const size_t TB_MODIFIED;
 
-const struct luaL_Reg lurch_lib[] = {
-	{ "conn_init",     api_conn_init      },
-	{ "conn_send",     api_conn_send      },
-	{ "conn_active",   api_conn_active    },
-	{ "cleanup",       api_cleanup        },
-	{ "tb_size",       api_tb_size        },
-	{ "tb_clear",      api_tb_clear       },
-	{ "tb_writeline",  api_tb_writeline   },
-	{ "tb_setcursor",  api_tb_setcursor   },
-	{ "utf8_insert",   api_utf8_insert    },
-	{ "utf8_dwidth",   api_utf8_dwidth    },
+const static struct luaL_Reg lurch_conn_lib[] = {
+	{ "init",       api_conn_init   },
+	{ "send",       api_conn_send   },
+	{ "is_active",  api_conn_active },
+	{ "close",      api_conn_close  },
 	{ NULL, NULL },
 };
+
+const static struct luaL_Reg lurch_termbox_lib[] = {
+	{ "shutdown",   api_tb_shutdown  },
+	{ "size",       api_tb_size      },
+	{ "clear",      api_tb_clear     },
+	{ "writeline",  api_tb_writeline },
+	{ "setcursor",  api_tb_setcursor },
+	{ NULL, NULL },
+};
+
+const static struct luaL_Reg lurch_utf8_lib[] = {
+	{ "insert",   api_utf8_insert },
+	{ "dwidth",   api_utf8_dwidth },
+	{ NULL, NULL },
+};
+
+int
+llua_openlib(lua_State *pL)
+{
+	char *lib = (char *) luaL_checkstring(pL, 1);
+
+	lua_newtable(L);
+	if (!strcmp(lib, "termbox")) {
+		llua_setfuncs(pL, lurch_termbox_lib);
+	} else if (!strcmp(lib, "lurchconn")) {
+		llua_setfuncs(pL, lurch_conn_lib);
+	} else if (!strcmp(lib, "utf8utils")) {
+		llua_setfuncs(pL, lurch_utf8_lib);
+	}
+
+	return 1;
+}
 
 int
 api_conn_init(lua_State *pL)
@@ -143,10 +168,31 @@ api_conn_send(lua_State *pL)
 }
 
 int
-api_cleanup(lua_State *pL)
+api_conn_close(lua_State *pL)
 {
 	UNUSED(pL);
-	cleanup();
+
+	if (tls_active && client) {
+		tls_close(client);
+		tls_free(client);
+	} else if (conn_fd != 0) {
+		close(conn_fd);
+		conn_fd = 0;
+	}
+
+	return 0;
+}
+
+int
+api_tb_shutdown(lua_State *pL)
+{
+	UNUSED(pL);
+
+	if ((tb_status & TB_ACTIVE) == TB_ACTIVE) {
+		tb_shutdown();
+		tb_status ^= TB_ACTIVE;
+	}
+
 	return 0;
 }
 

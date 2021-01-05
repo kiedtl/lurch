@@ -13,12 +13,6 @@
 #define llua_setfuncs(ST, FN) luaL_register(ST, NULL, FN);
 #endif
 
-#if LUA_VERSION_NUM >= 502
-#define llua_rawlen(ST, NM) lua_rawlen(ST, NM)
-#else
-#define llua_rawlen(ST, NM) lua_objlen(ST, NM)
-#endif
-
 #define SETTABLE_INT(LU, NAME, VALUE, TABLE) \
 	do { \
 		lua_pushstring(LU, NAME); \

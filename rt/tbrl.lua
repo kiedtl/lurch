@@ -1,6 +1,7 @@
 -- tbrl: readline for termbox.
 
 local tb = require('tb')
+local utf8utils = require('utf8utils')
 local inspect = require('inspect')
 local M = {}
 
@@ -22,7 +23,7 @@ end
 
 function M.insert_at_curs(text)
     if not text then return end
-    M.bufin[M.hist] = lurch.utf8_insert(M.bufin[M.hist], M.cursor, text)
+    M.bufin[M.hist] = utf8utils.insert(M.bufin[M.hist], M.cursor, text)
     M.cursor = M.cursor + 1
 end
 

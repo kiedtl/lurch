@@ -159,7 +159,7 @@ M.leftfmt = {
 
         -- Remove extra characters fromt the nickname that won't fit.
         --
-        -- We can use "#sender" instead of lurch.utf8_dwidth, because
+        -- We can use "#sender" instead of utf8utils.dwidth, because
         -- nicknames may only contain ASCII characters.
         if #sender > (M.left_col_width - 2) then
             sndfmt = sndfmt:sub(1, M.left_col_width - 3)

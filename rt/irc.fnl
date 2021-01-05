@@ -1,5 +1,6 @@
-(local format string.format)
 (local F (require :fun))
+(local format string.format)
+(local lurchconn (require :lurchconn))
 (local util (require :util))
 
 (var M {})
@@ -29,7 +30,7 @@
 
 (lambda M.connect [host port tls nick user name ?pass ?caps ?no_ident?]
   (tset M :server :connected (os.time))
-  (var (success err) (lurch.conn_init host port tls))
+  (var (success err) (lurchconn.init host port tls))
 
   (when success
     ; list and request IRCv3 capabilities. The responses are ignored
@@ -208,7 +209,7 @@
   buf)
 
 (lambda M.send [fmt ...]
-  (let [(r e) (lurch.conn_send (fmt:format ...))]
+  (let [(r e) (lurchconn.send (fmt:format ...))]
         (when (not r)
           (util.panic "error: %s\n" e))))
 

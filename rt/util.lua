@@ -1,5 +1,8 @@
-local format = string.format
-local mirc   = require('mirc')
+local format    = string.format
+local mirc      = require('mirc')
+local lurchconn = require('lurchconn')
+local termbox   = require('termbox')
+local utf8utils = require('utf8utils')
 local util = {}
 
 -- sleep for x seconds. Note that this is a busy sleep.
@@ -37,7 +40,8 @@ end
 -- function, that is, it informs the user of errors in the
 -- configuration, not of errors thrown from code.
 function util.panic(fmt, ...)
-    lurch.cleanup()
+    lurchconn.close()
+    termbox.shutdown()
     util.eprintf(fmt, ...)
     os.exit(1)
 end
@@ -78,7 +82,7 @@ end
 -- FIXME: this may occasionally split unicode characters
 function util.fold(text, width)
     local _raw_len = function(data)
-        local sz = lurch.utf8_dwidth(mirc.remove(data))
+        local sz = utf8utils.dwidth(mirc.remove(data))
         if not sz then sz = utf8.len(mirc.remove(data)) end
         return sz
     end
@@ -93,7 +97,7 @@ function util.fold(text, width)
 
         -- break up long words.
         if _raw_len(w) >= width then
-            w = lurch.utf8_insert(w, width - 1, '\n')
+            w = utf8utils.insert(w, width - 1, '\n')
         end
 
         -- only append a newline if the word's width is greater
