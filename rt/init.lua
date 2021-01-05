@@ -107,6 +107,7 @@ end
 
 function buf_scroll(idx, rel, abs)
     assert(bufs[idx])
+    local bufsz = #bufs[idx].history
 
     if rel then
         bufs[idx].scroll = bufs[idx].scroll + rel
@@ -114,8 +115,9 @@ function buf_scroll(idx, rel, abs)
         bufs[idx].scroll = abs
     end
 
-    if bufs[cbuf].scroll < 0 then bufs[idx].scroll = 0 end
-    if bufs[cbuf].scroll == 0 then buf_read(idx) end
+    if bufs[idx].scroll < 0 then bufs[idx].scroll = 0 end
+    if bufs[idx].scroll > bufsz then bufs[idx].scroll = bufsz - 5 end
+    if bufs[idx].scroll == 0 then buf_read(idx) end
 end
 
 -- check if a buffer exists, and if so, return the index
@@ -1516,8 +1518,14 @@ local keyseq_handler = {
     keys = {
         [tb.TB_KEY_CTRL_N] = function(_) parsecmd("/next") end,
         [tb.TB_KEY_CTRL_P] = function(_) parsecmd("/prev") end,
-        [tb.TB_KEY_PGUP]   = function(_) parsecmd("/scroll +10") end,
-        [tb.TB_KEY_PGDN]   = function(_) parsecmd("/scroll -10") end,
+        [tb.TB_KEY_PGUP]   = function(_)
+            buf_scroll(cbuf, tui.tty_height-5)
+            redraw()
+        end,
+        [tb.TB_KEY_PGDN]   = function(_)
+            buf_scroll(cbuf, -(tui.tty_height-5))
+            redraw()
+        end,
         [tb.TB_KEY_CTRL_L] = function(_) parsecmd("/redraw") end,
         [tb.TB_KEY_CTRL_C] = function(_) parsecmd("/quit") end,
         [tb.TB_KEY_CTRL_B] = function(_) tbrl.insert_at_curs(mirc.BOLD) end,
