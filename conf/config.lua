@@ -28,7 +28,7 @@ M.nick = "inebriate|lurch"
 -- but some IRC servers will accept passwords from here as if a NickServ
 -- IDENTIFY command was run anyway.
 --
--- By default, the command is 'pass show irc', which runs pash [0] and
+-- By default, the command is 'pash show irc', which runs pash [0] and
 -- shows the password entry 'irc'. This command can be substituted for the
 -- equivalent pass command (or whatever your password manager is).
 --
