@@ -829,7 +829,7 @@ local irchand = {
     ["901"] = function(e) prin_irc(0, MAINBUF, L_NORM, "%s", e.msg) end,
 
     -- CTCP stuff.
-    ["CTCP_ACTION"] = function(e)
+    ["CTCPQ_ACTION"] = function(e)
         local sender_fmt = hncol(e.nick or nick)
         local prio = 1
 
