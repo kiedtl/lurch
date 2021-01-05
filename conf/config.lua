@@ -193,13 +193,13 @@ end
 -- action:  value used from CTCP ACTIONs (/me)
 -- message: function that's called to format the sender of a message.
 M.leftfmt = {
-    names = "NAMES",
-    topic = "TOPIC",
-    error = "-!-",
-    normal = "--",
-    away = "-<>",
-    nick = "--@",
-    action = "*",
+    error   = function(e) return "-!-"   end,
+    normal  = function(e) return "--"    end,
+    away    = function(e) return "-<>"   end,
+    nick    = function(e) return "--@"   end,
+    names   = function(e) return "NAMES" end,
+    topic   = function(e) return "TOPIC" end,
+    action  = function(e) return "*"     end,
     message = function(sender, pings)
         local sndfmt = sender
 

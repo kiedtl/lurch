@@ -245,7 +245,7 @@ function prin_cmd(dest, left, right_fmt, ...)
     last_ircevent = nil
 
     local priority = 1
-    if left == L_ERR then priority = 2 end
+    if left == L_ERR() then priority = 2 end
 
     -- get the offset defined in the configuration and parse it.
     local offset = assert(util.parse_offset(config.tz))
@@ -298,12 +298,12 @@ end
 
 local function none(_) end
 local function default2(e)
-    prin_irc(0, MAINBUF, L_NORM, "There are %s %s", e.fields[3], e.msg)
+    prin_irc(0, MAINBUF, L_NORM(e), "There are %s %s", e.fields[3], e.msg)
 end
-local function default(e) prin_irc(0, e.dest, L_NORM, "%s", e.msg) end
+local function default(e) prin_irc(0, e.dest, L_NORM(e), "%s", e.msg) end
 local function hndfact_err(m)
     return function(e)
-        prin_irc(1, e.dest or MAINBUF, L_ERR, "%s", m or e.msg)
+        prin_irc(1, e.dest or MAINBUF, L_ERR(e), "%s", m or e.msg)
     end
 end
 
@@ -323,7 +323,7 @@ local irchand = {
         end
 
         buf_with_nick(e.nick, function(_, buf)
-            prin_irc(0, buf.name, L_NORM, "(Account) %s", msg)
+            prin_irc(0, buf.name, L_NORM(e), "(Account) %s", msg)
         end)
     end,
     ["AWAY"] = function(e)
@@ -342,7 +342,7 @@ local irchand = {
         end
 
         buf_with_nick(e.nick, function(_, buf)
-            prin_irc(0, buf.name, L_AWAY, "%s", msg)
+            prin_irc(0, buf.name, L_AWAY(e), "%s", msg)
         end)
     end,
     ["MODE"] = function(e)
@@ -353,11 +353,11 @@ local irchand = {
             e.fields[#e.fields + 1] = e.msg
             local by   = e.nick or e.from
             local mode = util.join(" ", e.fields, 3)
-            prin_irc(0, e.dest, L_NORM, "Mode [%s] by %s", mode, hncol(by))
+            prin_irc(0, e.dest, L_NORM(e), "Mode [%s] by %s", mode, hncol(by))
         elseif e.nick == nick then
-            prin_irc(0, MAINBUF, L_NORM, "Mode %s", e.msg)
+            prin_irc(0, MAINBUF, L_NORM(e), "Mode %s", e.msg)
         else
-            prin_irc(0, MAINBUF, L_NORM, "Mode %s by %s", e.msg,
+            prin_irc(0, MAINBUF, L_NORM(e), "Mode %s by %s", e.msg,
                 hncol(e.nick or e.from))
         end
     end,
@@ -377,7 +377,7 @@ local irchand = {
         logs.append(dest, e)
     end,
     ["TOPIC"] = function(e)
-        prin_irc(0, e.dest, L_TOPIC, "%s changed the topic to \"%s\"",
+        prin_irc(0, e.dest, L_TOPIC(e), "%s changed the topic to \"%s\"",
             hncol(e.nick), e.msg)
         logs.append(e.dest, e)
     end,
@@ -398,7 +398,7 @@ local irchand = {
     end,
     ["INVITE"] = function(e)
         -- TODO: auto-join on invite?
-        prin_irc(2, MAINBUF, L_NORM, "%s invited you to %s",
+        prin_irc(2, MAINBUF, L_NORM(e), "%s invited you to %s",
             hncol(e.nick), hcol(e.fields[3] or e.msg))
     end,
     ["PRIVMSG"] = function(e)
@@ -453,7 +453,7 @@ local irchand = {
             local buf = bufs[i]
             if buf.names[e.nick]
             or buf.name == e.nick or e.nick == nick then
-                prin_irc(0, buf.name, L_NICK, "%s is now known as %s",
+                prin_irc(0, buf.name, L_NICK(e), "%s is now known as %s",
                     hncol(e.nick), hncol(e.msg))
                 buf.names[e.nick] = nil; buf.names[e.msg] = true
                 logs.append(buf.name, e)
@@ -509,21 +509,21 @@ local irchand = {
     -- AWAY: otinuikaj10 is away: "Away message"
     -- Sent when you message a user that is marked as being away.
     ["301"] = function(e)
-        prin_irc(1, e.fields[3], L_AWAY, "%s is away: %s",
+        prin_irc(1, e.fields[3], L_AWAY(e), "%s is away: %s",
             hncol(e.fields[3]), e.msg)
     end,
 
     -- AWAY: You are no longer marked as being away
     ["305"] = function(e)
         util.ivmap(bufs, function(i, v)
-            prin_irc(0, v.name, L_AWAY, "You are no longer marked as being away.")
+            prin_irc(0, v.name, L_AWAY(e), "You are no longer marked as being away.")
         end)
     end,
 
     -- AWAY: You have been marked as being away
     ["306"] = function(e)
         util.ivmap(bufs, function(i, v)
-            prin_irc(0, v.name, L_AWAY, "You have been marked as being away.")
+            prin_irc(0, v.name, L_AWAY(e), "You have been marked as being away.")
         end)
     end,
 
@@ -601,28 +601,28 @@ local irchand = {
     end,
 
     -- No topic set
-    ["331"] = function(e) prin_irc(0, e.dest, L_ERR, "No topic set for %s", e.dest) end,
+    ["331"] = function(e) prin_irc(0, e.dest, L_ERR(e), "No topic set for %s", e.dest) end,
 
     -- TOPIC for channel
-    ["332"] = function(e) prin_irc(0, e.dest, L_TOPIC, "%s", e.msg) end,
+    ["332"] = function(e) prin_irc(0, e.dest, L_TOPIC(e), "%s", e.msg) end,
 
     -- TOPIC last set by nick!user@host
     ["333"] = function(e)
         -- sometimes, the nick is in the fields
         local n, userhost = (e.fields[4]):gmatch("(.-)!(.*)")()
         if n then
-            prin_irc(0, e.dest, L_NORM, "Topic last set by %s (%s)",
+            prin_irc(0, e.dest, L_NORM(e), "Topic last set by %s (%s)",
                 hncol(n), mirc.l_grey(e.fields[4]))
         else
             local datetime = os.date("%Y-%m-%d %H:%M:%S", tonumber(e.msg))
-            prin_irc(0, e.dest, L_NORM, "Topic last set by %s on %s",
+            prin_irc(0, e.dest, L_NORM(e), "Topic last set by %s on %s",
                 hncol(e.fields[4]), datetime)
         end
     end,
 
     -- invited <nick> to <chan> (response to /invite)
     ["341"] = function(e)
-        prin_irc(0, e.msg, L_NORM, "Invited %s to %s",
+        prin_irc(0, e.msg, L_NORM(e), "Invited %s to %s",
             hncol(e.fields[3]), hcol(e.msg))
     end,
 
@@ -656,7 +656,7 @@ local irchand = {
             bufs[bufidx].access[_nick] = access
         end
 
-        prin_irc(0, e.dest, L_NAME, "%s", nicklist)
+        prin_irc(0, e.dest, L_NAME(e), "%s", nicklist)
     end,
 
     -- End of /names
@@ -710,7 +710,7 @@ local irchand = {
         txt = txt:sub(1, #txt - 2) -- trim comma
         txt = format("%s denizens of %s (%s)", total, hcol(dest), txt)
 
-        prin_irc(0, dest, L_NAME, "%s", txt)
+        prin_irc(0, dest, L_NAME(e), "%s", txt)
     end,
 
     -- WHOWAS: RPL_ENDOFWHOWAS
@@ -752,16 +752,16 @@ local irchand = {
     end,
 
     -- "xyz" is now your hidden host (set by foo)
-    ["396"] = function(e) prin_irc(0, MAINBUF, L_NORM, "%s %s", e.fields[3], e.msg) end,
+    ["396"] = function(e) prin_irc(0, MAINBUF, L_NORM(e), "%s %s", e.fields[3], e.msg) end,
 
     -- No such nick/channel
     ["401"] = function(e)
-        prin_irc(1, buf_cur(), L_ERR, "No such nick/channel %s", e.fields[3])
+        prin_irc(1, buf_cur(), L_ERR(e), "No such nick/channel %s", e.fields[3])
     end,
 
     -- Nickname is reserved (being held for registered user)
     ["432"] = function(e)
-        prin_irc(1, buf_cur(), L_ERR, "Nickname %s is reserved: %s",
+        prin_irc(1, buf_cur(), L_ERR(e), "Nickname %s is reserved: %s",
             hncol(e.fields[3]), e.msg)
     end,
 
@@ -769,7 +769,7 @@ local irchand = {
     ["433"] = function(e)
         assert(e.fields[3] == nick)
         local newnick = e.fields[3] .. "_" -- sprout a tail
-        prin_irc(2, MAINBUF, L_NICK, "Nickname %s already in use; using %s",
+        prin_irc(2, MAINBUF, L_NICK(e), "Nickname %s already in use; using %s",
             hncol(e.fields[3]), hncol(newnick))
         send("NICK %s", newnick)
         nick = newnick
@@ -777,7 +777,7 @@ local irchand = {
 
     -- 441: <User> is not on that channel
     ["441"] = function(e)
-        prin_irc(0, e.fields[4], L_ERR, "%s is not in %s", hncol(e.fields[3]),
+        prin_irc(0, e.fields[4], L_ERR(e), "%s is not in %s", hncol(e.fields[3]),
             hcol(e.fields[4]))
     end,
 
@@ -786,7 +786,7 @@ local irchand = {
 
     -- <nick> is already in channel (response to /invite)
     ["443"] = function(e)
-        prin_irc(0, e.fields[4], L_ERR, "%s is already in %s", hncol(e.fields[3]),
+        prin_irc(0, e.fields[4], L_ERR(e), "%s is already in %s", hncol(e.fields[3]),
             hcol(e.fields[4]))
     end,
 
@@ -813,23 +813,23 @@ local irchand = {
     -- 718: joaquinito01 is messaging you, please run /ACCEPT +joaquinito01
     --      to begin the process of clogging your IRC logs.
     ["716"] = function(e)
-        prin_irc(1, e.fields[3], L_ERR, "%s has mode +g (server-side ignore).",
+        prin_irc(1, e.fields[3], L_ERR(e), "%s has mode +g (server-side ignore).",
             hncol(e.fields[3]))
     end,
     ["717"] = function(e)
-        prin_irc(1, e.fields[3], L_ERR,
+        prin_irc(1, e.fields[3], L_ERR(e),
             "%s has been informed that you messaged them.", hncol(e.fields[3]))
     end,
     ["718"] = function(e)
-        prin_irc(1, e.fields[3], L_ERR,
+        prin_irc(1, e.fields[3], L_ERR(e),
             "%s (%s) has messaged you, but you have mode +g set. Run /accept +%s to add them to your allow list.",
             hcol(e.fields[3]), mirc.l_grey(e.fields[4]), e.fields[3])
     end,
 
     -- 900: You are now logged in as xyz
     -- 901: You are now logged out
-    ["900"] = function(e) prin_irc(0, MAINBUF, L_NORM, "%s", e.msg) end,
-    ["901"] = function(e) prin_irc(0, MAINBUF, L_NORM, "%s", e.msg) end,
+    ["900"] = function(e) prin_irc(0, MAINBUF, L_NORM(e), "%s", e.msg) end,
+    ["901"] = function(e) prin_irc(0, MAINBUF, L_NORM(e), "%s", e.msg) end,
 
     -- CTCP stuff.
     ["CTCPQ_ACTION"] = function(e)
@@ -880,11 +880,11 @@ local irchand = {
         e.msg = (e.msg):match("(.-)%s*$") -- remove trailing whitespace
 
         if subcmd == "ls" then
-            prin_irc(0, MAINBUF, L_NORM, "Supported IRCv3 capabilities: %s", e.msg)
+            prin_irc(0, MAINBUF, L_NORM(e), "Supported IRCv3 capabilities: %s", e.msg)
         elseif subcmd == "ack" then
-            prin_irc(0, MAINBUF, L_NORM, "Enabling IRCv3 capability: %s", e.msg)
+            prin_irc(0, MAINBUF, L_NORM(e), "Enabling IRCv3 capability: %s", e.msg)
         elseif subcmd == "nak" then
-            prin_irc(0, MAINBUF, L_NORM, "Disabling IRCv3 capability: %s", e.msg)
+            prin_irc(0, MAINBUF, L_NORM(e), "Disabling IRCv3 capability: %s", e.msg)
         end
     end,
 }
@@ -976,7 +976,7 @@ cmdhand = {
 
             if not tonumber(buf) then
                 if not buf_idx(buf) then
-                    prin_cmd(buf_cur(), L_ERR, "%s is not an open buffer.", a)
+                    prin_cmd(buf_cur(), L_ERR(), "%s is not an open buffer.", a)
                     return
                 end
 
@@ -986,7 +986,7 @@ cmdhand = {
             end
 
             if buf == 1 then
-                prin_cmd(buf_cur(), L_ERR, "Cannot close main buffer.")
+                prin_cmd(buf_cur(), L_ERR(), "Cannot close main buffer.")
                 return
             end
 
@@ -1043,7 +1043,7 @@ cmdhand = {
                 end
             end
 
-            prin_cmd(buf_cur(), L_ERR, "Nothing to see here... Press Alt+Tab and move along")
+            prin_cmd(buf_cur(), L_ERR(), "Nothing to see here... Press Alt+Tab and move along")
         end,
     },
     ["/read"] = {
@@ -1064,7 +1064,7 @@ cmdhand = {
             elseif tonumber(a) then
                 buf_read(tonumber(a))
             else
-                prin_cmd(buf_cur(), L_ERR, "Unknown buffer '%s'. Buffer should be either 'all' or '[0-9]+'.")
+                prin_cmd(buf_cur(), L_ERR(), "Unknown buffer '%s'. Buffer should be either 'all' or '[0-9]+'.")
             end
 
             tui.statusline()
@@ -1201,14 +1201,14 @@ cmdhand = {
         fn = function(a, args, _)
             if not a then
                 local lvlstrs = { B = "Block", F = "Filter", D = "Dim" }
-                prin_cmd(buf_cur(), L_NORM, "Ignored users:")
+                prin_cmd(buf_cur(), L_NORM(), "Ignored users:")
                 for pat, lvl in pairs(config.ignores) do
-                    prin_cmd(buf_cur(), L_NORM, "  - %-24s %s (%s)", pat, lvl, lvlstrs[lvl] or "None")
+                    prin_cmd(buf_cur(), L_NORM(), "  - %-24s %s (%s)", pat, lvl, lvlstrs[lvl] or "None")
                 end
             else
                 if args == "" then args = nil end
                 local oldign = config.ignores[a]; config.ignores[a] = args
-                prin_cmd(buf_cur(), L_NORM, "Ignore status for '%s' is now '%s' (was '%s')", a, args, oldign)
+                prin_cmd(buf_cur(), L_NORM(), "Ignore status for '%s' is now '%s' (was '%s')", a, args, oldign)
             end
         end,
     },
@@ -1245,24 +1245,24 @@ cmdhand = {
         usage = "<cmd> <name>",
         fn = function(a, args, _)
             if not args then
-                prin_cmd(buf_cur(), L_ERR, "Need handler name (see /help disable).")
+                prin_cmd(buf_cur(), L_ERR(), "Need handler name (see /help disable).")
                 return
             end
 
             local name = format("'%s::%s'", a, args)
             if not config.handlers[a] or not config.handlers[a][args] then
-                prin_cmd(buf_cur(), L_ERR, "No such handler %s", name)
+                prin_cmd(buf_cur(), L_ERR(), "No such handler %s", name)
                 return
             end
 
             local hnd = config.handlers[a][args]
             if hnd.disabled then
-                prin_cmd(buf_cur(), L_ERR, "Handler %s is already disabled.", name)
+                prin_cmd(buf_cur(), L_ERR(), "Handler %s is already disabled.", name)
                 return
             end
 
             config.handlers[a][args].disabled = true
-            prin_cmd(buf_cur(), L_NORM, "Handler %s disabled.", name)
+            prin_cmd(buf_cur(), L_NORM(), "Handler %s disabled.", name)
         end
     },
     ["/quit"] = {
@@ -1339,7 +1339,7 @@ cmdhand = {
         fn = function(a, _, _)
             if not a or a == "" then
                 -- all set up and ready to go !!!
-                prin_cmd(buf_cur(), L_NORM, "hello bastard !!!")
+                prin_cmd(buf_cur(), L_NORM(), "hello bastard !!!")
                 return
             end
 
@@ -1347,32 +1347,32 @@ cmdhand = {
             if not (cmd:find("/") == 1) then cmd = "/" .. cmd end
 
             if not cmdhand[cmd] and not config.commands[cmd] then
-                prin_cmd(buf_cur(), L_ERR, "No such command '%s'", a)
+                prin_cmd(buf_cur(), L_ERR(), "No such command '%s'", a)
                 return
             end
 
             local cmdinfo = cmdhand[cmd] or config.commands[cmd]
 
-            prin_cmd(buf_cur(), L_NORM, "")
-            prin_cmd(buf_cur(), L_NORM, "Help for %s", cmd)
+            prin_cmd(buf_cur(), L_NORM(), "")
+            prin_cmd(buf_cur(), L_NORM(), "Help for %s", cmd)
 
             if cmdinfo.usage then
-                prin_cmd(buf_cur(), L_NORM, "usage: %s %s", cmd, cmdinfo.usage)
+                prin_cmd(buf_cur(), L_NORM(), "usage: %s %s", cmd, cmdinfo.usage)
             end
 
-            prin_cmd(buf_cur(), L_NORM, "")
+            prin_cmd(buf_cur(), L_NORM(), "")
 
             for i = 1, #cmdinfo.help do
-                prin_cmd(buf_cur(), L_NORM, "%s", cmdinfo.help[i])
-                prin_cmd(buf_cur(), L_NORM, "")
+                prin_cmd(buf_cur(), L_NORM(), "%s", cmdinfo.help[i])
+                prin_cmd(buf_cur(), L_NORM(), "")
             end
 
             if cmdinfo.REQUIRE_CHANBUF then
-                prin_cmd(buf_cur(), L_NORM, "This command must be run in a channel buffer.")
-                prin_cmd(buf_cur(), L_NORM, "")
+                prin_cmd(buf_cur(), L_NORM(), "This command must be run in a channel buffer.")
+                prin_cmd(buf_cur(), L_NORM(), "")
             elseif cmdinfo.REQUIRE_CHAN_OR_USERBUF then
-                prin_cmd(buf_cur(), L_NORM, "This command must be run in a channel or a user buffer.")
-                prin_cmd(buf_cur(), L_NORM, "")
+                prin_cmd(buf_cur(), L_NORM(), "This command must be run in a channel or a user buffer.")
+                prin_cmd(buf_cur(), L_NORM(), "")
             end
         end,
     },
@@ -1380,21 +1380,21 @@ cmdhand = {
         -- TODO: list user-defined commands.
         help = { "List builtin and user-defined lurch commands." },
         fn = function(_, _, _)
-            prin_cmd(buf_cur(), L_NORM, "")
-            prin_cmd(buf_cur(), L_NORM, "[builtin]")
+            prin_cmd(buf_cur(), L_NORM(), "")
+            prin_cmd(buf_cur(), L_NORM(), "[builtin]")
             local cmdlist = ""
             for k, _ in pairs(cmdhand) do
                 cmdlist = cmdlist .. k .. " "
             end
-            prin_cmd(buf_cur(), L_NORM, "%s", cmdlist)
+            prin_cmd(buf_cur(), L_NORM(), "%s", cmdlist)
 
-            prin_cmd(buf_cur(), L_NORM, "")
-            prin_cmd(buf_cur(), L_NORM, "[user]")
+            prin_cmd(buf_cur(), L_NORM(), "")
+            prin_cmd(buf_cur(), L_NORM(), "[user]")
             cmdlist = ""
             for k, _ in pairs(config.commands) do
                 cmdlist = cmdlist .. k .. " "
             end
-            prin_cmd(buf_cur(), L_NORM, "%s", cmdlist)
+            prin_cmd(buf_cur(), L_NORM(), "%s", cmdlist)
 
         end,
     },
@@ -1407,7 +1407,7 @@ cmdhand = {
 
             local fp, err = io.open(file, "w")
             if not fp then
-                prin_cmd(buf_cur(), L_ERR, "Couldn't open tmpfile %s", err)
+                prin_cmd(buf_cur(), L_ERR(), "Couldn't open tmpfile %s", err)
                 return
             end
 
@@ -1426,11 +1426,11 @@ cmdhand = {
 
             local ret, err = fp:write(inspect(state))
             if not ret then
-                prin_cmd(buf_cur(), L_ERR, "Could not open tmpfile: %s", err)
+                prin_cmd(buf_cur(), L_ERR(), "Could not open tmpfile: %s", err)
                 return
             end
 
-            prin_cmd(buf_cur(), L_ERR, "Wrote information to %s", file)
+            prin_cmd(buf_cur(), L_ERR(), "Wrote information to %s", file)
             fp:close()
         end,
     },
@@ -1482,24 +1482,24 @@ function parsecmd(inp)
         local hand = cmdhand[_cmd] or config.commands[_cmd]
 
         if hand.REQUIRE_CHANBUF and not (buf_cur()):find("#") then
-            prin_cmd(buf_cur(), L_ERR,
+            prin_cmd(buf_cur(), L_ERR(),
                 "%s must be executed in a channel buffer.", _cmd)
             return
         end
 
         if hand.REQUIRE_ARG and (not a or a == "") then
-            prin_cmd(buf_cur(), L_ERR, "%s requires an argument.", _cmd)
+            prin_cmd(buf_cur(), L_ERR(), "%s requires an argument.", _cmd)
             return
         end
 
         if hand.REQUIRE_CHANBUF_OR_ARG and (not a or a == "") and not (buf_cur()):find("#") then
-            prin_cmd(buf_cur(), L_ERR,
+            prin_cmd(buf_cur(), L_ERR(),
                 "%s must be executed in a channel buffer or must be run with an argument.", _cmd)
             return
         end
 
         if hand.REQUIRE_CHAN_OR_USERBUF and cbuf == 1 then
-            prin_cmd(buf_cur(), L_ERR,
+            prin_cmd(buf_cur(), L_ERR(),
                 "%s must be executed in a channel or user buffer.", _cmd)
         end
 
@@ -1510,7 +1510,7 @@ function parsecmd(inp)
 
         -- since the command doesn't exist, just send it as a message
         if buf_cur() == MAINBUF then
-            prin_cmd(buf_cur(), L_ERR, "Stop trying to talk to lurch.")
+            prin_cmd(buf_cur(), L_ERR(), "Stop trying to talk to lurch.")
         else
             -- split long messages, as servers don't like IRC messages
             -- that are longer than about 512 characters (but that limit
@@ -1647,7 +1647,7 @@ function rt.init(args)
     callbacks.on_startup()
 
     -- Finally, we can connect to the server.
-    prin_cmd(MAINBUF, L_ERR, "Connecting to %s:%s (TLS: %s)",
+    prin_cmd(MAINBUF, L_ERR(), "Connecting to %s:%s (TLS: %s)",
         config.host, config.port, config.tls)
     return connect()
 end
@@ -1663,13 +1663,13 @@ function rt.on_disconnect(_err)
     end
 
     reconn = reconn - 1
-    prin_cmd(MAINBUF, L_ERR,
+    prin_cmd(MAINBUF, L_ERR(),
         "Link lost, attempting reconnection... (%s tries left)", reconn)
 
     local ret, err = connect()
     if not ret then
         reconn_wait = math.floor(reconn_wait * 1.6)
-        prin_cmd(MAINBUF, L_ERR, "Unable to connect (%s), waiting %s seconds",
+        prin_cmd(MAINBUF, L_ERR(), "Unable to connect (%s), waiting %s seconds",
             err, reconn_wait)
     else
         -- rejoin channels.
@@ -1720,7 +1720,7 @@ function rt.on_lerror(err)
     local bt = debug.traceback(err, 2)
     xpcall(function()
         bt = bt:gsub("\t", "    ")
-        prin_cmd(MAINBUF, L_ERR, "Lua error!: %s", bt)
+        prin_cmd(MAINBUF, L_ERR(), "Lua error!: %s", bt)
     end, function(ohno)
         panic("While trying to handle error: %s\nAnother error occurred: %s\n",
             bt, ohno)
