@@ -58,10 +58,22 @@
 ;
 ; ported from the parse() function in https://github.com/dylanaraps/birch
 ;
-; example IRC message:
+; the following IRC message:
 ; @time=2020-09-07T01:14:11Z :onisamot!~onisamot@reghog.pink PRIVMSG #meat :ahah
 ; ^------------------------- ^------------------------------ ^------ ^---- ^----
 ; IRCv3 tags                 sender                          command arg   msg
+;
+; parses to:
+; {
+;      fields = { "PRIVMSG", "#meat" },
+;      from = "onisamot!~onisamot@reghog.pink",
+;      dest = "#meat", msg = "ahah",
+;      host = "reghog.pink",
+;      nick = "onisamot", user = "~onisamot",
+;      tagn = 1, tags = {
+;          time = "2020-09-07T01:14:11Z"
+;      }
+; }
 ;
 (lambda M.parse [rawmsg]
   (var rawmsg rawmsg)
