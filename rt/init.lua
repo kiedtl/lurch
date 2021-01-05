@@ -31,12 +31,13 @@ L_NORM  = config.leftfmt.normal
 L_AWAY  = config.leftfmt.away
 L_NICK  = config.leftfmt.nick
 
+SRVCONF = config.servers[config.server]
 DBGFILE = "/tmp/lurch_debug"
-MAINBUF = config.host
+MAINBUF = SRVCONF.host
 
 reconn      = config.reconn  -- Number of times we've reconnected.
 reconn_wait = 5              -- Seconds to wait before reconnecting.
-nick        = config.nick    -- The current nickname
+nick        = SRVCONF.nick   -- The current nickname
 cbuf        = nil            -- The current buffer
 bufs        = {}             -- List of all opened buffers
 
@@ -46,12 +47,12 @@ end
 
 -- a simple wrapper around irc.connect.
 function connect()
-    local user  = config.user or os.getenv("USER")
-    local name  = config.name or _nick
-    local pass  = config.pass
+    local user  = SRVCONF.user or os.getenv("USER")
+    local name  = SRVCONF.name or _nick
+    local pass  = SRVCONF.pass
 
-    local r, e = irc.connect(config.host, config.port, config.tls,
-        nick, user, name, pass, config.caps, config.no_ident)
+    local r, e = irc.connect(SRVCONF.host, SRVCONF.port, SRVCONF.tls,
+        nick, user, name, pass, SRVCONF.caps, SRVCONF.no_ident)
     return r, e
 end
 
@@ -731,12 +732,12 @@ local irchand = {
     -- and nothing has gone wrong in the registration process, we can
     -- connect to the default channels and set the default mode.
     ["376"] = function(_, _, _, _)
-        if config.mode and config.mode ~= "" then
-            send(":%s MODE %s :%s", nick, nick, config.mode)
+        if SRVCONF.mode and SRVCONF.mode ~= "" then
+            send(":%s MODE %s :%s", nick, nick, SRVCONF.mode)
         end
 
-        for c = 1, #config.join do
-            send(":%s JOIN %s", nick, config.join[c])
+        for c = 1, #SRVCONF.join do
+            send(":%s JOIN %s", nick, SRVCONF.join[c])
         end
     end,
 
@@ -1581,23 +1582,31 @@ function rt.init(args)
     --
     -- For example: the following argument string:
     --    ./lurch -host irc.snoonet.org -port 6666 -mirc
-    -- Will set config.host to irc.snoonet.org, config.port
+    -- Will set the IRC host to irc.snoonet.org, the IRC port
     -- to 6666, and will toggle config.mirc.
     --
     local lastarg
-    for i, arg in ipairs(args) do
+    for _, arg in ipairs(args) do
         if arg:sub(1, 1) == "-" then
             arg = arg:sub(2, #arg)
-            config[arg] = not config[arg]
+            if SRVCONF[arg] ~= nil then
+                SRVCONF[arg] = not SRVCONF[arg]
+            else
+                config[arg] = not config[arg]
+            end
             lastarg = arg
         elseif lastarg then
-            config[lastarg] = arg
+            if SRVCONF[lastarg] ~= nil then
+                SRVCONF[lastarg] = arg
+            else
+                config[lastarg] = arg
+            end
             lastarg = nil
         end
     end
 
     -- Get the IRC log directory and create it if necessary.
-    logs.setup(config.host)
+    logs.setup(SRVCONF.host)
 
     -- Set up the TUI. Retrieve the column width, set the prompt,
     -- line format, and statusline functions, and load the highlight

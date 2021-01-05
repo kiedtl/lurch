@@ -15,38 +15,71 @@ local M = {}
 -- been K-lined before).
 M.reconn = 25
 
-M.tls  = true
-M.host = "irc.tilde.chat"
-M.port = 6697
+M.servers = {
+    ["tilde.chat"] = {
+        tls  = true,
+        host = "irc.tilde.chat",
+        port = 6697,
 
-M.nick = "inebriate|lurch"
+        nick = "inebriate|lurch",
 
--- Command that will give the server password as its output. The actual
--- password should not be stored here for obvious reasons.
---
--- This is distinct from the password used with SASL or Nickserv IDENTIFY,
--- but some IRC servers will accept passwords from here as if a NickServ
--- IDENTIFY command was run anyway.
---
--- By default, the command is 'pash show irc', which runs pash [0] and
--- shows the password entry 'irc'. This command can be substituted for the
--- equivalent pass command (or whatever your password manager is).
---
--- [0]: https://github.com/dylanaraps/pash
-M.pass_command = "pash show irc"
-M.pass = util.capture(M.pass_command)
+        -- Command that will give the server password as its output. The actual
+        -- password should not be stored here for obvious reasons.
+        --
+        -- This is distinct from the password used with SASL or Nickserv IDENTIFY,
+        -- but some IRC servers will accept passwords from here as if a NickServ
+        -- IDENTIFY command was run anyway.
+        --
+        -- By default, the command is 'pash show irc', which runs pash [0] and
+        -- shows the password entry 'irc'. This command can be substituted for the
+        -- equivalent pass command (or whatever your password manager is).
+        --
+        -- [0]: https://github.com/dylanaraps/pash
+        pass = util.capture("pash show irc"),
 
--- If this is nil, it defaults to M.nick
-M.user = nil
+        -- If this is nil, it defaults to M.nick
+        user = nil,
 
--- your "real name". if nil, defaults to the nickname.
-M.name = "o hai"
+        -- your "real name". if nil, defaults to the nickname.
+        name = "o hai",
 
--- Channels to join when connected.
-M.join = { "#lurch" }
+        -- Channels to join when connected.
+        join = { "#lurch" },
 
--- Mode to set when connected.
-M.mode = "+i"
+        -- Mode to set when connected.
+        mode = "+i",
+
+        -- Attempt to prevent the ident from being received.
+        -- This is done by delaying the registration of the user after connecting to the
+        -- IRC server for a few seconds; by then, some servers will have their identd
+        -- requests time out. Note that only a few IRCd's are susceptible to this.
+        no_ident = false,
+
+        -- List of IRCv3 capabilities to enable.
+        --
+        -- Supported capabilities:
+        --   * server-time:    Enables adding the "time" IRCv3 tag to messages, thus
+        --                     allowing us to determine when a message was sent.
+        --                     Without it, lurch just uses the time at which the message
+        --                     was received, which could very well be inaccurate.
+        --   * away-notify:    Allows the server to notify us when a user changes their
+        --                     away status.
+        --   * account-notify: Allows the server to notify us when a user logs in/out of
+        --                     their account.
+        --   * echo-message:   Normally, when the user sends a message, the server doesn't
+        --                     let us know if the message was recieved or not. With this
+        --                     enabled, the server will "echo" our messages back to us.
+        --
+        -- Note that these capabilities will only be enabled if the server
+        -- supports it.
+        --
+        caps = { "server-time", "account-notify", "echo-message" }
+    }
+}
+
+-- This can be changed at runtime like so:
+-- $ lurch -server freenode
+M.server = "tilde.chat"
 
 -- default kick/quit/part message. (defaults to an empty string)
 M.quit_msg = function(channel)
@@ -294,30 +327,6 @@ M.handlers = {
 
 -- what timezone to display times in. (format: "UTC[+-]<offset>")
 M.tz = "UTC-5:00"
-
--- Attempt to prevent the ident from being received.
--- This is done by delaying the registration of the user after connecting to the
--- IRC server for a few seconds; by then, some servers will have their identd
--- requests time out. Note that only a few IRCd's are susceptible to this.
-M.no_ident = false
-
--- List of IRCv3 capabilities to enable.
---
--- Supported capabilities:
---   * server-time:    enables adding the "time" IRCv3 tag to messages, thus
---                     allowing us to accurately determine when a message was sent.
---   * away-notify:    allows the server to notify us when a user changes their
---                     away status
---   * account-notify: allows the server to notify us when a user logs in/out of
---                     their account
---   * echo-message:   normally, when the user sends a message, the server does not
---                     let us know if the message was recieved or not. With this
---                     enabled, the server will "echo" our messages back to us.
---
--- Note that these capabilities will only be enabled if the server
--- supports it.
---
-M.caps = { "server-time", "account-notify", "echo-message" }
 
 -- List of blocked/dimmed/filtered user patterns. Blocked ("B") users are
 -- filtered out completely, while filtered ("F") users are only filtered out
