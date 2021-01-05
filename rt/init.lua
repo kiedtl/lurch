@@ -1182,8 +1182,9 @@ cmdhand = {
         usage = "<user> [reason...]",
         fn = function(a, args, _)
             if args == "" then args = nil end
-            local reason = args or config.kick_msg or ""
-            send("KICK %s %s :%s", bufs[cbuf].name, a, reason)
+            local buf = bufs[cbuf].name
+            local reason = args or config.kick_msg(buf_cur()) or ""
+            send("KICK %s %s :%s", buf_cur(), a, reason)
         end,
     },
     ["/ignore"] = {
@@ -1225,7 +1226,7 @@ cmdhand = {
         help = { "Part the current channel." },
         usage = "[part_message]",
         fn = function(a, args, _)
-            local msg = config.part_msg
+            local msg = config.part_msg(buf_cur()) or ""
             if a and a ~= "" then msg = format("%s %s", a, args) end
             send(":%s PART %s :%s", nick, buf_cur(), msg)
         end
@@ -1265,7 +1266,7 @@ cmdhand = {
         fn = function(a, args, _)
             local msg
             if not a or a == "" then
-                msg = config.quit_msg
+                msg = config.quit_msg() or ""
             else
                 msg = format("%s %s", a, args)
             end
@@ -1691,7 +1692,7 @@ local sighand = {
 }
 
 function rt.on_signal(sig)
-    local quitmsg = config.quit_msg or "*poof*"
+    local quitmsg = config.quit_msg() or "*poof*"
     local handler = sighand[sig] or sighand[0]
     if (handler)() then
         send("QUIT :%s", quitmsg)

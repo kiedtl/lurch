@@ -49,9 +49,15 @@ M.join = { "#lurch" }
 M.mode = "+i"
 
 -- default kick/quit/part message. (defaults to an empty string)
-M.quit_msg = "*thud*"
-M.kick_msg = "your presence in this community is no longer desirable"
-M.part_msg = "*confused shouting*"
+M.quit_msg = function(channel)
+    return "*thud*"
+end
+M.kick_msg = function(channel)
+    return "your presence in this community is no longer desirable"
+end
+M.part_msg = function(channel)
+    return "*confused shouting*"
+end
 
 -- Default replies for CTCP queries from users/server.
 --
