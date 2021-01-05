@@ -515,14 +515,14 @@ local irchand = {
 
     -- AWAY: You are no longer marked as being away
     ["305"] = function(e)
-        util.ivmap(bufs, function(i, v)
+        util.ivmap(bufs, function(_, v)
             prin_irc(0, v.name, L_AWAY(e), "You are no longer marked as being away.")
         end)
     end,
 
     -- AWAY: You have been marked as being away
     ["306"] = function(e)
-        util.ivmap(bufs, function(i, v)
+        util.ivmap(bufs, function(_, v)
             prin_irc(0, v.name, L_AWAY(e), "You have been marked as being away.")
         end)
     end,
@@ -554,7 +554,7 @@ local irchand = {
     end,
 
     -- WHO: RPL_ENDOFWHO
-    ["315"] = function(e)
+    ["315"] = function(_)
         --
         -- Disabled. Since 352 (RPL_WHOREPLY) is the only reply we get
         -- from a WHO query, this message is unnecessary.
@@ -612,7 +612,7 @@ local irchand = {
         local n, userhost = (e.fields[4]):gmatch("(.-)!(.*)")()
         if n then
             prin_irc(0, e.dest, L_NORM(e), "Topic last set by %s (%s)",
-                hncol(n), mirc.l_grey(e.fields[4]))
+                hncol(n), mirc.l_grey(userhost))
         else
             local datetime = os.date("%Y-%m-%d %H:%M:%S", tonumber(e.msg))
             prin_irc(0, e.dest, L_NORM(e), "Topic last set by %s on %s",
@@ -967,7 +967,7 @@ function send_both(fmt, ...)
     end
 end
 
-cmdhand = {
+local cmdhand = {
     ["/close"] = {
         help = { "Close a buffer. The buffers after the one being closed are shifted left." },
         usage = "[buffer]",
@@ -1012,7 +1012,6 @@ cmdhand = {
                 "/scroll -23    Scroll down by 23 lines.\n"
         },
         fn = function(a, _, _)
-            local ps = bufs[cbuf].scroll
             if a:match("^%-") and tonumber(a) then
                 buf_scroll(cbuf, -(tonumber(a:sub(2, #a))), nil)
             elseif a:match("^%+") and tonumber(a) then
@@ -1033,7 +1032,7 @@ cmdhand = {
     },
     ["/unread"] = {
         help = { "Switch to the first buffer with an unread message." },
-        fn = function(a, _, _)
+        fn = function(_, _, _)
             for _, unread_type in ipairs({ "pings", "unreadh", "unreadl" }) do
                 for i = 1, #bufs do
                     if bufs[i][unread_type] > 0 then
