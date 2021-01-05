@@ -308,7 +308,7 @@ local function hndfact_err(m)
 end
 
 local irchand = {
-    ["PING"] = function(e)   send("PONG :%s", e.dest or e.msg) end,
+    ["PING"] = function(e) send("PONG :%s", e.dest or e.msg) end,
     ["ACCOUNT"] = function(e)
         assert(irc.server.caps["account-notify"])
 
