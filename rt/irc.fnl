@@ -215,6 +215,9 @@
 
 ; ---
 
+(fn M._handlers.PING [e]
+  (M.send "PONG :%s" (or e.dest e.msg)))
+
 (fn M._handlers.CAP [e]
   (let [subcmd (string.lower (. e :fields 3))
         msg    (string.match (. e :msg) "(.-)%s*$")] ; remove trailing whitespace
@@ -231,6 +234,6 @@
 
 (lambda M.handle [event]
   (let [hnd (. M :_handlers (. event :fields 1))]
-    (when hnd (hnd event))))
+    (when hnd (hnd event) true)))
 
 M

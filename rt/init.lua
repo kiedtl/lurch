@@ -308,7 +308,6 @@ local function hndfact_err(m)
 end
 
 local irchand = {
-    ["PING"] = function(e) send("PONG :%s", e.dest or e.msg) end,
     ["ACCOUNT"] = function(e)
         assert(irc.server.caps["account-notify"])
 
@@ -921,7 +920,10 @@ function parseirc(reply)
     end
 
     -- Allow the IRC module to do its bookkeeping stuff.
-    irc.handle(event)
+    --
+    -- We use has_handler to keep track of whether the command
+    -- was handled or not.
+    local has_handler = irc.handle(event)
 
     -- run each user handler, if it's not disabled.
     if config.handlers[CFGHND_ALL] then
@@ -938,10 +940,16 @@ function parseirc(reply)
             local ret = (v.fn)(event)
             if ret == CFGHND_RETURN then _return = true end
         end)
+        has_handler = true
     end
     if _return then return end
 
-    if not irchand[cmd] then
+    if irchand[cmd] then
+        (irchand[cmd])(event)
+        has_handler = true
+    end
+
+    if not has_handler then
         local text = "(" .. event.fields[1] .. ")"
         for i = 2, #event.fields do
             text = text .. " " .. event.fields[i]
@@ -951,8 +959,6 @@ function parseirc(reply)
         end
 
         prin_irc(1, MAINBUF, "-?-", "%s", text)
-    else
-        (irchand[cmd])(event)
     end
 end
 
