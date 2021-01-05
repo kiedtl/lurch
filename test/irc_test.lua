@@ -53,6 +53,7 @@ function M.test_field_parsing()
         { ":chet!nikah@tilde.team PRIVMSG #meat :*was", { "PRIVMSG", "#meat" }, "*was", "#meat" },
         { ":team.tilde.chat 353 nsa = #chaos :exef enuu Civan Oyster nsa", { "353", "nsa", "=", "#chaos" }, "exef enuu Civan Oyster nsa", "#chaos" },
         { ":team.tilde.chat 353 nsa @ #nsa :@nsa", { "353", "nsa", "@", "#nsa" }, "@nsa", "#nsa" },
+        { ":halfdozens!~halfdozens@mirac.le PART :#meat", { "PART" }, "#meat", "#meat" },
     }
 
     for _, case in ipairs(cases) do
@@ -105,6 +106,7 @@ function M.test_construct()
         "@time=2021-01-01T20:20:41.499Z :relovscam!relovscam@brown.house PRIVMSG #etma :Hey there",
         "@time=2021-01-01T20:21:04.540Z :relovscam!relovscam@brown.house PRIVMSG #etma :buy two if you buy one",
         "@time=2021-01-02T12:28:23.671Z :S3xyL1nux!S3xyL1nux@idio.ts PRIVMSG spacehare :VERSION",
+        ":halfdozens!~halfdozens@mirac.le PART :#meat",
     }
 
     for _, case in ipairs(cases) do

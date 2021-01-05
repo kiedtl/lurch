@@ -142,6 +142,11 @@
       (string.find (. event.fields 3) "^[@=]")
       (tset event :dest (. event.fields 4))))
 
+  ; If there is no dest, check if the message is a channel; if so,
+  ; use that as the message.
+  (when (and (not event.dest) (string.match event.msg "^#"))
+    (tset event :dest event.msg))
+
   ; If the message itself contains text with surrounding '\x01',
   ; we're dealing with CTCP. Simply set the type to that text so
   ; we may specially deal with it later.
