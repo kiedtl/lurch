@@ -47,7 +47,6 @@ L_NICK  = config.leftfmt.nick
 
 SRVCONF = config.servers[config.server]
 DBGFILE = "/tmp/lurch_debug"
-MAINBUF = SRVCONF.host
 
 reconn      = config.reconn  -- Number of times we've reconnected.
 reconn_wait = 5              -- Seconds to wait before reconnecting.
@@ -1579,9 +1578,9 @@ function rt.on_keyseq(event)
         if config.keyseqs.mods[event.mod]
         and config.keyseqs.mods[event.mod][ev_key] then
             (config.keyseqs.mods[event.mod][ev_key])(event)
-        elseif modseq_handler.mods[event.mod]
-        and modseq_handler.mods[event.mod][ev_key] then
-            (modseq_handler.mods[event.mod][ev_key])(event)
+        elseif keyseq_handler.mods[event.mod]
+        and keyseq_handler.mods[event.mod][ev_key] then
+            (keyseq_handler.mods[event.mod][ev_key])(event)
         end
     elseif event.key ~= 0 then
         if config.keyseqs.keys[event.key] then
