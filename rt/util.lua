@@ -82,9 +82,8 @@ end
 -- FIXME: this may occasionally split unicode characters
 function util.fold(text, width)
     local _raw_len = function(data)
-        local sz = utf8utils.dwidth(mirc.remove(data))
-        if not sz then sz = utf8.len(mirc.remove(data)) end
-        return sz
+        local rd = mirc.remove(data)
+        return utf8utils.dwidth(rd) or utf8.len(rd) or #rd
     end
 
     local res = ""
