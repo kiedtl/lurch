@@ -3,11 +3,25 @@
 
 local rt = {}
 
+-- Add config paths to package.path before require'ing
+-- config module
+if os.getenv("LURCH_CONFIG") then
+    package.path = os.getenv("LURCH_CONFIG") .. "/?.lua;" .. package.path
+end
+package.path = __LURCH_EXEDIR .. "/conf/?.lua;" .. package.path
+if os.getenv("XDG_CONFIG_HOME") then
+    package.path = os.getenv("XDG_CONFIG_HOME") .. "/lurch/?.lua;" .. package.path
+end
+package.path = "/home/" .. os.getenv("USER") .. "/.config/lurch/?.lua;" .. package.path
+
+local config = require('config')
+
+-- ----------------------------------
+
 local inspect = require('inspect')
 
 local irc       = require('irc')
 local callbacks = require('callbacks')
-local config    = require('config')
 local logs      = require('logs')
 local mirc      = require('mirc')
 local util      = require('util')
@@ -1610,6 +1624,14 @@ function rt.init(args)
         end
     end
 
+    -- HACK: re-set these vars, just in case they were changed
+    -- while parsing arguments
+    --
+    -- FIXME: remove this
+    SRVCONF = config.servers[config.server]
+    nick = SRVCONF.nick
+    MAINBUF = SRVCONF.host
+
     -- Get the IRC log directory and create it if necessary.
     logs.setup(SRVCONF.host)
 
@@ -1653,7 +1675,7 @@ function rt.init(args)
 
     -- Finally, we can connect to the server.
     prin_cmd(MAINBUF, L_ERR(), "Connecting to %s:%s (TLS: %s)",
-        config.host, config.port, config.tls)
+        SRVCONF.host, SRVCONF.port, SRVCONF.tls)
     return connect()
 end
 

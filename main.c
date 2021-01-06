@@ -139,7 +139,6 @@ main(int argc, char **argv)
 	/* TODO: do this the non-lazy way */
 	(void) luaL_dostring(L,
 		"package.path = __LURCH_EXEDIR .. '/rt/?.lua;' .. package.path\n"
-		"package.path = __LURCH_EXEDIR .. '/conf/?.lua;' .. package.path\n"
 	);
 
 	/* setup lurch api functions */
