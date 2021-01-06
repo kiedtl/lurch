@@ -5,14 +5,14 @@ local rt = {}
 
 -- Add config paths to package.path before require'ing
 -- config module
-if os.getenv("LURCH_CONFIG") then
-    package.path = os.getenv("LURCH_CONFIG") .. "/?.lua;" .. package.path
-end
-package.path = __LURCH_EXEDIR .. "/conf/?.lua;" .. package.path
+package.path = "/home/" .. os.getenv("USER") .. "/.config/lurch/?.lua;" .. package.path
 if os.getenv("XDG_CONFIG_HOME") then
     package.path = os.getenv("XDG_CONFIG_HOME") .. "/lurch/?.lua;" .. package.path
 end
-package.path = "/home/" .. os.getenv("USER") .. "/.config/lurch/?.lua;" .. package.path
+package.path = __LURCH_EXEDIR .. "/conf/?.lua;" .. package.path
+if os.getenv("LURCH_CONFIG") then
+    package.path = os.getenv("LURCH_CONFIG") .. "/?.lua;" .. package.path
+end
 
 local config = require('config')
 
