@@ -219,7 +219,7 @@ function prin_irc(prio, dest, left, right_fmt, ...)
     for pat, lvl in pairs(config.ignores) do
         local sndr = last_ircevent.from
         if sndr and (sndr):match(pat) then
-            ignlvl = lvl; break
+            ignlvl = lvl:upper(); break
         end
     end
 
@@ -237,6 +237,15 @@ function prin_irc(prio, dest, left, right_fmt, ...)
         time = utc_time + (offset * 60 * 60)
     else
         time = util.time_with_offset(offset)
+    end
+
+    -- Only log JOIN, PART, QUIT, MODE(+b), PRIVMSG, and NOTICE
+    -- because litterbox's unscoop utility ignores anything else
+    local last_cmd = last_ircevent.fields[1]
+    if last_cmd == "JOIN" or last_cmd == "PART"
+    or last_cmd == "QUIT" or last_cmd == "MODE"
+    or last_cmd == "PRIVMSG" or last_cmd == "NOTICE" then
+        logs.append(dest, last_ircevent)
     end
 
     -- If the user is dimmed, color the message/sender a light grey.
@@ -360,8 +369,6 @@ local irchand = {
     ["MODE"] = function(e)
         if not e.dest then e.dest = e.msg end
         if (e.dest):find("#") then
-            logs.append(e.dest, e)
-
             e.fields[#e.fields + 1] = e.msg
             local by   = e.nick or e.from
             local mode = util.join(" ", e.fields, 3)
@@ -385,13 +392,10 @@ local irchand = {
         else
             prin_irc(prio, dest, "NOTE", "%s", e.msg)
         end
-
-        logs.append(dest, e)
     end,
     ["TOPIC"] = function(e)
         prin_irc(0, e.dest, L_TOPIC(e), "%s changed the topic to \"%s\"",
             hncol(e.nick), e.msg)
-        logs.append(e.dest, e)
     end,
     ["PART"] = function(e)
         local idx = buf_idx_or_add(e.dest)
@@ -399,14 +403,12 @@ local irchand = {
         local userhost = e.user .. "@" .. e.host
         prin_irc(0, e.dest, "<--", "%s (%s) has left %s (%s)",
             hncol(e.nick), mirc.l_grey(userhost), hcol(e.dest), e.msg)
-        logs.append(e.dest, e)
     end,
     ["KICK"] = function(e)
         local p = 0
         if e.fields == nick then p = 2 end -- if the user was kicked, ping them
         prin_irc(p, e.dest, "<--", "%s has kicked %s (%s)", hncol(e.nick),
             hncol(e.fields[3]), e.msg)
-        logs.append(e.dest, e)
     end,
     ["INVITE"] = function(e)
         -- TODO: auto-join on invite?
@@ -425,7 +427,6 @@ local irchand = {
         if not config.mirc then e.msg = mirc.remove(e.msg) end
 
         prin_irc(prio, e.dest, sndfmt, "%s", e.msg)
-        logs.append(e.dest, e)
     end,
     ["QUIT"] = function(e)
         -- display quit message for all buffers that user has joined,
@@ -435,7 +436,6 @@ local irchand = {
             prin_irc(0, buf.name, "<--", "%s (%s) quit (%s)",
                 hncol(e.nick), mirc.l_grey(userhost), e.msg)
             bufs[i].names[e.nick] = false
-            logs.append(buf.name, e)
         end)
         bufs[1].names[e.nick] = false
     end,
@@ -455,7 +455,6 @@ local irchand = {
         local userhost = e.user .. "@" .. e.host
         prin_irc(0, e.dest, "-->", "%s (%s) joined %s",
             hncol(e.nick), mirc.l_grey(userhost), hcol(e.dest))
-        logs.append(e.dest, e)
     end,
     ["NICK"] = function(e)
         -- copy across nick information (this preserves nick highlighting across
@@ -468,7 +467,6 @@ local irchand = {
                 prin_irc(0, buf.name, L_NICK(e), "%s is now known as %s",
                     hncol(e.nick), hncol(e.msg))
                 buf.names[e.nick] = nil; buf.names[e.msg] = true
-                logs.append(buf.name, e)
             end
         end
         tui.set_colors[e.msg]  = tui.set_colors[e.nick]

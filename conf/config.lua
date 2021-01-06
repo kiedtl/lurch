@@ -339,11 +339,12 @@ M.tz = "UTC-5:00"
 -- NOTE: these patterns are actual Lua patterns, and an invalid pattern will
 -- cause lurch to crash.
 M.ignores = {
-    ["joaquinito0[1-9]"] = "D",
-    [".-!Bearfield.-@"] = "D",
-    [".-!MrMoney.-@"] = "D",
-    [".-!rareman.-@"] = "D",
-    [".-!MrETH1.-@"] = "D",
+    ["S3xyL1nux"]        = "B",
+    ["joaquinito0[1-9]"] = "B",
+    [".-!Bearfield.-@"]  = "B",
+    [".-!MrMoney.-@"]    = "B",
+    [".-!rareman.-@"]    = "B",
+    [".-!MrETH1.-@"]     = "B",
 }
 
 return M
