@@ -858,7 +858,7 @@ local irchand = {
             e.msg = mirc.remove(e.msg)
         end
 
-        prin_irc(prio, e.dest, config.leftfmt.action, "%s %s",
+        prin_irc(prio, e.dest, config.leftfmt.action(e), "%s %s",
             sender_fmt, e.msg)
     end,
 
