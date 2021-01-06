@@ -32,7 +32,12 @@
     (set hsh (bxor hsh (rshift hsh 15)))
     hsh)
 
-  (-?>> [(F.iter str)] (F.foldl 0 _hash_fn)))
+  ; "avalanche"
+  (var hsh (-?>> [(F.iter str)]
+                 (F.foldl 0 _hash_fn)))
+  (set hsh (+ hsh (lshift hsh 3)))
+  (set hsh (bxor hsh (rshift hsh 23)))
+  (+ hsh (lshift hsh 15)))
 
 (lambda M.highlight [text ?text_as ?no_bold?]
   (assert_t [text :string :text])
