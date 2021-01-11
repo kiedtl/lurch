@@ -177,12 +177,6 @@ main(int argc, char **argv)
 	 * ttimeout: how long select(2) should wait for activity.
 	 * tpresent: last time tb_present() was called.
 	 * tcurrent: buffer for gettimeofday(2).
-	 *
-	 * ttimeout is set to 0,0 so as to prevent reconnection
-	 * activity from being disrupted if there is no user input
-	 * (if there's no user input, select() times out and the
-	 * loop continues, and the on_disconnect() handler doesn't
-	 * get called).
 	 */
 	struct timeval ttimeout = { 5, 500 };
 	struct timeval tpresent = { 0,   0 };
