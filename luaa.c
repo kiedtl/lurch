@@ -120,7 +120,7 @@ api_conn_init(lua_State *pL)
 		if (tls_connect_socket(client, conn_fd, host) != 0)
 			LLUA_ERR(pL, format("tls: can't connect: %s", tls_error(client)));
 		if (tls_handshake(client) != 0)
-			LLUA_ERR(pL, format("tls: can't perform handshake: %s", tls_error(client)));
+			LLUA_ERR(pL, format("tls: handshake failed: %s", tls_error(client)));
 	}
 
 	lua_pushboolean(L, true);
@@ -158,9 +158,9 @@ api_conn_send(lua_State *pL)
 
 		if (tls_active && (r == TLS_WANT_POLLIN || r == TLS_WANT_POLLOUT))
 			continue;
-		if (r < 0) LLUA_ERR(pL, NETWRK_ERR());
+		else if (r < 0) LLUA_ERR(pL, NETWRK_ERR());
 
-		data += r; len -= r;
+		fmtd += r; len -= r;
 	}
 
 	lua_pushboolean(L, true);
