@@ -11,8 +11,8 @@
   (if (> v max) max (< v min) min v))
 (macro sq [a] `(* ,a ,a))
 
-(let [iters     10 output "color"
-      width     80 height (- (/ width 2) 2)
+(let [iters     10 output "ascii"
+      width     24 height (- (/ width 2) 2)
       min-re -2.05 max-re 1.05  min-im -1.2
       max-im   1.1]
       ;min-re -0.756401399999999998687
