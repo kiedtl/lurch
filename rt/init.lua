@@ -1543,14 +1543,8 @@ local keyseq_handler = {
     keys = {
         [tb.TB_KEY_CTRL_N] = function(_) parsecmd("/next") end,
         [tb.TB_KEY_CTRL_P] = function(_) parsecmd("/prev") end,
-        [tb.TB_KEY_PGUP]   = function(_)
-            buf_scroll(cbuf, tui.tty_height-5)
-            redraw()
-        end,
-        [tb.TB_KEY_PGDN]   = function(_)
-            buf_scroll(cbuf, -(tui.tty_height-5))
-            redraw()
-        end,
+        [tb.TB_KEY_PGUP]   = function(_) parsecmd("/scroll +3") end,
+        [tb.TB_KEY_PGDN]   = function(_) parsecmd("/scroll -3") end,
         [tb.TB_KEY_CTRL_L] = function(_) parsecmd("/redraw") end,
         [tb.TB_KEY_CTRL_C] = function(_) parsecmd("/quit") end,
         [tb.TB_KEY_CTRL_B] = function(_) tbrl.insert_at_curs(mirc.BOLD) end,
