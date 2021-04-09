@@ -1629,9 +1629,10 @@ function rt.init(args)
     -- Set up the TUI. Retrieve the column width, set the prompt,
     -- line format, and statusline functions, and load the highlight
     -- colors.
-    tui.linefmt_func    = config.linefmt
-    tui.prompt_func     = callbacks.prompt
-    tui.statusline_func = callbacks.statusline
+    tui.linefmt_func           = config.linefmt
+    tui.prompt_func            = callbacks.prompt
+    tui.statusline_func        = callbacks.statusline
+    tui.bottom_statusline_func = callbacks.bottom_statusline
 
     tui.refresh()
     tui.colors = config.colors()

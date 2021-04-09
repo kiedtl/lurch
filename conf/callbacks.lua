@@ -253,6 +253,13 @@ end
 -- example above.
 M.statusline = M.fancy_statusline
 
+-- A statusline that shows up just above the inputbar.
+-- If you wish, you could change the top statusline to show the channel's topic and
+-- the bottom one to show, say, the channel name, mode, and user count, like Irssi.
+--
+-- Disable it by changing it to nil.
+M.bottom_statusline = nil
+
 -- called whenever there is a new unread message/event in a buffer.
 --
 -- type: the type of notification. A low-priority notification (e.g.

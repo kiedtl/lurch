@@ -10,13 +10,14 @@
 (local assert_t util.assert_t)
 
 (var M {}) 
-(tset M :linefmt_func     nil)
-(tset M :prompt_func      nil)
-(tset M :statusline_func  nil)
-(tset M :set_colors        {})
-(tset M :colors            {})
-(tset M :tty_height        80)
-(tset M :tty_width         24)
+(tset M :linefmt_func            nil)
+(tset M :prompt_func             nil)
+(tset M :statusline_func         nil)
+(tset M :bottom_statusline_func  nil)
+(tset M :set_colors               {})
+(tset M :colors                   {})
+(tset M :tty_height               80)
+(tset M :tty_width                24)
 
 (lambda M.refresh []
   (let [(y x) (termbox.size)]
@@ -72,8 +73,14 @@
       (termbox.setcursor tb.TB_HIDE_CURSOR tb.TB_HIDE_CURSOR))
     (M.prompt_func inp cursor)))
 
+
 (lambda M.statusline []
   (M.statusline_func))
+
+(lambda M.bottom_statusline []
+  (when M.bottom_statusline_func
+    (M.bottom_statusline_func)))
+
 
 (lambda M.format_line [timestr left right timew leftw ?rightw]
   (assert_t [timestr :string :timestr] [timew :number :timew]
@@ -118,12 +125,13 @@
   ; advance how many lines a particular history entry will take
   ; up, and thus don't know how many history events will fit
   ; on the screen.
-  ;
+
   ; keep one blank line in between statusline and text, and
   ; don't overwrite the prompt/inputline.
-
   (let [linestart 1
-        lineend   (- M.tty_height 2)
+        lineend   (if (not M.bottom_statusline_func)
+                    (- M.tty_height 2)
+                    (- M.tty_height 3))
         h_st      (- (length (. bufs cbuf :history)) (- M.tty_height 4))
         h_end     (length (. bufs cbuf :history))
         scr       (. bufs cbuf :scroll)]
@@ -165,6 +173,7 @@
     (M.refresh)
     (termbox.clear)
     (M.statusline)
+    (M.bottom_statusline)
     (M.buffer_text timew leftw ?rightw)
     (M.prompt inbuf incurs))
 
