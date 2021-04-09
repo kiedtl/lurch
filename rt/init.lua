@@ -302,8 +302,7 @@ function prin(priority, time, dest, left, right)
     -- draw the text; otherwise, add to the list of unread notifications
     local cb = bufs[cbuf]
     if dest == cb.name and cb.scroll == 0 then
-        tui.buffer_text(config.time_col_width, config.left_col_width,
-            config.right_col_width)
+        redraw()
     else
         if priority == 0 then
             bufs[bufidx].unreadl = bufs[bufidx].unreadl + 1
