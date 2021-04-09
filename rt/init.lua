@@ -38,6 +38,9 @@ local format    = string.format
 local hcol      = tui.highlight
 local assert_t  = util.assert_t
 
+-- Ugly globals
+_G.irc_ctx = irc
+
 L_NAME  = config.leftfmt.names
 L_TOPIC = config.leftfmt.topic
 L_ERR   = config.leftfmt.error

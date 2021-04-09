@@ -7,6 +7,7 @@
 (tset M :_handlers {})
 
 ; Bookkeeping
+(tset M :channels {})
 (tset M :server {})
 (tset M :server :connected (os.time))  ; last time we tried to connect
 (tset M :server :caps {:all {}         ; IRCv3 caps the server ack'd/nak'd
@@ -17,7 +18,7 @@
 ;
 ; "hkxumk|weechat" => "hkxumk"; "josh_" => "josh"; "jayd[m]" => "jay"
 ;
-; (XXX: This isn't foolproof: "__attribute__" => "__attribute" :/)
+; (XXX: This isn't foolproof: "__attribute__" => "__attribute")
 (lambda M.normalise_nick [nick]
   (var nick nick)
   (if (nick:match "[^|]+|..+$")
@@ -215,8 +216,35 @@
 
 ; ---
 
+(tset M :_handlers :332
+      (fn [e]
+        (when (not (. M.channels e.dest))
+          (tset M.channels e.dest {}))
+        (tset M.channels e.dest :topic e.msg)))
+
+(tset M :_handlers :333
+      (fn [e]
+        (when (not (. M.channels e.dest))
+          (tset M.channels e.dest {}))
+        ; sometimes, the nick is in the fields
+        (let [(n userhost) (string.gmatch (. e.fields 4) "(.-)!(.*)")]
+          (if n
+            (do
+              (tset M.channels e.dest :topic_by n)
+              (tset M.channels e.dest :topic_by_userhost userhost))
+            (do
+              (tset M.channels e.dest :topic_by (. e.fields 4))
+              (tset M.channels e.dest :topic_on (tonumber e.msg)))))))
+
 (fn M._handlers.PING [e]
   (M.send "PONG :%s" (or e.dest e.msg)))
+
+(fn M._handlers.TOPIC [e]
+  (when (not (. M.channels e.dest))
+    (tset M.channels e.dest {}))
+  (tset M.channels e.dest :topic e.msg)
+  (tset M.channels e.dest :topic_on (os.time))
+  (tset M.channels e.dest :topic_by e.nick))
 
 (fn M._handlers.CAP [e]
   (let [subcmd (string.lower (. e :fields 3))
