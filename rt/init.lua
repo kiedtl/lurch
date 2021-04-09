@@ -253,10 +253,8 @@ function prin_irc(prio, dest, left, right_fmt, ...)
 
     -- If the user is dimmed, color the message/sender a light grey.
     if ignlvl == "D" then
-        right = mirc.remove(right)
-        right = mirc.COLOR .. "15" .. right .. mirc.RESET
-        left  = mirc.remove(left)
-        left  = mirc.COLOR .. "15" .. left .. mirc.RESET
+        right = mirc.grey(mirc.remove(right))
+        left  = mirc.grey(mirc.remove(left))
     end
 
     -- If the user is filtered, skip printing.
@@ -404,7 +402,7 @@ local irchand = {
         bufs[idx].names[e.nick] = false
         local userhost = e.user .. "@" .. e.host
         prin_irc(0, e.dest, "<--", "%s (%s) has left %s (%s)",
-            hncol(e.nick), mirc.l_grey(userhost), hcol(e.dest), e.msg)
+            hncol(e.nick), mirc.grey(userhost), hcol(e.dest), e.msg)
     end,
     ["KICK"] = function(e)
         local p = 0
@@ -436,7 +434,7 @@ local irchand = {
         local userhost = e.user .. "@" .. e.host
         buf_with_nick(e.nick, function(i, buf)
             prin_irc(0, buf.name, "<--", "%s (%s) quit (%s)",
-                hncol(e.nick), mirc.l_grey(userhost), e.msg)
+                hncol(e.nick), mirc.grey(userhost), e.msg)
             bufs[i].names[e.nick] = false
         end)
         bufs[1].names[e.nick] = false
@@ -456,7 +454,7 @@ local irchand = {
 
         local userhost = e.user .. "@" .. e.host
         prin_irc(0, e.dest, "-->", "%s (%s) joined %s",
-            hncol(e.nick), mirc.l_grey(userhost), hcol(e.dest))
+            hncol(e.nick), mirc.grey(userhost), hcol(e.dest))
     end,
     ["NICK"] = function(e)
         -- copy across nick information (this preserves nick highlighting across
@@ -624,7 +622,7 @@ local irchand = {
         local n, userhost = (e.fields[4]):gmatch("(.-)!(.*)")()
         if n then
             prin_irc(0, e.dest, L_NORM(e), "Topic last set by %s (%s)",
-                hncol(n), mirc.l_grey(userhost))
+                hncol(n), mirc.grey(userhost))
         else
             local datetime = os.date("%Y-%m-%d %H:%M:%S", tonumber(e.msg))
             prin_irc(0, e.dest, L_NORM(e), "Topic last set by %s on %s",
@@ -835,7 +833,7 @@ local irchand = {
     ["718"] = function(e)
         prin_irc(1, e.fields[3], L_ERR(e),
             "%s (%s) has messaged you, but you have mode +g set. Run /accept +%s to add them to your allow list.",
-            hcol(e.fields[3]), mirc.l_grey(e.fields[4]), e.fields[3])
+            hcol(e.fields[3]), mirc.grey(e.fields[4]), e.fields[3])
     end,
 
     -- 900: You are now logged in as xyz

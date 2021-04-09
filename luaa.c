@@ -267,7 +267,7 @@ api_tb_writeline(lua_State *pL)
 		break; case MIRC_BOLD:      ++string; c.fg ^= TB_BOLD;
 		break; case MIRC_UNDERLINE: ++string; c.fg ^= TB_UNDERLINE;
 		break; case MIRC_INVERT:    ++string; c.fg ^= TB_REVERSE;
-		break; case MIRC_RESET:     ++string; c.fg = 15, c.bg = 0;
+		break; case MIRC_RESET:     ++string; c.fg = 7, c.bg = 0;
 		break; case MIRC_ITALIC:    ++string; break;
 		break; case MIRC_BLINK:     ++string; break;
 		break; case MIRC_COLOR:
@@ -276,7 +276,7 @@ api_tb_writeline(lua_State *pL)
 
 			/* if no digits after MIRC_COLOR, reset */
 			if (!isdigit(*string)) {
-				c.fg = 15, c.bg = 0;
+				c.fg = 7, c.bg = 0;
 				break;
 			}
 
