@@ -9,8 +9,7 @@
 (local format   string.format)
 (local assert_t util.assert_t)
 
-(var M {})
-
+(var M {}) 
 (tset M :linefmt_func     nil)
 (tset M :prompt_func      nil)
 (tset M :statusline_func  nil)
@@ -86,7 +85,7 @@
   ; fold message to width, like /bin/fold
   (let [infow (+ leftw timew)
         width (- (or ?rightw M.tty_width) infow)
-        rpadd (string.rep " " (+ infow 3))]
+        rpadd (string.rep " " (+ infow 2))]
     (set right (util.fold right (- width 4)))
     (set right (right:gsub "\n" (.. "%1" rpadd))))
 
