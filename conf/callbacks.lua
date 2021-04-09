@@ -55,8 +55,8 @@ function M.simple_promptf(inp, cursor)
 
     -- draw the input buffer and move the cursor to the appropriate
     -- position.
-    termbox.writeline(tui.tty_height-1, inp)
     termbox.setcursor(cursor, tui.tty_height-1)
+    return inp
 end
 
 -- A more fully-featured prompt function. This prompt changes
@@ -119,8 +119,8 @@ function M.fancy_promptf(inp, cursor)
 
     -- Clear the line, remove any bold/color, draw the input buffer
     -- and move the cursor to the appropriate position.
-    termbox.writeline(tui.tty_height-1, format("\x0f%s%s", prompt, inp))
     termbox.setcursor(cursor + rawprompt_len, tui.tty_height-1)
+    return format("\x0f%s%s", prompt, inp)
 end
 
 -- The function that is called on every keypress. It should, at the
@@ -183,7 +183,7 @@ function M.simple_statusline()
 
     local padding = M.tty_width - #(mirc.remove(chl))
     chl = format("\x16%s%s\x0f", chl, (" "):rep(padding))
-    termbox.writeline(0, chl)
+    return chl
 end
 
 -- A more fully-featured statusline, heavily based on catgirl's [0] statusbar.
@@ -243,7 +243,7 @@ function M.fancy_statusline()
         end
     end
 
-    termbox.writeline(0, "\x0f" .. chanlist)
+    return "\x0f" .. chanlist
 end
 
 -- The statusline function, the purpose of which is to print the list

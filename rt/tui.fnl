@@ -63,6 +63,7 @@
       (set esc (.. esc (format "%s%003d" mirc._256COLOR color)))))
   (format "%s%s%s" esc text mirc.RESET))
 
+
 (lambda M.prompt [inp cursor]
   (assert_t [inp :string :inp] [cursor :number :cursor])
 
@@ -71,15 +72,16 @@
     (do
       (termbox.writeline (- M.tty_height 1) "\x16\x02 -- more -- \x0f")
       (termbox.setcursor tb.TB_HIDE_CURSOR tb.TB_HIDE_CURSOR))
-    (M.prompt_func inp cursor)))
+    (termbox.writeline (- M.tty_height 1) (M.prompt_func inp cursor))))
 
 
 (lambda M.statusline []
-  (M.statusline_func))
+  (termbox.writeline 0 (M.statusline_func)))
+
 
 (lambda M.bottom_statusline []
   (when M.bottom_statusline_func
-    (M.bottom_statusline_func)))
+    (termbox.writeline (- M.tty_height 2) (M.bottom_statusline_func))))
 
 
 (lambda M.format_line [timestr left right timew leftw ?rightw]
