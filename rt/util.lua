@@ -81,6 +81,11 @@ end
 -- FIXME: not all unicode characters are just one display width...
 -- FIXME: this may occasionally split unicode characters
 function util.fold(text, width)
+    -- Ugly hack to keep tests working when utf8utils aren't available.
+    if not utf8utils.dwith then
+        utf8utils.dwidth = utf8.len
+    end
+
     local _raw_len = function(data)
         local rd = mirc.remove(data)
         return utf8utils.dwidth(rd) or utf8.len(rd) or #rd
