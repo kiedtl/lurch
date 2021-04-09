@@ -80,9 +80,12 @@
             [left :string :left] [right :string :right]
             [leftw :number :leftw])
 
+  (var leftw leftw)
   (var right right)
 
   ; fold message to width, like /bin/fold
+  (when (= leftw 0)
+    (set leftw (# left)))
   (let [infow (+ leftw timew)
         width (- (or ?rightw M.tty_width) infow)
         rpadd (string.rep " " (+ infow 2))]
