@@ -1648,7 +1648,15 @@ function rt.init(args)
     tui.set_colors[MAINBUF] = 14
     buf_add(MAINBUF)
     buf_switch(1)
-    callbacks.print_banner("beta")
+
+    prin_cmd(buf_cur(), "--", "|     ._ _ |_    o ._  _    _ | o  _  ._ _|_")
+    prin_cmd(buf_cur(), "--", "| |_| | (_ | |   | |  (_   (_ | | (/_ | | |_")
+    prin_cmd(buf_cur(), "--", "")
+    prin_cmd(buf_cur(), "--", "lurch beta (https://github.com/lptstr/lurch)")
+    prin_cmd(buf_cur(), "--", "(c) Kiëd Llaentenn. Lurch is GPLv3 software.")
+    prin_cmd(buf_cur(), "--", "")
+    prin_cmd(buf_cur(), "--", "-- -- -- -- -- -- -- -- -- -- -- -- -- -- --")
+    prin_cmd(buf_cur(), "--", "")
 
     -- Setup the termbox readline. Before termbox was used, lurch just
     -- used the normal GNU readline, but we now have to implement our
