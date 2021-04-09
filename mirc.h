@@ -19,6 +19,7 @@
 
 /* non-standard extension! */
 #define MIRC_256COLOR   '\x04'
+#define MIRC_256COLORBG '\x05'
 
 #define MIRC_BLACK          1
 #define MIRC_RED            5

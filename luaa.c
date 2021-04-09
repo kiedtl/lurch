@@ -301,6 +301,12 @@ api_tb_writeline(lua_State *pL)
 			strncpy((char *) &colorbuf, string, 3);
 			set_color(&oldfg, &c.fg, (char *) &colorbuf);
 			string += 3;
+		break; case MIRC_256COLORBG:
+			++string;
+			colorbuf[0] = colorbuf[1] = colorbuf[2] = '\0';
+			strncpy((char *) &colorbuf, string, 3);
+			set_color(&oldfg, &c.bg, (char *) &colorbuf);
+			string += 3;
 		break; default:
 			charbuf = 0;
 			runelen = utf8proc_iterate((const unsigned char *) string,

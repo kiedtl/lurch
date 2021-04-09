@@ -16,7 +16,8 @@
 (tset M :COLOR     "\x03")
 
 ;; non-standard extension
-(tset M :_256COLOR "\x04")
+(tset M :_256COLOR   "\x04")
+(tset M :_256COLORBG "\x05")
 
 (tset M :BLACK         01)
 (tset M :RED           05)
