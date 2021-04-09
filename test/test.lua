@@ -5,6 +5,10 @@ package.path = ("%s/../rt/?.lua;"):format(dir) .. package.path
 package.path = ("%s/../conf/?.lua;"):format(dir) .. package.path
 package.path = ("%s/?.lua;"):format(dir) .. package.path
 
+package.preload['lurchconn'] = function() return {} end
+package.preload['termbox'] = function() return {} end
+package.preload['utf8utils'] = function() return {} end
+
 local lunatest = require("lunatest")
 
 lunatest.suite("irc_test")
