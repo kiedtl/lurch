@@ -1,3 +1,8 @@
+; This file is part of lurch.
+;
+; (c) Kiëd Llaentenn
+; https://github.com/kiedtl/lurch
+
 (local F (require :fun))
 (local format string.format)
 (local lurchconn (require :lurchconn))
