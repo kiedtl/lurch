@@ -1,35 +1,46 @@
+Refactorings
+------------
+- move all state into a few globals, paving way for multi-server
+
 Simple fixes
 ------------
-escape channel names when writing logs (#!/bin/mksh.txt is invalid)
-redirect ChanServ messages that begin with "[#channel]" to the proper buffer
+- escape channel names when writing logs (#!/bin/mksh.txt is invalid)
+- redirect ChanServ messages that begin with "[#channel]" to the proper buffer
+- remove braindamaged away-notify thing
+- show lots of buffers nicely in fancy statusline
 
 Difficult fixes
 ---------------
-add messages to unread if away
-Keep track of nickname's access across MODE changes
-fix support for inputting multi-byte Unicode codepoints
-fix the hundres of bugs present in the inputline code
+- add messages to unread if away
+- Keep track of nickname's access across MODE changes
+- fix support for inputting multi-byte Unicode codepoints
+- fix the hundres of bugs present in the inputline code
+  - fix the cursor moving erratically on overfull inputlines
 
 New features
 ------------
-add support for: WALLOPS, 322, 367, 368, 698
-add commands for: /list, /quiet
-last-read-message indicator
-Show nickname's access in messages
-Add undo, completion support to the termbox readline module
+- add support for: WALLOPS, 322, 367, 368, 698, 005, 335 (whois is-a-bot)
+- add commands for: /list, /quiet, /reload-config
+- last-read-message indicator
+- Show nickname's access in messages
+- Add undo, completion support to the termbox readline module
 
 Long-term ideas/features
 ------------------------
-Switch to ncurses
-multi-server
-Different command prefix to print command output in current buffer vs main buffer
+- Switch to ncurses
+- multi-server
+- Different command prefix to print command output in current buffer vs main buffer
 	- maybe /:command for current buffer and /command for main buffer?
-Show netsplits/netjoins as a single message (to avoid clogging buffers)
-Support for mouse input (switching buffers, highlighting messages, etc)
-Support for multi-codepoint Unicode graphemes
+- Show netsplits/netjoins as a single message (to avoid clogging buffers)
+- Support for mouse input (switching buffers, highlighting messages, etc)
+- Support for multi-codepoint Unicode graphemes
 
 Code hygiene
 ------------
-test suite for bookkeeping
-tests for util.fold
-manpage
+- test suite for bookkeeping
+- tests for util.fold
+
+Docs
+----
+- manpage
+- readme
